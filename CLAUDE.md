@@ -143,21 +143,36 @@ que não persistimos áudio bruto). Tipagem estrita em ambos os lados (type hint
 
 ## Deploy
 
-- **Backend**: Cloud Run, a partir de `backend/Dockerfile`. Variáveis de ambiente (Groq,
-  WhatsApp, banco) configuradas como secrets do Cloud Run, nunca commitadas — ver
-  `backend/.env.example` para a lista de chaves esperadas.
-  Rodar `alembic upgrade head` contra o Neon antes do primeiro deploy (e a cada migration
-  nova) e `python -m app.seed` para popular o catálogo inicial de passeios.
-- **Frontend**: Cloudflare Pages, build de `frontend/` (`npm run build`, diretório `dist/`).
-  Variáveis `VITE_API_BASE_URL` (URL do serviço no Cloud Run) e `VITE_API_TOKEN` (mesmo valor do
-  `DASHBOARD_API_TOKEN` do backend) — ver `frontend/.env.example`. Proteger o domínio
-  `*.pages.dev` com **Cloudflare Access** enquanto o painel não for público — é a barreira real
-  de acesso, já que o token do frontend sozinho não é segredo (ver Segurança acima).
-- **WhatsApp**: configurar o webhook (URL do Cloud Run + `/webhook/whatsapp`) e o
-  `WHATSAPP_VERIFY_TOKEN` no painel de desenvolvedores da Meta.
-- Passos manuais que só o Patrick faz na interface do GitHub/Cloudflare/Google Cloud: secrets
-  do Cloud Run, branch protection da `main` exigindo os jobs `backend` e `frontend` do CI, e o
-  domínio do Cloudflare Pages.
+Automático via `.github/workflows/deploy.yml`, disparado quando o job `CI` termina com sucesso
+na `main` (mesmo padrão do `ocr-placas-previsao-filas`) — ou manualmente por
+`workflow_dispatch` quando só um secret mudou e não há commit novo.
+
+1. **Backend**: builda `backend/Dockerfile`, publica no Artifact Registry, roda
+   `alembic upgrade head` e `python -m app.seed` (idempotente) contra o Neon **antes** de trocar
+   o tráfego, depois publica no Cloud Run (`agente-turismo-lencois-backend`,
+   `--allow-unauthenticated` — o webhook da Meta precisa alcançar o serviço sem autenticação de
+   plataforma).
+2. **Frontend**: builda `frontend/` com `VITE_API_BASE_URL` apontando pra URL do Cloud Run que
+   acabou de subir e `VITE_API_TOKEN` = `DASHBOARD_API_TOKEN`, publica no Cloudflare Pages
+   (projeto `agente-turismo-lencois`).
+
+Secrets esperados no repositório GitHub (`Settings → Secrets and variables → Actions` —
+segredos são por repositório, não herdam de outro, nem de org: confirmado que hoje este repo
+não tem nenhum configurado):
+
+- Reaproveitáveis do `ocr-placas-previsao-filas` (mesma infra Rovan): `GCP_WORKLOAD_IDENTITY_PROVIDER`,
+  `GCP_SERVICE_ACCOUNT`, `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_ARTIFACT_REPO`,
+  `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+- Novos deste projeto: `DATABASE_URL` (Neon — banco novo, não reaproveitar o do OCR),
+  `GROQ_API_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`,
+  `WHATSAPP_APP_SECRET`, `DASHBOARD_API_TOKEN` (qualquer string aleatória forte, só precisa
+  bater entre backend e frontend).
+
+Depois do primeiro deploy: configurar o webhook no painel da Meta
+(`https://<url-do-cloud-run>/webhook/whatsapp`, com o mesmo `WHATSAPP_VERIFY_TOKEN`), proteger
+`agente-turismo-lencois.pages.dev` com **Cloudflare Access** (barreira real de acesso ao
+painel — ver Segurança acima), e checar branch protection da `main` exigindo os dois jobs do
+`CI`.
 
 ## Antes de abrir PR
 
