@@ -1,0 +1,27 @@
+# skills pessoais do Patrick, não fazem parte do time
+.claude/skills/clickup-task/
+.claude/skills/cloud-costs/
+.claude/skills/prepare-pr/clickup-task/
+.claude/skills/prepare-pr/cloud-costs/
+
+# segredos
+.env
+.env.*
+!.env.example
+
+# backend (Python)
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.egg-info/
+backend/local.db
+backend/.pytest_cache/
+backend/.ruff_cache/
+
+# frontend (Node)
+frontend/node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.vite/
+frontend/*.tsbuildinfo
