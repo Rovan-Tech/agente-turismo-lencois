@@ -4,10 +4,13 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Parâmetros de query que só drivers baseados em libpq (psycopg2) entendem — o Neon inclui
-# `channel_binding` nas connection strings por padrão, mas o asyncpg quebra com
-# "TypeError: connect() got an unexpected keyword argument 'channel_binding'" se ele chegar.
-_ASYNCPG_UNSUPPORTED_QUERY_PARAMS = {"channel_binding"}
+# Parâmetros de query que só drivers baseados em libpq (psycopg2) entendem quando embutidos numa
+# URL. O SQLAlchemy repassa qualquer parâmetro que não reconhece como kwarg cru pro
+# `asyncpg.connect()`, que não aceita nem `sslmode` nem `channel_binding` (só aceita `ssl=`) —
+# ambos quebram com "TypeError: connect() got an unexpected keyword argument '...'". O Neon
+# inclui os dois por padrão nas connection strings que fornece. SSL é configurado à parte via
+# `connect_args` (ver app/db/session.py), não pela query string.
+_ASYNCPG_UNSUPPORTED_QUERY_PARAMS = {"channel_binding", "sslmode"}
 
 
 class Settings(BaseSettings):
