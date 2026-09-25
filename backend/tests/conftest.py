@@ -1,0 +1,91 @@
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from app.core.config import get_settings
+from app.db.base import Base
+from app.db.session import get_db
+from app.main import app
+from app.models.tour import DifficultyLevel, Tour
+
+TEST_DASHBOARD_TOKEN = "test-dashboard-token"
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_factory() as session:
+        yield session
+
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def client(db_session, monkeypatch):
+    monkeypatch.setattr(get_settings(), "dashboard_api_token", TEST_DASHBOARD_TOKEN)
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    transport = ASGITransport(app=app)
+    headers = {"Authorization": f"Bearer {TEST_DASHBOARD_TOKEN}"}
+    async with AsyncClient(transport=transport, base_url="http://test", headers=headers) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def sample_tours() -> list[Tour]:
+    return [
+        Tour(
+            id="passeio-bugre-orla",
+            nome="Passeio de bugre pela orla",
+            descricao="Caminhada mínima, acessível a idosos e cadeirantes.",
+            dificuldade_fisica=DifficultyLevel.BAIXA,
+            caminhada_areia_minutos=5,
+            acessivel_idosos=True,
+            acessivel_cadeirantes=True,
+            acessivel_criancas_pequenas=True,
+            duracao_horas=2.5,
+            faixa_etaria_recomendada="todas as idades",
+            preco_reais=100,
+            ativo=True,
+        ),
+        Tour(
+            id="trilha-das-emendas",
+            nome="Trilha das Emendas",
+            descricao="Trilha longa, alta dificuldade.",
+            dificuldade_fisica=DifficultyLevel.ALTA,
+            caminhada_areia_minutos=90,
+            acessivel_idosos=False,
+            acessivel_cadeirantes=False,
+            acessivel_criancas_pequenas=False,
+            duracao_horas=5,
+            faixa_etaria_recomendada="12 a 55 anos",
+            preco_reais=130,
+            ativo=True,
+        ),
+        Tour(
+            id="rio-preguicas",
+            nome="Rio Preguiças (barco)",
+            descricao="Passeio de barco, acessível a idosos.",
+            dificuldade_fisica=DifficultyLevel.BAIXA,
+            caminhada_areia_minutos=8,
+            acessivel_idosos=True,
+            acessivel_cadeirantes=False,
+            acessivel_criancas_pequenas=True,
+            duracao_horas=6,
+            faixa_etaria_recomendada="todas as idades",
+            preco_reais=180,
+            ativo=True,
+        ),
+    ]
