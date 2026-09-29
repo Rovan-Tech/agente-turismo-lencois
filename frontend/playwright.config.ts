@@ -6,6 +6,9 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL: "http://localhost:4173",
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
   webServer: {
     command: "npm run build && npm run preview",

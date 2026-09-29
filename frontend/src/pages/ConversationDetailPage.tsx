@@ -24,17 +24,17 @@ export function ConversationDetailPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-8">
-      <Link to="/" className="text-sm text-lagoa hover:underline">
+      <Link to="/" className="text-sm text-link hover:underline">
         ← voltar
       </Link>
 
-      {conversation === undefined && <p className="mt-8 text-grafite/60">Carregando…</p>}
-      {conversation === null && <p className="mt-8 text-grafite/60">Conversa não encontrada.</p>}
+      {conversation === undefined && <p className="mt-8 text-muted">Carregando…</p>}
+      {conversation === null && <p className="mt-8 text-muted">Conversa não encontrada.</p>}
 
       {conversation && (
         <>
           <div className="mt-4 flex items-center justify-between">
-            <h1 className="font-display text-xl font-semibold text-grafite">
+            <h1 className="font-display text-xl font-semibold text-primary">
               {conversation.whatsapp_phone}
             </h1>
             <StatusBadge status={conversation.status} />
@@ -46,13 +46,13 @@ export function ConversationDetailPage() {
                 key={message.id}
                 className={`max-w-md rounded-lg px-4 py-2 ${
                   message.direction === "entrada"
-                    ? "bg-white border border-grafite/10"
-                    : "ml-auto bg-lagoa text-white"
+                    ? "border border-subtle bg-surface text-primary"
+                    : "ml-auto bg-action text-on-action"
                 }`}
               >
                 <p>{message.conteudo}</p>
                 {message.tipo === "audio_transcrito" && (
-                  <p className="mt-1 text-xs opacity-70">transcrito de áudio</p>
+                  <p className="mt-1 text-xs">transcrito de áudio</p>
                 )}
               </li>
             ))}

@@ -1,6 +1,6 @@
 ---
 name: prepare-pr
-description: Deixa a branch atual pronta e abre o PR - sincroniza com a main (resolvendo conflito se houver), confere se os testes exigidos existem, roda /security-check e os mesmos checks do CI localmente (ruff, pytest, bandit, pip-audit no backend; prettier, tsc, vitest, playwright, build, npm audit no frontend), corrige o que falhar, sobe a branch e cria o PR com título e descrição do que foi feito. Use SOMENTE quando o usuário pedir explicitamente para abrir o PR — nunca por conta própria ao terminar uma tarefa, pois o usuário precisa testar antes.
+description: Deixa a branch atual pronta e abre o PR - sincroniza com a main (resolvendo conflito se houver), confere se os testes exigidos existem, roda /security-check e o gate de qualidade completo (`scripts/quality_gate.py --full`, a mesma fonte do CI), corrige o que falhar, sobe a branch e cria o PR com título e descrição do que foi feito. Use SOMENTE quando o usuário pedir explicitamente para abrir o PR — nunca por conta própria ao terminar uma tarefa, pois o usuário precisa testar antes.
 ---
 
 # prepare-pr
@@ -43,31 +43,17 @@ Automatiza tudo entre "terminei de codar nesta branch" e "PR aberto, pronto para
 
 5. **Segurança**: rode o skill `/security-check`. Toda falha é corrigida com teste de regressão.
 
-6. **Checks do CI localmente**, na mesma ordem de `.github/workflows/ci.yml`:
+6. **Fluxo de revisão e gate**: confirme que `code-reviewer` e `qa-tester` aprovaram o código
+   atual (o hook `SubagentStop` registra o veredito) e rode o gate completo, a mesma fonte do CI:
 
    ```bash
-   # backend (working-directory: backend)
-   pip install -r requirements.txt
-   ruff check .
-   ruff format --check .
-   pytest
-   bandit -r app -q
-   pip-audit -r requirements.txt
-
-   # frontend (working-directory: frontend)
-   npm ci
-   npm run format:check
-   npm run check
-   npm run test:unit
-   npx playwright install --with-deps chromium
-   npm run test:e2e
-   npm run build
-   npm audit --audit-level=high
+   python3 scripts/quality_gate.py --full
    ```
 
-   Só rode o job (`backend`/`frontend`) cuja pasta mudou, a menos que a mudança afete os dois
-   (ex: contrato da API). Correção não trivial com dúvida sobre a intenção original → pergunte.
-   Depois de qualquer correção, rode a sequência completa de novo.
+   Ele cobre backend (formatação, ruff, mypy, pytest+cobertura, vulture, bandit, pip-audit) e
+   frontend (prettier, tsc, vitest+cobertura, build, npm audit, E2E). Correção não trivial com
+   dúvida sobre a intenção original → pergunte. Depois de qualquer correção, rode o gate de novo e
+   volte ao `code-reviewer` (mudança de código invalida as aprovações).
 
 7. **Subir a branch**: `git push -u origin $(git branch --show-current)`.
 
@@ -80,8 +66,8 @@ Automatiza tudo entre "terminei de codar nesta branch" e "PR aberto, pronto para
    - ...
 
    ## Test plan
-   - [x] backend: ruff, pytest, bandit, pip-audit
-   - [x] frontend: prettier, tsc, vitest, playwright, build, npm audit
+   - [x] `python3 scripts/quality_gate.py --full` verde
+   - [x] code-reviewer e qa-tester APROVADOS
 
    ## Security
    - [x] bandit / pip-audit / npm audit / pentest local (/security-check)

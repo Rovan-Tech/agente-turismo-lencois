@@ -2,13 +2,75 @@
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+pythonpath = ["../scripts", "../.claude/hooks"]
+addopts = "--strict-markers -ra"
+markers = [
+    "unit: teste unitário, sem I/O real",
+    "integration: teste de integração (webhook, banco em memória)",
+    "e2e: teste ponta a ponta (a suíte E2E do painel fica em frontend/tests/e2e)",
+]
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+# O CI antigo aplicava só E, F, I, UP, B na árvore inteira. As demais famílias valem para
+# código novo/alterado: o gate as aplica apenas nas linhas do diff (scripts/quality_gate.py).
+select = [
+    "E", "W", "F", "I", "N", "UP", "B", "SIM", "C4", "C90", "RUF", "PL", "ANN", "D", "S",
+    "PT", "RET", "ARG", "PTH", "ERA", "T20", "TRY",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Testes: assert é o mecanismo, valores literais são esperados e fixtures têm args "não usados".
+"tests/**" = ["S101", "ANN", "D", "PLR2004", "ARG", "PLR0913"]
+# Migrations do Alembic são geradas.
+"alembic/**" = ["D", "ANN"]
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Header"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 5
+max-statements = 30
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+plugins = ["pydantic.mypy"]
+files = ["app", "tests"]
+mypy_path = "../scripts:../.claude/hooks"
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+disallow_untyped_decorators = false
+disallow_untyped_calls = false
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.vulture]
+paths = ["app"]
+min_confidence = 80
+ignore_decorators = ["@router.*", "@app.*", "@asynccontextmanager"]
+ignore_names = ["cls"]

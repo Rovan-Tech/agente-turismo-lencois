@@ -1,0 +1,246 @@
+/*
+ * Tokens do design system — ÚNICA fonte de cores, tipografia, espaçamento, raios, sombras,
+ * z-index e durações. Ver docs/design-system.md e .claude/rules/design-system.md.
+ *
+ * Camada 1 (--palette-*): paleta base. Só este arquivo pode conter hex/rgb/hsl.
+ * Camada 2 (--color-*): tokens semânticos. Componentes usam SÓ esta camada (via classes do
+ * Tailwind mapeadas em tailwind.config.js). O modo escuro redefine apenas os semânticos.
+ */
+
+:root {
+  /* Paleta base — escalas 50–900. Âncoras da marca: primary-600 (lagoa), secondary-700
+     (terracota), neutral-50 (areia) e neutral-900 (grafite). */
+  --palette-primary-50: #f1f7f8;
+  --palette-primary-100: #cbe2e6;
+  --palette-primary-200: #a5cdd4;
+  --palette-primary-300: #80b9c2;
+  --palette-primary-400: #5aa4b0;
+  --palette-primary-500: #358f9e;
+  --palette-primary-600: #0f7a8c;
+  --palette-primary-700: #0d5d6b;
+  --palette-primary-800: #0b4049;
+  --palette-primary-900: #0a2328;
+
+  --palette-secondary-50: #f9f5f2;
+  --palette-secondary-100: #ecddd5;
+  --palette-secondary-200: #dec6b8;
+  --palette-secondary-300: #d1af9b;
+  --palette-secondary-400: #c4987e;
+  --palette-secondary-500: #b78061;
+  --palette-secondary-600: #a96944;
+  --palette-secondary-700: #9c5227;
+  --palette-secondary-800: #62361c;
+  --palette-secondary-900: #291a12;
+
+  --palette-neutral-0: #ffffff;
+  --palette-neutral-50: #fdfbf6;
+  --palette-neutral-100: #e4e4e0;
+  --palette-neutral-200: #cccdca;
+  --palette-neutral-300: #b3b5b3;
+  --palette-neutral-400: #9a9e9d;
+  --palette-neutral-500: #828787;
+  --palette-neutral-600: #697071;
+  --palette-neutral-700: #50585a;
+  --palette-neutral-800: #384144;
+  --palette-neutral-900: #1f2a2e;
+
+  --palette-success-50: #f2f7f3;
+  --palette-success-100: #cee2d5;
+  --palette-success-200: #abcdb6;
+  --palette-success-300: #88b998;
+  --palette-success-400: #64a479;
+  --palette-success-500: #418f5b;
+  --palette-success-600: #1e7a3c;
+  --palette-success-700: #185d30;
+  --palette-success-800: #134023;
+  --palette-success-900: #0d2317;
+
+  --palette-warning-50: #faf5f0;
+  --palette-warning-100: #efdaca;
+  --palette-warning-200: #e3bfa3;
+  --palette-warning-300: #d7a47d;
+  --palette-warning-400: #cc8956;
+  --palette-warning-500: #c06e30;
+  --palette-warning-600: #b45309;
+  --palette-warning-700: #87400a;
+  --palette-warning-800: #5b2d0b;
+  --palette-warning-900: #2e1a0b;
+
+  --palette-error-50: #fbf3f2;
+  --palette-error-100: #f1d3d1;
+  --palette-error-200: #e7b4b0;
+  --palette-error-300: #de948f;
+  --palette-error-400: #d4756e;
+  --palette-error-500: #ca554d;
+  --palette-error-600: #c0362c;
+  --palette-error-700: #902b24;
+  --palette-error-800: #601f1b;
+  --palette-error-900: #301413;
+
+  --palette-info-50: #f2f6fa;
+  --palette-info-100: #d0ddec;
+  --palette-info-200: #aec5df;
+  --palette-info-300: #8bacd1;
+  --palette-info-400: #6994c3;
+  --palette-info-500: #477bb6;
+  --palette-info-600: #2563a8;
+  --palette-info-700: #1d4c7f;
+  --palette-info-800: #163557;
+  --palette-info-900: #0e1e2e;
+
+  /* Semânticos — tema claro */
+  --color-bg-page: var(--palette-neutral-50);
+  --color-bg-surface: var(--palette-neutral-0);
+  --color-bg-subtle: var(--palette-primary-50);
+  --color-bg-header: var(--palette-primary-600);
+  --color-text-primary: var(--palette-neutral-900);
+  --color-text-secondary: var(--palette-neutral-700);
+  --color-text-muted: var(--palette-neutral-600);
+  --color-text-link: var(--palette-primary-700);
+  --color-text-on-action: var(--palette-neutral-0);
+  --color-text-on-header: var(--palette-neutral-0);
+  --color-action-primary: var(--palette-primary-600);
+  --color-action-primary-hover: var(--palette-primary-700);
+  --color-action-primary-active: var(--palette-primary-800);
+  --color-action-secondary: var(--palette-secondary-700);
+  --color-border-subtle: var(--palette-neutral-100);
+  --color-border-strong: var(--palette-neutral-500);
+  --color-focus-ring: var(--palette-primary-600);
+  --color-accent-subtle-bg: var(--palette-primary-100);
+  --color-accent-subtle-fg: var(--palette-primary-800);
+  --color-neutral-subtle-bg: var(--palette-neutral-100);
+  --color-neutral-subtle-fg: var(--palette-neutral-800);
+  --color-status-success-bg: var(--palette-success-50);
+  --color-status-success-fg: var(--palette-success-800);
+  --color-status-warning-bg: var(--palette-warning-50);
+  --color-status-warning-fg: var(--palette-warning-800);
+  --color-status-error-bg: var(--palette-error-50);
+  --color-status-error-fg: var(--palette-error-800);
+  --color-status-info-bg: var(--palette-info-50);
+  --color-status-info-fg: var(--palette-info-800);
+
+  /* Tipografia */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+
+  /* Espaçamento — escala de 4 px */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* Raios, sombras, z-index e animação */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px 0 rgb(31 42 46 / 0.08);
+  --shadow-md: 0 4px 8px -2px rgb(31 42 46 / 0.12);
+  --shadow-lg: 0 12px 24px -6px rgb(31 42 46 / 0.16);
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --duration-fast: 100ms;
+  --duration-base: 200ms;
+  --duration-slow: 300ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Breakpoints (espelhados em tailwind.config.js; var() não vale em media query) */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-page: var(--palette-neutral-900);
+    --color-bg-surface: var(--palette-neutral-800);
+    --color-bg-subtle: var(--palette-primary-900);
+    --color-bg-header: var(--palette-primary-800);
+    --color-text-primary: var(--palette-neutral-50);
+    --color-text-secondary: var(--palette-neutral-200);
+    --color-text-muted: var(--palette-neutral-300);
+    --color-text-link: var(--palette-primary-300);
+    --color-text-on-action: var(--palette-neutral-900);
+    --color-action-primary: var(--palette-primary-400);
+    --color-action-primary-hover: var(--palette-primary-300);
+    --color-action-primary-active: var(--palette-primary-200);
+    --color-action-secondary: var(--palette-secondary-300);
+    --color-border-subtle: var(--palette-neutral-700);
+    --color-border-strong: var(--palette-neutral-400);
+    --color-focus-ring: var(--palette-primary-300);
+    --color-accent-subtle-bg: var(--palette-primary-800);
+    --color-accent-subtle-fg: var(--palette-primary-100);
+    --color-neutral-subtle-bg: var(--palette-neutral-700);
+    --color-neutral-subtle-fg: var(--palette-neutral-100);
+    --color-status-success-bg: var(--palette-success-900);
+    --color-status-success-fg: var(--palette-success-100);
+    --color-status-warning-bg: var(--palette-warning-900);
+    --color-status-warning-fg: var(--palette-warning-100);
+    --color-status-error-bg: var(--palette-error-900);
+    --color-status-error-fg: var(--palette-error-100);
+    --color-status-info-bg: var(--palette-info-900);
+    --color-status-info-fg: var(--palette-info-100);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg-page: var(--palette-neutral-900);
+  --color-bg-surface: var(--palette-neutral-800);
+  --color-bg-subtle: var(--palette-primary-900);
+  --color-bg-header: var(--palette-primary-800);
+  --color-text-primary: var(--palette-neutral-50);
+  --color-text-secondary: var(--palette-neutral-200);
+  --color-text-muted: var(--palette-neutral-300);
+  --color-text-link: var(--palette-primary-300);
+  --color-text-on-action: var(--palette-neutral-900);
+  --color-action-primary: var(--palette-primary-400);
+  --color-action-primary-hover: var(--palette-primary-300);
+  --color-action-primary-active: var(--palette-primary-200);
+  --color-action-secondary: var(--palette-secondary-300);
+  --color-border-subtle: var(--palette-neutral-700);
+  --color-border-strong: var(--palette-neutral-400);
+  --color-focus-ring: var(--palette-primary-300);
+  --color-accent-subtle-bg: var(--palette-primary-800);
+  --color-accent-subtle-fg: var(--palette-primary-100);
+  --color-neutral-subtle-bg: var(--palette-neutral-700);
+  --color-neutral-subtle-fg: var(--palette-neutral-100);
+  --color-status-success-bg: var(--palette-success-900);
+  --color-status-success-fg: var(--palette-success-100);
+  --color-status-warning-bg: var(--palette-warning-900);
+  --color-status-warning-fg: var(--palette-warning-100);
+  --color-status-error-bg: var(--palette-error-900);
+  --color-status-error-fg: var(--palette-error-100);
+  --color-status-info-bg: var(--palette-info-900);
+  --color-status-info-fg: var(--palette-info-100);
+  color-scheme: dark;
+}

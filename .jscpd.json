@@ -1,0 +1,32 @@
+{
+  "path": [
+    "backend/app",
+    "backend/tests",
+    "frontend/src",
+    "frontend/tests",
+    "scripts",
+    ".claude/hooks"
+  ],
+  "format": [
+    "python",
+    "typescript",
+    "tsx",
+    "css"
+  ],
+  "minLines": 6,
+  "minTokens": 20,
+  "threshold": 0,
+  "gitignore": true,
+  "ignore": [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "**/styles/tokens.css"
+  ],
+  "reporters": [
+    "console"
+  ],
+  "silent": true,
+  "absolute": true
+}

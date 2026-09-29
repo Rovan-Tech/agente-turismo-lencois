@@ -7,9 +7,9 @@ const STATUS_LABELS: Record<ConversationStatus, string> = {
 };
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
-  aberta: "bg-lagoa/10 text-lagoa",
-  precisa_atencao: "bg-terracota text-white",
-  resolvida: "bg-grafite/10 text-grafite",
+  aberta: "bg-accent-subtle text-accent-subtle",
+  precisa_atencao: "bg-action-secondary text-on-action",
+  resolvida: "bg-neutral-subtle text-neutral-subtle",
 };
 
 export function StatusBadge({ status }: { status: ConversationStatus }) {

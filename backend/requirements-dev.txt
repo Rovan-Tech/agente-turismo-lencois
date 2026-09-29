@@ -1,0 +1,9 @@
+# Ferramentas de desenvolvimento e do gate de qualidade. Não vão para a imagem Docker
+# (o Dockerfile instala só requirements.txt).
+-r requirements.txt
+
+mypy==2.3.1
+pytest-cov==7.1.0
+pytest-randomly==5.0.0
+diff-cover==10.6.0
+vulture==2.16

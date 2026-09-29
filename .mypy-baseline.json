@@ -1,0 +1,14 @@
+{
+  "backend/app/api/conversations.py|type-arg|Missing type arguments for generic type \"dict\"": 2,
+  "backend/app/api/tours.py|type-arg|Missing type arguments for generic type \"dict\"": 1,
+  "backend/app/api/webhook.py|type-arg|Missing type arguments for generic type \"dict\"": 2,
+  "backend/app/db/session.py|type-arg|Missing type arguments for generic type \"dict\"": 1,
+  "backend/app/main.py|type-arg|Missing type arguments for generic type \"dict\"": 1,
+  "backend/app/models/tour.py|type-arg|Missing type arguments for generic type \"dict\"": 1,
+  "backend/app/services/tour_matcher.py|type-arg|Missing type arguments for generic type \"dict\"": 3,
+  "backend/app/services/transcription.py|import-untyped|Skipping analyzing \"faster_whisper\": module is installed, but missing library stubs or py.typed marker": 1,
+  "backend/app/services/transcription.py|no-untyped-def|Function is missing a return type annotation": 1,
+  "backend/app/services/whatsapp_client.py|no-any-return|Returning Any from function declared to return \"str\"": 1,
+  "backend/tests/test_webhook.py|attr-defined|Module \"app.services.message_handler\" does not explicitly export attribute \"whatsapp_client\"": 1,
+  "backend/tests/test_webhook.py|type-arg|Missing type arguments for generic type \"dict\"": 1
+}
