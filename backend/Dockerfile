@@ -13,6 +13,9 @@ COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini .
 
+RUN useradd --create-home --uid 10001 app
+USER app
+
 # Baixa o modelo do faster-whisper durante o build, não no primeiro request — Cloud
 # Run hiberna sem tráfego, então um cold start não pode depender de rede externa
 # pra baixar ~150MB do Hugging Face antes de conseguir transcrever um áudio.
