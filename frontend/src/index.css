@@ -1,13 +1,21 @@
+@import "./styles/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: "Inter", system-ui, sans-serif;
-}
+@layer base {
+  body {
+    @apply bg-page font-sans text-primary;
+  }
 
-h1,
-h2,
-h3 {
-  font-family: "Sora", system-ui, sans-serif;
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-focus;
+  }
 }

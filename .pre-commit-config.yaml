@@ -1,0 +1,11 @@
+# Espelha o gate rápido para commits feitos fora do Claude Code.
+# Instalar: pip install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: quality-gate-fast
+        name: gate rápido (formatação, lint, tipos, limites, design system)
+        entry: sh -c 'PY=backend/.venv/bin/python; [ -x "$PY" ] || PY=python3; "$PY" scripts/quality_gate.py --fast'
+        language: system
+        pass_filenames: false
+        always_run: true

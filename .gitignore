@@ -21,7 +21,26 @@ backend/.ruff_cache/
 # frontend (Node)
 frontend/node_modules/
 frontend/dist/
-frontend/playwright-report/
-frontend/test-results/
 frontend/.vite/
 frontend/*.tsbuildinfo
+
+# gate de qualidade e cobertura
+backend/.mypy_cache/
+.mypy_cache/
+backend/.coverage
+backend/coverage.xml
+frontend/coverage/
+.jscpd-report/
+report/
+
+# Claude Code: estado local, relatórios dos hooks, evidências de QA e preferências pessoais
+.claude/state/
+.claude/reports/
+.claude/settings.local.json
+.qa-artifacts/
+frontend/playwright-report/
+frontend/test-results/
+
+# caches do Python
+__pycache__/
+*.pyc

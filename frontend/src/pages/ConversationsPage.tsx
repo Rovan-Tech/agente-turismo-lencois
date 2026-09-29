@@ -20,27 +20,27 @@ export function ConversationsPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="font-display text-2xl font-semibold text-grafite">Conversas no WhatsApp</h1>
-      <p className="mt-1 text-sm text-grafite/70">
+      <h1 className="font-display text-2xl font-semibold text-primary">Conversas no WhatsApp</h1>
+      <p className="mt-1 text-sm text-secondary">
         Conversas com turistas atendidas pelo assistente virtual.
       </p>
 
-      {conversations === null && <p className="mt-8 text-grafite/60">Carregando…</p>}
+      {conversations === null && <p className="mt-8 text-muted">Carregando…</p>}
 
       {conversations !== null && conversations.length === 0 && (
-        <p className="mt-8 text-grafite/60">Nenhuma conversa encontrada.</p>
+        <p className="mt-8 text-muted">Nenhuma conversa encontrada.</p>
       )}
 
-      <ul className="mt-6 divide-y divide-grafite/10 rounded-lg border border-grafite/10 bg-white">
+      <ul className="mt-6 divide-y divide-subtle rounded-lg border border-subtle bg-surface">
         {conversations?.map((conversation) => (
           <li key={conversation.id}>
             <Link
               to={`/conversas/${conversation.id}`}
-              className="flex items-center justify-between gap-4 px-4 py-4 hover:bg-lagoa/5"
+              className="flex items-center justify-between gap-4 px-4 py-4 hover:bg-subtle"
             >
               <div>
-                <p className="font-medium text-grafite">{conversation.whatsapp_phone}</p>
-                <p className="text-sm text-grafite/60">
+                <p className="font-medium text-primary">{conversation.whatsapp_phone}</p>
+                <p className="text-sm text-muted">
                   {new Date(conversation.updated_at).toLocaleString("pt-BR")}
                   {conversation.idioma_detectado ? ` · ${conversation.idioma_detectado}` : ""}
                 </p>

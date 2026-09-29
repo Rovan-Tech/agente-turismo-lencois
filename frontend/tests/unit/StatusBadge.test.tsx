@@ -13,7 +13,7 @@ describe("StatusBadge", () => {
     render(<StatusBadge status="precisa_atencao" />);
     const badge = screen.getByRole("status");
     expect(badge).toHaveTextContent("Precisa de atenção");
-    expect(badge.className).toContain("bg-terracota");
+    expect(badge.className).toContain("bg-action-secondary");
   });
 
   it("shows resolved status", () => {

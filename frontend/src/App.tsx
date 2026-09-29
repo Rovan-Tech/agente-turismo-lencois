@@ -6,9 +6,9 @@ import { ConversationsPage } from "./pages/ConversationsPage";
 export function App() {
   return (
     <BrowserRouter>
-      <header className="border-b border-grafite/10 bg-lagoa">
+      <header className="border-b border-subtle bg-header">
         <div className="mx-auto max-w-3xl px-4 py-4">
-          <p className="font-display text-lg font-semibold text-white">
+          <p className="font-display text-lg font-semibold text-on-header">
             Agência de Turismo em Lençóis
           </p>
         </div>
