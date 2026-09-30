@@ -46,20 +46,15 @@ ASK_EXACT = {
     "frontend/playwright.config.ts",
     ".claude/settings.json",
     ".claude/settings.local.json",
+    "docs/checklist-engenharia.md",
 }
+# Mesmo conjunto que o fingerprint considera "código" (hook_common) mais o que só pede confirmação.
 ASK_PREFIXES = (
     ".claude/skills/prepare-pr/",
     ".claude/skills/security-check/",
     ".claude/skills/clean-code/",
-    ".github/workflows/",
     ".claude/hooks/",
-    ".claude/agents/",
-    ".claude/rules/",
-    ".claude/skills/feature/",
-    ".claude/skills/bugfix/",
-    ".claude/skills/revisar/",
-    ".claude/skills/qa/",
-    ".claude/skills/gate/",
+    *common.CODE_PREFIXES,
 )
 ASK_GLOBS = ("scripts/quality_gate.py", "scripts/gate_*.py", "scripts/check_*.py")
 

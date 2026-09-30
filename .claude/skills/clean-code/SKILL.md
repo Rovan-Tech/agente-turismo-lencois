@@ -30,3 +30,10 @@ comentários só explicam o porquê**. Esta skill tira o que sobra, não a docum
 2. Edite manualmente (nunca regex no arquivo inteiro: JSX, strings e union types quebram).
 3. Confirme: `python3 scripts/quality_gate.py --fast` (formatação, lint, tipos, limites).
 4. Reporte quantos arquivos mudaram. Não abra PR sozinho.
+
+## Anti-AI-slop (Manual V5 §9, item `GIT-3`)
+
+Além dos comentários, o código alterado não pode ter: `print(`/`console.log|debug|info|trace(`,
+`breakpoint()`/`debugger`, funções, imports, parâmetros ou variáveis sem uso ("funções fantasmas"),
+blocos comentados e trechos que ninguém consegue explicar. Remova-os (o gate acusa o que for
+mecânico: `vulture`, `ruff F401/ERA/T20`). Se não entender um trecho gerado, pergunte antes de manter.

@@ -21,3 +21,19 @@ Ferramentas: `tsc --noEmit` (`strict: true`), Prettier (linha de 100), Vitest, P
 - Estilo: só tokens do design system (ver `design-system.md`); sem `style={{ color: ... }}`.
 - Tamanho e aninhamento: não há medição automática no TypeScript; o `code-reviewer` avalia
   legibilidade (componentes curtos, sem JSX aninhado em excesso). Duplicação: `jscpd` no gate.
+
+## Manual V5 (itens do `docs/checklist-engenharia.md`)
+- **Contratos (`FE-1`)**: toda resposta de API é validada em runtime com **Zod** em `lib/api.ts`
+  (ou no `api.ts` da feature) antes de chegar ao componente; tipos vêm do schema (`z.infer`).
+  ✅ `const tours = TourListSchema.parse(await res.json())` · ❌ `(await res.json()) as Tour[]`
+- **Feature Slices (`FE-2`)**: funcionalidade nova em `src/features/<nome>/` com `components/`,
+  `hooks/`, `api.ts`, `types.ts` e testes ao lado; o que for compartilhado sobe para `src/lib` e
+  `src/components`. Uma feature não importa de outra: só de `lib/` e `components/`.
+- **Segurança (`FE-3`, `FE-4`)**: nada de `dangerouslySetInnerHTML` (se inevitável, DOMPurify com
+  whitelist de tags); credencial/JWT nunca em `localStorage`/`sessionStorage` (cookie HttpOnly,
+  Secure, SameSite=Strict); preferência de UI (tema) pode usar `localStorage`. Sem script/estilo
+  inline novo nem `unsafe-inline`/`unsafe-eval`.
+- **Performance (`FE-5`)**: rota pesada com `React.lazy` + `Suspense` e skeleton; chunk ≤ 200 KB
+  gzip; LCP < 2,5 s, INP < 200 ms, CLS < 0,1. Imagens com dimensões explícitas (CLS).
+- **Acessibilidade e datas (`FE-6`)**: WCAG 2.2 AA no mínimo; datas chegam e saem em UTC e só a
+  exibição converte para o fuso do usuário (`src/lib/time.ts`).

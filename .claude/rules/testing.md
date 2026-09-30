@@ -33,3 +33,13 @@ que falhava antes da correção.
 ## Cobertura
 Mínimo de **90% nas linhas alteradas** (`diff-cover`); a cobertura global **nunca cai** (baseline em
 `.coverage-baseline.json`).
+
+## Manual V5 (itens do `docs/checklist-engenharia.md`)
+- **Mitigação STRIDE = teste (`SEC-7`)**: cada ameaça mitigada tem teste que envia o ataque e
+  confirma o bloqueio (`test_security.py`).
+- **Testes que detectam defeito (`TEST-2`)**: em lógica crítica (HMAC, matcher, regras), pergunte
+  "se eu quebrar esta linha, qual teste falha?". Mutação real (mutmut/Stryker) ainda não está no
+  gate (TD-T1); rode manualmente na lógica crítica nova quando possível.
+- **Resiliência (`OBS-3`)**: para toda integração, um teste simula timeout/5xx/queda e confirma a
+  degradação graciosa. **IA (`AI-1`)**: teste com entrada adversária (injeção de prompt).
+- **Acessibilidade**: componente novo tem teste por papel/rótulo e, na E2E, navegação por teclado.

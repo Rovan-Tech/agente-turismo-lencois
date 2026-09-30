@@ -33,8 +33,12 @@ CODE_PREFIXES = (
     ".claude/skills/revisar/",
     ".claude/skills/qa/",
     ".claude/skills/gate/",
+    ".claude/skills/checklist/",
+    ".claude/skills/adr/",
+    ".claude/skills/threat-model/",
 )
 CODE_FILES = {
+    "docs/checklist-engenharia.md",
     ".coverage-baseline.json",
     ".mypy-baseline.json",
     ".jscpd.json",

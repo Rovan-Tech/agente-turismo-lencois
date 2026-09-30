@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Roda só o qa-tester (gate completo, E2E e testes exploratórios com Playwright MCP). Use depois que o código foi revisado, ou para validar o estado atual do painel.
+description: Roda só o qa-tester (gate completo, E2E, medições do manual e testes exploratórios com Playwright MCP), que preenche o checklist de engenharia inteiro. Use depois que o código foi revisado, ou para validar o estado atual do painel.
 disable-model-invocation: true
 ---
 
@@ -11,5 +11,6 @@ disable-model-invocation: true
    `origin/main`, como subir o app (backend `uvicorn app.main:app` em `backend/`; painel
    `npm run build && npm run preview` em `frontend/`) e como rodar os testes.
 2. Invoque o subagent `qa-tester` com esse briefing (e, a partir da 2ª rodada, o que mudou).
-3. Apresente o relatório integralmente. Se REPROVADO, transforme cada bug em teste que falha antes
-   de corrigir (fluxo de `/bugfix`) e lembre que a correção invalida a aprovação do `code-reviewer`.
+3. Apresente o relatório integralmente, **incluindo a seção `Checklist:`**. Se REPROVADO,
+   transforme cada bug e cada `FALHA` em teste que falha antes de corrigir (fluxo de `/bugfix`) e
+   lembre que a correção invalida a aprovação do `code-reviewer`.

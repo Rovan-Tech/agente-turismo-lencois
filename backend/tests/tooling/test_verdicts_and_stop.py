@@ -6,20 +6,20 @@ import record_verdict as rv
 import session_start as ss
 import stop_gate as sg
 
-REVIEWER_OK = (
-    "VEREDITO: APROVADO\nEscopo: a.py\nGates: tudo ✅\nProblemas: nenhum\nPontos positivos: ok\n"
+pytestmark = pytest.mark.usefixtures("fake_checklist")
+
+REVIEWER_CHECKLIST = (
+    "Checklist:\nGOV-1: N/A — diff não altera arquitetura\nGIT-1: OK — nenhum arquivo sensível\n"
 )
-QA_OK = "VEREDITO: REPROVADO\nTestes: 1/1\nCritérios de aceite:\n[❌] x\nBugs: y\n"
-
-
-@pytest.fixture
-def state(tmp_path, monkeypatch):
-    monkeypatch.setattr(common, "STATE_DIR", tmp_path / "state")
-    monkeypatch.setattr(common, "REPORTS_DIR", tmp_path / "reports")
-    monkeypatch.setattr(rv, "VERDICTS_FILE", tmp_path / "state" / "verdicts.json")
-    monkeypatch.setattr(common, "STARTS_FILE", tmp_path / "state" / "starts.json")
-    monkeypatch.setattr(common, "fingerprint", lambda: ("fp2", ["backend/app/a.py"]))
-    return tmp_path
+REVIEWER_OK = (
+    "VEREDITO: APROVADO\nEscopo: a.py\nGates: tudo ✅\n"
+    + REVIEWER_CHECKLIST
+    + "Problemas: nenhum\nPontos positivos: ok\n"
+)
+QA_OK = (
+    "VEREDITO: REPROVADO\nTestes: 1/1\nCritérios de aceite:\n[❌] x\n"
+    "Checklist:\nGATE-2: FALHA — gate completo vermelho\nBugs: y\n"
+)
 
 
 def _hook_input(monkeypatch, module, data):
@@ -37,6 +37,7 @@ def test_parse_report_accepts_valid_report():
         "Texto antes\nVEREDITO: APROVADO\nEscopo: x",
         "VEREDITO: TALVEZ\nEscopo: x",
         "VEREDITO: APROVADO\nEscopo: x",
+        "VEREDITO: APROVADO\nEscopo: x\nGates: ✅\nChecklist:\nProblemas: nenhum",
     ],
 )
 def test_parse_report_rejects_malformed_reports(message):
