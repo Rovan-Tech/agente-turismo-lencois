@@ -96,6 +96,15 @@ apareciam com menos cobertura do que realmente tinham — ver `[tool.coverage.ru
   percorre todas as mensagens a cada GET (só há índice em `conversation_id`), e a lista não tem
   paginação. Serve ao volume do portfólio; com muito histórico, trocar por `LATERAL ... LIMIT 1`
   (Postgres) ou criar o índice `(conversation_id, created_at)` e paginar.
+- Painel: se a API de conversas falhar ou devolver um contrato quebrado (validado por Zod), a lista
+  mostra "Nenhuma conversa encontrada" em vez de um estado de erro (`ConversationsPage` faz
+  `data ?? []`). O `vite dev` também loga `GET /favicon.ico` 404 (não há ícone em `index.html`).
+- Webhook: uma mensagem assinada de tamanho enorme é aceita e gravada inteira no banco; só o texto
+  enviado ao Groq é limitado a 1000 caracteres. O teto de tamanho do corpo do webhook depende do
+  limite de taxa/volume (TD-A3).
+- Webhook: um payload assinado e bem-formado como JSON, mas com estrutura inesperada
+  (`{"entry": "x"}`, `{"entry": [null]}`, `messages: ["x"]`), devolve 500 em `_extract_messages`, que
+  assume dict e lista. Só a Meta assinante consegue disparar (achado do QA, fora deste diff).
 - Observabilidade: o app não configura `logging` (sem `basicConfig` em `app/main.py`), então o logger
   raiz fica em WARNING e logs INFO, como o `áudio recusado: acima de N bytes` do handler, não
   aparecem no uvicorn. Configurar o nível/formato de log na inicialização.
@@ -110,7 +119,7 @@ infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
 | ID | Item do checklist | Lacuna | Prioridade |
 | --- | --- | --- | --- |
 | TD-A1 | `SEC-1` | gitleaks no CI e no pre-commit (hoje só o padrão do hook `post_edit_quality`) | Alta |
-| TD-A2 | `FE-1` | `zod` não está instalado; respostas de `lib/api.ts` não são validadas em runtime | Alta |
+| TD-A2 | `FE-1` | `zod` instalado; as respostas de **conversas** (lista, detalhe e troca de status) já são validadas em `lib/api.ts`. Faltam os passeios (`listTours`, `createTour`, `updateTour`, `deleteTour`), que ainda usam o caminho sem schema | Média |
 | TD-A3 | `SEC-3` | sem limite de taxa no webhook e na API do painel (ex.: `slowapi`) | Alta |
 | TD-A4 | `SEC-5`, `INF-2` | SBOM CycloneDX (`cyclonedx-py`, `@cyclonedx/cyclonedx-npm`) não é gerado no CI | Média |
 | TD-A5 | `DATA-3` | sem tabela de auditoria append-only com hash chain; mutações (`status` da conversa, CRUD de passeios) não registram quem/quando/antes/depois | Alta |

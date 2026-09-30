@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { SuggestedTourCard } from "../features/suggested-tour/components/SuggestedTourCard";
 import { ConversationSidePanel } from "../components/ConversationSidePanel";
 import { LanguageAvatar } from "../components/LanguageAvatar";
 import { MessageBubble } from "../components/MessageBubble";
@@ -102,7 +103,9 @@ export function ConversationDetailPage() {
           updating={updating}
           updateFailed={updateFailed}
           onChange={handleStatusChange}
-        />
+        >
+          <SuggestedTourCard tour={conversation.passeio_sugerido} />
+        </ConversationSidePanel>
       )}
     </main>
   );

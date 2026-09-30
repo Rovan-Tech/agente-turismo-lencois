@@ -122,6 +122,10 @@ Contraste mínimo de 4,5:1 (texto) e 3:1 (texto grande, borda de campo e anel de
 
 Regras: foco sempre visível (`:focus-visible` global), tudo operável por teclado, `alt` em imagens, `label` em todo campo, estado nunca só por cor (o selo de status sempre traz texto).
 
+## Componentes
+
+- **`SuggestedTourCard`** (`src/features/suggested-tour/`): seção "Passeio sugerido pela IA" do painel da conversa. Mostra nome, descrição, selos (dificuldade em `accent-subtle`; duração e acessibilidade em `neutral-subtle`) e o preço por pessoa. Sem sugestão, mostra o texto "A IA ainda não sugeriu um passeio nesta conversa." em vez de sumir. O conteúdo vem do catálogo e é sempre texto (nunca HTML). Só usa tokens; não cria cor nova.
+
 ## Consolidação feita
 
 - `lagoa`, `terracota`, `areia` e `grafite` viraram tokens (`primary-600`, `secondary-700`, `neutral-50`, `neutral-900`); as classes legadas foram removidas.

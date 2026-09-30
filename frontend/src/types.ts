@@ -1,37 +1,26 @@
-export type ConversationStatus = "aberta" | "precisa_atencao" | "resolvida";
+import type { z } from "zod";
 
-export interface ConversationMessage {
-  id: string;
-  direction: "entrada" | "saida";
-  tipo: "texto" | "audio_transcrito";
-  conteudo: string;
-  idioma: string | null;
-  created_at: string;
-}
+import type {
+  ConversationDetailSchema,
+  ConversationHeaderSchema,
+  ConversationMessageSchema,
+  ConversationStatusSchema,
+  ConversationSummarySchema,
+  LastMessageSchema,
+  SuggestedTourSchema,
+} from "./lib/schemas";
 
+// Tipos das respostas de conversas: derivados dos schemas Zod (lib/schemas.ts).
+export type ConversationStatus = z.infer<typeof ConversationStatusSchema>;
+export type ConversationMessage = z.infer<typeof ConversationMessageSchema>;
 /** Campos comuns a tudo que a API devolve sobre uma conversa. */
-export interface ConversationHeader {
-  id: string;
-  whatsapp_phone: string;
-  status: ConversationStatus;
-  idioma_detectado: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
+export type ConversationHeader = z.infer<typeof ConversationHeaderSchema>;
 /** Última mensagem da conversa, truncada pela API para a prévia da lista. */
-export type LastMessage = Pick<
-  ConversationMessage,
-  "conteudo" | "tipo" | "direction" | "created_at"
->;
-
-export interface ConversationSummary extends ConversationHeader {
-  ultima_mensagem: LastMessage | null;
-}
-
-export interface ConversationDetail extends ConversationHeader {
-  messages: ConversationMessage[];
-}
+export type LastMessage = z.infer<typeof LastMessageSchema>;
+export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
+export type ConversationDetail = z.infer<typeof ConversationDetailSchema>;
+/** Passeio do catálogo que o assistente recomendou nesta conversa. */
+export type SuggestedTour = z.infer<typeof SuggestedTourSchema>;
 
 export type DifficultyLevel = "baixa" | "media" | "alta";
 

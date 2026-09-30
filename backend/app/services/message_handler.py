@@ -13,7 +13,12 @@ from app.models.conversation import Conversation, ConversationStatus
 from app.models.message import Message, MessageDirection, MessageType
 from app.models.tour import Tour
 from app.services import tour_matcher, whatsapp_client
-from app.services.groq_client import GroqReply, ask_groq, build_system_prompt
+from app.services.groq_client import (
+    GroqReply,
+    GroqUnavailableError,
+    ask_groq,
+    build_system_prompt,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +27,15 @@ AUDIO_TOO_LONG_REPLY = (
     "Seu áudio é muito longo para eu ouvir. Pode mandar um áudio mais curto ou escrever? 🙏\n"
     "Your voice message is too long for me to listen to. Could you send a shorter one or type it?\n"
     "Tu audio es demasiado largo para escucharlo. ¿Puedes enviar uno más corto o escribirlo?"
+)
+# Contingência quando o Groq está fora do ar: o turista nunca fica sem resposta e a conversa vai
+# para atendimento humano. Trilíngue pelo mesmo motivo do aviso de áudio.
+GROQ_FALLBACK_REPLY = (
+    "Estamos com dificuldade para responder agora. "
+    "Uma pessoa da nossa equipe vai falar com você em breve.\n"
+    "We are having trouble answering right now. Someone from our team will contact you soon.\n"
+    "Estamos teniendo dificultades para responder ahora. "
+    "Alguien de nuestro equipo te contactará pronto."
 )
 # Registro no painel: a agência vê que o turista mandou um áudio, mesmo sem transcrição. Vai como
 # TEXTO porque o painel rotula AUDIO_TRANSCRITO como "transcrito de áudio".
@@ -154,11 +168,33 @@ async def _refuse_oversized_audio(
 
 
 async def _generate_reply(db: AsyncSession, settings: Settings, content: str) -> GroqReply:
-    """Escolhe os passeios candidatos para a mensagem e pede a resposta ao Groq."""
+    """Escolhe os passeios candidatos, pede a resposta ao Groq e valida o passeio que ele sugeriu.
+
+    O `id` sugerido é saída de terceiro: só vale se estiver entre os candidatos que o modelo viu.
+    """
     result = await db.execute(select(Tour).where(Tour.ativo.is_(True)))
     candidate_tours = tour_matcher.select_candidate_tours(list(result.scalars().all()), content)
     system_prompt = build_system_prompt(settings.agency_name, candidate_tours)
-    return await ask_groq(settings, system_prompt, content)
+    try:
+        reply = await ask_groq(settings, system_prompt, content)
+    except GroqUnavailableError as error:
+        # A causa vai no texto (o formato padrão de log descarta o `extra`) e também estruturada.
+        logger.warning(
+            "Groq indisponível: causa=%s status_http=%s; resposta de contingência",
+            error.causa,
+            error.status_http,
+            extra={"motivo": "groq", "causa": error.causa, "status_http": error.status_http},
+        )
+        # Sem idioma: a contingência não sabe em que língua o turista escreve e não pode apagar
+        # o idioma já detectado nem inventar um.
+        return GroqReply(idioma=None, precisa_atencao_humana=True, resposta=GROQ_FALLBACK_REPLY)
+    offered = {tour.id for tour in candidate_tours}
+    if reply.passeio_sugerido_id is not None and reply.passeio_sugerido_id not in offered:
+        logger.warning(
+            "passeio sugerido fora dos candidatos descartado", extra={"motivo": "allowlist"}
+        )
+        reply.passeio_sugerido_id = None
+    return reply
 
 
 def _record_reply(db: AsyncSession, conversation: Conversation, reply: GroqReply) -> None:
@@ -172,7 +208,10 @@ def _record_reply(db: AsyncSession, conversation: Conversation, reply: GroqReply
             idioma=reply.idioma,
         )
     )
-    conversation.idioma_detectado = reply.idioma
+    if reply.idioma is not None:
+        conversation.idioma_detectado = reply.idioma
+    if reply.passeio_sugerido_id is not None:
+        conversation.passeio_sugerido_id = reply.passeio_sugerido_id
     conversation.status = (
         ConversationStatus.PRECISA_ATENCAO
         if reply.precisa_atencao_humana

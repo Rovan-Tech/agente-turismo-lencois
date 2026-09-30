@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { ConversationStatus } from "../types";
 import { StatusControl } from "./StatusControl";
 
@@ -9,11 +11,14 @@ export function ConversationSidePanel({
   updating,
   updateFailed,
   onChange,
+  children,
 }: {
   status: ConversationStatus;
   updating: boolean;
   updateFailed: boolean;
   onChange: (next: ConversationStatus) => void;
+  /** Seções extras entre o status e as ações (ex.: passeio sugerido). */
+  children?: ReactNode;
 }) {
   return (
     <aside
@@ -25,6 +30,7 @@ export function ConversationSidePanel({
       <p className="text-xs text-muted">
         O assistente também atualiza o status quando o turista escreve de novo.
       </p>
+      {children}
       {status !== "resolvida" && (
         <button
           type="button"

@@ -9,7 +9,7 @@ import {
   updateConversationStatus,
   updateTour,
 } from "../../src/lib/api";
-import { SAMPLE_TOUR } from "./fixtures";
+import { SAMPLE_CONVERSATION, SAMPLE_SUGGESTED_TOUR, SAMPLE_TOUR, summary } from "./fixtures";
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -19,17 +19,67 @@ function jsonResponse(status: number, body: unknown) {
   } as Response;
 }
 
+/** Faz o próximo `fetch` devolver `body` com status 200. */
+function respondWith(body: unknown) {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, body)));
+}
+
 describe("lib/api", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("listConversations parses the JSON body on success", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(200, [{ id: "1" }])));
+  const loadDetail = () => getConversation("abc123");
+  const [firstMessage] = SAMPLE_CONVERSATION.messages;
+  const withTour = (tour: unknown) => ({ ...SAMPLE_CONVERSATION, passeio_sugerido: tour });
 
-    const result = await listConversations();
+  it.each([
+    ["a conversation list", listConversations, [summary({ id: "1" })]],
+    [
+      "a conversation with no messages and no detected language",
+      listConversations,
+      [summary({ ultima_mensagem: null, idioma_detectado: null })],
+    ],
+    [
+      "a detail with no suggested tour and a message without language",
+      loadDetail,
+      { ...SAMPLE_CONVERSATION, messages: [{ ...firstMessage, idioma: null }] },
+    ],
+    ["a detail with the suggested tour", loadDetail, withTour(SAMPLE_SUGGESTED_TOUR)],
+  ])("accepts %s that follows the contract", async (_case, load, body) => {
+    respondWith(body);
 
-    expect(result).toEqual([{ id: "1" }]);
+    expect(await load()).toEqual(body);
+  });
+
+  it.each(["baixa", "media", "alta"] as const)(
+    "accepts a suggested tour with %s difficulty",
+    async (level) => {
+      const detail = withTour({ ...SAMPLE_SUGGESTED_TOUR, dificuldade_fisica: level });
+      respondWith(detail);
+
+      expect(await loadDetail()).toEqual(detail);
+    }
+  );
+
+  it.each([
+    ["a list item missing required fields", listConversations, [{ id: "1" }]],
+    [
+      "a suggested tour with a field of the wrong type",
+      loadDetail,
+      withTour({ ...SAMPLE_SUGGESTED_TOUR, preco_reais: "barato" }),
+    ],
+    [
+      "a suggested tour with an unknown difficulty",
+      loadDetail,
+      withTour({ ...SAMPLE_SUGGESTED_TOUR, dificuldade_fisica: "extrema" }),
+    ],
+    ["a suggested tour that is not an object", loadDetail, withTour("trilha-das-emendas")],
+    ["a status that is not a known one", loadDetail, { ...withTour(null), status: "arquivada" }],
+  ])("returns null for %s", async (_case, load, body) => {
+    respondWith(body);
+
+    expect(await load()).toBeNull();
   });
 
   it("listConversations returns null when the response is not ok", async () => {
@@ -118,8 +168,9 @@ describe("lib/api", () => {
   });
 
   it("updateConversationStatus sends a PATCH with the chosen status and returns the summary", async () => {
-    const summary = { id: "c1", status: "aberta" };
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, summary));
+    const header = summary({ id: "c1", status: "aberta" });
+    const { ultima_mensagem: _preview, ...updated } = header;
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, updated));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await updateConversationStatus("c1", "aberta");
@@ -128,7 +179,7 @@ describe("lib/api", () => {
     expect(url).toContain("/api/conversations/c1/status");
     expect(init.method).toBe("PATCH");
     expect(JSON.parse(init.body)).toEqual({ status: "aberta" });
-    expect(result).toEqual({ ok: true, data: summary });
+    expect(result).toEqual({ ok: true, data: updated });
   });
 
   it("updateConversationStatus reports the HTTP status when the API rejects the change", async () => {
@@ -141,6 +192,16 @@ describe("lib/api", () => {
       ok: false,
       status: 404,
       message: "conversa não encontrada",
+    });
+  });
+
+  it("updateConversationStatus reports an unexpected body instead of trusting it", async () => {
+    respondWith({ id: "c1", status: 7 });
+
+    expect(await updateConversationStatus("c1", "aberta")).toEqual({
+      ok: false,
+      status: 200,
+      message: "resposta inesperada do servidor",
     });
   });
 });

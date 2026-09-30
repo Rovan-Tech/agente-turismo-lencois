@@ -5,11 +5,13 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.schema import ForeignKey
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.models.message import Message
+    from app.models.tour import Tour
 
 
 class ConversationStatus(str, enum.Enum):
@@ -27,6 +29,10 @@ class Conversation(Base):
         String(20), default=ConversationStatus.ABERTA
     )
     idioma_detectado: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # Último passeio que o assistente recomendou (validado contra os candidatos enviados ao LLM).
+    passeio_sugerido_id: Mapped[str | None] = mapped_column(
+        ForeignKey("tours.id"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
@@ -36,6 +42,7 @@ class Conversation(Base):
         onupdate=lambda: datetime.now(UTC),
     )
 
+    passeio_sugerido: Mapped["Tour | None"] = relationship()
     messages: Mapped[list["Message"]] = relationship(
         back_populates="conversation", order_by="Message.created_at", cascade="all, delete-orphan"
     )

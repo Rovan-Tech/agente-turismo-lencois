@@ -114,15 +114,17 @@ async def get_conversation(
     """Devolve a conversa com todas as mensagens, ou 404 se não existir."""
     result = await db.execute(
         select(Conversation)
-        .options(selectinload(Conversation.messages))
+        .options(selectinload(Conversation.messages), selectinload(Conversation.passeio_sugerido))
         .where(Conversation.id == conversation_id)
     )
     conversation = result.scalars().first()
     if not conversation:
         raise HTTPException(status_code=404, detail="conversa não encontrada")
 
+    suggested = conversation.passeio_sugerido
     return {
         **_summary(conversation),
+        "passeio_sugerido": suggested.to_catalog_dict() if suggested else None,
         "messages": [
             {
                 "id": m.id,

@@ -11,7 +11,8 @@ from app.models import Conversation, Message, Tour  # noqa: F401 — registram o
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False: sem isso o Alembic desativa os loggers do app já criados.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 
