@@ -106,6 +106,22 @@ async def test_cors_blocks_untrusted_origin(client):
     assert "access-control-allow-origin" not in {k.lower() for k in response.headers}
 
 
+@pytest.mark.parametrize("method", ["PUT", "DELETE"])
+@pytest.mark.asyncio
+async def test_cors_preflight_allows_edit_and_delete_from_trusted_origin(client, method):
+    from app.core.config import get_settings
+
+    response = await client.options(
+        "/api/tours/qualquer-id",
+        headers={
+            "Origin": get_settings().frontend_origin,
+            "Access-Control-Request-Method": method,
+        },
+    )
+    assert response.status_code == 200
+    assert method in response.headers["access-control-allow-methods"]
+
+
 def test_valid_dashboard_token_is_accepted():
     assert is_valid_dashboard_token("Bearer abc123", "abc123") is True
 

@@ -60,6 +60,11 @@ disallow_untyped_calls = false
 [tool.coverage.run]
 source = ["app"]
 branch = true
+# SQLAlchemy async usa greenlet pra fazer a ponte com o driver; sem isso o coverage perde o
+# rastreamento da linha seguinte a um `await` que passou pelo greenlet, reportando falso-negativo.
+# "thread" também entra: sem ele, código síncrono rodado no threadpool do Starlette (dependências
+# `def`, não `async def`) apareceria como não coberto.
+concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
 show_missing = true
