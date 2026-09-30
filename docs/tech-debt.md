@@ -68,13 +68,20 @@ apareciam com menos cobertura do que realmente tinham — ver `[tool.coverage.ru
 
 ## Baixa prioridade
 
-- `ANN202`/`ANN204` (1 cada), `PLR0913` (1 função com > 5 parâmetros).
+- `ANN202`/`ANN204` (1 cada), `PLR0913` (a de `process_incoming_message` foi resolvida com o objeto `IncomingMessage`).
 - Duplicação: as três entradas de `seed.py` e os setups repetidos de `test_webhook.py` e
   `ConversationsPage.test.tsx` viram helper/fixture ao serem tocados. (Os testes novos já usam
   esse padrão: `backend/tests/test_tours.py` tem `_persist`/`_valid_payload`,
   `frontend/tests/unit/fixtures.ts` compartilha `SAMPLE_TOUR`/`fillTourFormRequiredFields`.)
-- Funções acima de 40 linhas: `services/message_handler.py:process_incoming_message` (50),
-  `alembic/versions/0001_initial_schema.py:upgrade` (44, gerada), `tests/conftest.py:sample_tours` (45).
+- Funções acima de 40 linhas: `alembic/versions/0001_initial_schema.py:upgrade` (44, gerada), `tests/conftest.py:sample_tours` (45).
+- Áudio: o teto é só em bytes (`MAX_AUDIO_BYTES`, 5 MiB ≈ 20–30 min de Opus do WhatsApp); um limite
+  por duração (ler o cabeçalho Ogg antes do Whisper) segue pendente.
+- `process_incoming_message` faz `commit` e só depois `send_text_message`: se o envio falhar, o
+  webhook devolve 500 e o reenvio da Meta duplica as mensagens no painel. A idempotência por
+  `message.id` está na tarefa "Processar o webhook em background e tornar idempotente".
+- Observabilidade: o app não configura `logging` (sem `basicConfig` em `app/main.py`), então o logger
+  raiz fica em WARNING e logs INFO, como o `áudio recusado: acima de N bytes` do handler, não
+  aparecem no uvicorn. Configurar o nível/formato de log na inicialização.
 - `pytest-randomly` está ativo: se algum teste novo depender de ordem, ele aparece como flaky.
 
 ## Resolvido (era alta prioridade)

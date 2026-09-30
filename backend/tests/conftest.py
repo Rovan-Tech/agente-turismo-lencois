@@ -8,6 +8,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 from app.models.tour import DifficultyLevel, Tour
+from app.services import message_handler, whatsapp_client
 
 TEST_DASHBOARD_TOKEN = "test-dashboard-token"
 
@@ -41,6 +42,27 @@ async def client(db_session, monkeypatch):
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def pipeline_spies(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[object]]:
+    """Espiona as fronteiras externas do bot (envio ao WhatsApp, Groq e transcrição)."""
+    import app.services.transcription as transcription_module
+
+    calls: dict[str, list[object]] = {"sent": [], "transcribed": [], "asked": []}
+
+    async def fake_send_text_message(settings, to, body):
+        calls["sent"].append(body)
+
+    async def fake_ask_groq(settings, system_prompt, user_message):
+        calls["asked"].append(user_message)
+
+    monkeypatch.setattr(whatsapp_client, "send_text_message", fake_send_text_message)
+    monkeypatch.setattr(message_handler, "ask_groq", fake_ask_groq)
+    monkeypatch.setattr(
+        transcription_module, "transcribe_audio", lambda *args: calls["transcribed"].append(args)
+    )
+    return calls
 
 
 @pytest.fixture

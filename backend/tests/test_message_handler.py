@@ -10,6 +10,7 @@ from app.models.message import Message, MessageType
 from app.services import message_handler, whatsapp_client
 from app.services.groq_client import GroqReply
 from app.services.message_handler import (
+    IncomingMessage,
     get_or_create_open_conversation,
     process_incoming_message,
     resolve_incoming_text,
@@ -69,7 +70,7 @@ async def test_resolve_incoming_text_transcribes_audio(monkeypatch):
     async def fake_get_media_url(settings, media_id):
         return "https://media.example/x"
 
-    async def fake_download_media(settings, media_url):
+    async def fake_download_media(settings, media_url, max_bytes):
         return b"raw-audio-bytes"
 
     seen_paths = []
@@ -108,7 +109,7 @@ async def test_process_incoming_message_persists_reply_and_updates_status(
     monkeypatch.setattr(message_handler, "ask_groq", fake_ask_groq)
 
     conversation = await process_incoming_message(
-        db_session, get_settings(), "5598900000004", "text", text_body="quiero un tour"
+        db_session, get_settings(), IncomingMessage("5598900000004", "text", "quiero un tour")
     )
 
     assert sent == ["Ya llamo a alguien."]
@@ -121,3 +122,76 @@ async def test_process_incoming_message_persists_reply_and_updates_status(
         .order_by(Message.created_at)
     )
     assert list(result.scalars().all()) == ["quiero un tour", "Ya llamo a alguien."]
+
+
+@pytest.fixture
+def oversized_audio(monkeypatch, pipeline_spies):
+    """Simula um áudio acima do limite; devolve os espiões de envio, transcrição e Groq."""
+
+    async def fake_get_media_url(settings, media_id):
+        return "https://media.example/x"
+
+    async def fake_download_media(settings, media_url, max_bytes):
+        raise whatsapp_client.MediaTooLargeError(max_bytes)
+
+    monkeypatch.setattr(whatsapp_client, "get_media_url", fake_get_media_url)
+    monkeypatch.setattr(whatsapp_client, "download_media", fake_download_media)
+    return pipeline_spies
+
+
+@pytest.mark.asyncio
+async def test_process_incoming_message_refuses_oversized_audio_without_transcribing(
+    db_session, oversized_audio
+):
+    incoming = IncomingMessage("5598900000005", "audio", media_id="media-1")
+
+    conversation = await process_incoming_message(db_session, get_settings(), incoming)
+
+    assert oversized_audio["transcribed"] == []
+    assert oversized_audio["asked"] == []
+    assert oversized_audio["sent"] == [message_handler.AUDIO_TOO_LONG_REPLY]
+    result = await db_session.execute(
+        select(Message.tipo, Message.conteudo)
+        .where(Message.conversation_id == conversation.id)
+        .order_by(Message.created_at)
+    )
+    # A entrada é TEXTO: o painel rotula AUDIO_TRANSCRITO como "transcrito de áudio".
+    assert [tuple(row) for row in result] == [
+        (MessageType.TEXTO, message_handler.AUDIO_TOO_LONG_NOTE),
+        (MessageType.TEXTO, message_handler.AUDIO_TOO_LONG_REPLY),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_resolve_incoming_text_passes_configured_limit_to_download(monkeypatch):
+    seen = []
+
+    async def fake_get_media_url(settings, media_id):
+        return "https://media.example/x"
+
+    async def fake_download_media(settings, media_url, max_bytes):
+        seen.append(max_bytes)
+        return b"audio"
+
+    monkeypatch.setattr(whatsapp_client, "get_media_url", fake_get_media_url)
+    monkeypatch.setattr(whatsapp_client, "download_media", fake_download_media)
+    monkeypatch.setattr(transcription_module, "transcribe_audio", lambda s, p: ("ok", "pt"))
+    settings = get_settings()
+    monkeypatch.setattr(settings, "max_audio_bytes", 1234)
+
+    await resolve_incoming_text(settings, "audio", None, "media-1")
+
+    assert seen == [1234]
+
+
+@pytest.mark.asyncio
+async def test_process_incoming_message_logs_oversized_audio_without_personal_data(
+    db_session, oversized_audio, caplog
+):
+    incoming = IncomingMessage("5598900000006", "audio", media_id="media-1")
+
+    with caplog.at_level("INFO", logger=message_handler.logger.name):
+        await process_incoming_message(db_session, get_settings(), incoming)
+
+    assert "áudio recusado" in caplog.text
+    assert "5598900000006" not in caplog.text

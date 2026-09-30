@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings, get_settings
 from app.core.security import is_valid_whatsapp_signature
 from app.db.session import get_db
-from app.services.message_handler import process_incoming_message
+from app.services.message_handler import IncomingMessage, process_incoming_message
 
 router = APIRouter(prefix="/webhook/whatsapp", tags=["webhook"])
 
@@ -61,12 +61,12 @@ async def receive_webhook(
             continue
 
         if msg_type == "text":
-            await process_incoming_message(
-                db, settings, phone, "text", text_body=msg.get("text", {}).get("body")
-            )
+            text_body = msg.get("text", {}).get("body")
+            await process_incoming_message(db, settings, IncomingMessage(phone, "text", text_body))
         elif msg_type == "audio":
+            media_id = msg.get("audio", {}).get("id")
             await process_incoming_message(
-                db, settings, phone, "audio", media_id=msg.get("audio", {}).get("id")
+                db, settings, IncomingMessage(phone, "audio", media_id=media_id)
             )
 
     return {"status": "ok"}
