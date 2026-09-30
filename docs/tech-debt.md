@@ -101,6 +101,43 @@ apareciam com menos cobertura do que realmente tinham — ver `[tool.coverage.ru
   aparecem no uvicorn. Configurar o nível/formato de log na inicialização.
 - `pytest-randomly` está ativo: se algum teste novo depender de ordem, ele aparece como flaky.
 
+## Conformidade com o Manual V5 (medida em 2026-09-30)
+
+Lacunas entre o código/infra atuais e o `docs/checklist-engenharia.md` (ADR-0001). Os itens ⏳ do
+checklist apontam para cá. As regras valem para código novo ou alterado; estes itens são o legado e a
+infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
+
+| ID | Item do checklist | Lacuna | Prioridade |
+| --- | --- | --- | --- |
+| TD-A1 | `SEC-1` | gitleaks no CI e no pre-commit (hoje só o padrão do hook `post_edit_quality`) | Alta |
+| TD-A2 | `FE-1` | `zod` não está instalado; respostas de `lib/api.ts` não são validadas em runtime | Alta |
+| TD-A3 | `SEC-3` | sem limite de taxa no webhook e na API do painel (ex.: `slowapi`) | Alta |
+| TD-A4 | `SEC-5`, `INF-2` | SBOM CycloneDX (`cyclonedx-py`, `@cyclonedx/cyclonedx-npm`) não é gerado no CI | Média |
+| TD-A5 | `DATA-3` | sem tabela de auditoria append-only com hash chain; mutações (`status` da conversa, CRUD de passeios) não registram quem/quando/antes/depois | Alta |
+| TD-A6 | `FE-3` | painel autentica com token estático no bundle (`VITE_API_TOKEN`); migrar para sessão por cookie HttpOnly/Secure/SameSite=Strict atrás do Cloudflare Access | Média |
+| TD-G1 | `GIT-1` | pre-commit sem `check-added-large-files` (500 KB) | Baixa |
+| TD-M5 | `PY-4` | sem handler global RFC 7807; erros saem como `{"detail": ...}` do FastAPI | Média |
+| TD-M6 | `PY-5` | sem biblioteca de retry/circuit breaker (`tenacity`); jitter e breaker não padronizados nas chamadas ao Groq e ao WhatsApp | Média |
+| TD-M7 | `FE-4` | não existe `frontend/public/_headers` com CSP; nonce dinâmico exigiria Worker/SSR | Média |
+| TD-M8 | `PY-3` | `StatusUpdate` (`api/conversations.py`) e `TourFields` (`api/tours.py`) sem `strict=True` nem `extra="forbid"` | Média |
+| TD-F1 | `FE-5` | `size-limit` (200 KB gzip/chunk) fora do gate; rotas sem `React.lazy`/`Suspense` | Média |
+| TD-F2 | `FE-8` | Storybook não adotado (exige ADR) | Baixa |
+| TD-F3 | `FE-2` | painel em `pages/components/lib`; migração para `features/` só quando reescrito | Baixa |
+| TD-O1 | `OBS-1`, `OBS-2` | sem logs JSON com `correlation_id`/`trace_id`/`span_id`, sem filtro de PII, sem OpenTelemetry nem métricas RED/USE | Alta |
+| TD-O2 | `OBS-4` | SLO/SLA/SLI e plano de recuperação de desastres (RPO/RTO < 15 min) não documentados; definir em `docs/slo.md` e `docs/deploy.md` (PITR do Neon, rollback do Cloud Run) | Média |
+| TD-O3 | `OBS-3` | Chaos Engineering em staging inexistente (não há staging) | Baixa |
+| TD-I1 | `INF-1` | `backend/Dockerfile` single-stage em `python:3.11-slim` (usuário já é não-root) | Média |
+| TD-I2 | `INF-2` | sem Trivy/Grype nem assinatura Cosign no `deploy.yml` | Média |
+| TD-I3 | `INF-3` | Checkov ausente; `ci.yml` sem bloco `permissions:` | Média |
+| TD-I4 | `INF-5` | sem canary (divisão de tráfego do Cloud Run), flag de desligamento e rollback automático | Média |
+| TD-T1 | `TEST-2` | mutation testing (`mutmut`, `stryker`) fora do gate | Baixa |
+| TD-T2 | `TEST-3` | DAST com OWASP ZAP não roda (não há staging); `/security-check` cobre o pentest local | Baixa |
+
+**Fora da dívida (N/A por arquitetura, ADR-0001):** RLS (`DATA-4`, single-tenant), mTLS/service mesh
+(`INF-6`, serviço único), Transactional Outbox (`PY-6`, sem mensageria). **Substituições permanentes
+por custo/peso (ADR-0001):** SonarQube → bandit + Semgrep + ruff `S` (`SEC-4`); NeMo Guardrails/Llama
+Guard → delimitação + limite + filtro + teste adversário (`AI-1`).
+
 ## Resolvido (era alta prioridade)
 
 - ~~Cobertura baixa em código crítico~~: `seed.py` (dados do catálogo validados, 0%→43% — falta só
