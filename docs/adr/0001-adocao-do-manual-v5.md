@@ -1,6 +1,6 @@
 # ADR-0001: Adoção do Manual Corporativo V5 e adaptações ao projeto
 
-- **Status:** Proposto (aguarda aprovação do Patrick)
+- **Status:** Aprovado (pelo Patrick, 2026-09-30)
 - **Data:** 2026-09-30
 - **Autores:** Patrick / Claude Code
 - **Checklist afetado:** todos (`docs/checklist-engenharia.md`)

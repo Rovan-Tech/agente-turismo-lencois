@@ -12,4 +12,4 @@ um ADR aprovado aqui** (Manual V5 §2; item `GOV-1` do `docs/checklist-engenhari
 
 | ADR | Título | Status |
 |---|---|---|
-| [0001](0001-adocao-do-manual-v5.md) | Adoção do Manual Corporativo V5 e adaptações ao projeto | Proposto |
+| [0001](0001-adocao-do-manual-v5.md) | Adoção do Manual Corporativo V5 e adaptações ao projeto | Aprovado |
