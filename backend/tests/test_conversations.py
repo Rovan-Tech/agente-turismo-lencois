@@ -267,3 +267,53 @@ async def test_timestamps_are_always_serialized_as_utc(client, db_session):
     ]
     assert all(stamp.endswith("+00:00") for stamp in stamps)
     assert summary["ultima_mensagem"]["created_at"] == "2026-09-28T09:05:00+00:00"
+
+
+async def _suggesting_conversation(db_session, sample_tours, phone, active=True):
+    """Conversa cujo último passeio sugerido é o primeiro do catálogo de exemplo."""
+    sample_tours[0].ativo = active
+    db_session.add_all(sample_tours)
+    conversation = await _create_conversation(db_session, phone, ConversationStatus.ABERTA)
+    conversation.passeio_sugerido_id = "passeio-bugre-orla"
+    await db_session.commit()
+    # Sem isso o Tour ficaria no mapa de identidade da sessão compartilhada com o app e um
+    # relacionamento não carregado (sem `selectinload`) passaria despercebido.
+    db_session.expunge_all()
+    return conversation
+
+
+@pytest.mark.asyncio
+async def test_detail_includes_the_suggested_tour(client, db_session, sample_tours):
+    conversation = await _suggesting_conversation(db_session, sample_tours, "5598900004001")
+
+    detail = (await client.get(f"/api/conversations/{conversation.id}")).json()
+
+    tour = detail["passeio_sugerido"]
+    assert tour["id"] == "passeio-bugre-orla"
+    assert tour["nome"] == "Passeio de bugre pela orla"
+    assert tour["acessivel_cadeirantes"] is True
+    assert tour["preco_reais"] == 100
+
+
+@pytest.mark.asyncio
+async def test_detail_without_a_suggestion_returns_null(client, db_session):
+    conversation = await _create_conversation(
+        db_session, "5598900004002", ConversationStatus.ABERTA
+    )
+
+    detail = (await client.get(f"/api/conversations/{conversation.id}")).json()
+
+    assert detail["passeio_sugerido"] is None
+
+
+@pytest.mark.asyncio
+async def test_detail_still_shows_a_suggested_tour_that_was_deactivated(
+    client, db_session, sample_tours
+):
+    conversation = await _suggesting_conversation(
+        db_session, sample_tours, "5598900004003", active=False
+    )
+
+    detail = (await client.get(f"/api/conversations/{conversation.id}")).json()
+
+    assert detail["passeio_sugerido"]["id"] == "passeio-bugre-orla"

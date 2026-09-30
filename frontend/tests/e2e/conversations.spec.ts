@@ -7,6 +7,19 @@ const CONVERSATION = {
   idioma_detectado: "en",
   created_at: "2026-09-20T09:00:00Z",
   updated_at: "2026-09-26T09:30:00Z",
+  passeio_sugerido: {
+    id: "lagoa-azul-barco",
+    nome: "Lagoa Azul de barco",
+    descricao: "Travessia de barco com parada para banho.",
+    dificuldade_fisica: "media",
+    caminhada_areia_minutos: 25,
+    acessivel_idosos: true,
+    acessivel_cadeirantes: false,
+    acessivel_criancas_pequenas: true,
+    duracao_horas: 2.5,
+    faixa_etaria_recomendada: "a partir de 4 anos",
+    preco_reais: 180.5,
+  },
   messages: [
     {
       id: "e2e-m1",
@@ -170,4 +183,28 @@ test("sizes the tourist's message bubble to its text instead of stretching it", 
   const bubble = page.getByText("quero falar com um atendente").locator("xpath=..");
   const thread = page.locator("ul", { has: bubble });
   expect((await boxOf(bubble)).width).toBeLessThan((await boxOf(thread)).width / 2);
+});
+
+test("shows the tour the assistant suggested for the conversation", async ({ page }) => {
+  await mockConversationApi(page);
+
+  await page.goto("/conversas/e2e-conversa");
+
+  const card = page.getByRole("region", { name: "Passeio sugerido pela IA" });
+  await expect(card.getByText("Lagoa Azul de barco")).toBeVisible();
+  await expect(card.getByText("Dificuldade média")).toBeVisible();
+  await expect(card.getByText("2,5h")).toBeVisible();
+  await expect(card.getByText("Acessível p/ idosos")).toBeVisible();
+  await expect(card.getByText("Acessível p/ cadeirantes")).toHaveCount(0);
+  await expect(card.getByText("R$ 180,50")).toBeVisible();
+});
+
+test("says so when the assistant suggested no tour", async ({ page }) => {
+  await page.route("**/api/conversations/e2e-conversa**", (route) =>
+    route.fulfill({ json: { ...CONVERSATION, passeio_sugerido: null } })
+  );
+
+  await page.goto("/conversas/e2e-conversa");
+
+  await expect(page.getByText("A IA ainda não sugeriu um passeio nesta conversa.")).toBeVisible();
 });

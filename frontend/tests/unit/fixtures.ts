@@ -4,6 +4,7 @@ import type {
   ConversationDetail,
   ConversationHeader,
   ConversationSummary,
+  SuggestedTour,
   Tour,
 } from "../../src/types";
 
@@ -41,8 +42,23 @@ const SAMPLE_HEADER: ConversationHeader = {
   updated_at: "2026-09-25T12:01:00Z",
 };
 
+export const SAMPLE_SUGGESTED_TOUR: SuggestedTour = {
+  id: "passeio-bugre-orla",
+  nome: "Mirante Vila Acessível",
+  descricao: "Caminho pavimentado, sem trecho de areia. Indicado para cadeirantes e idosos.",
+  dificuldade_fisica: "baixa",
+  caminhada_areia_minutos: 0,
+  acessivel_idosos: true,
+  acessivel_cadeirantes: true,
+  acessivel_criancas_pequenas: false,
+  duracao_horas: 1,
+  faixa_etaria_recomendada: "todas as idades",
+  preco_reais: 120,
+};
+
 export const SAMPLE_CONVERSATION: ConversationDetail = {
   ...SAMPLE_HEADER,
+  passeio_sugerido: null,
   messages: [
     {
       id: "m1",

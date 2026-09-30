@@ -1,11 +1,11 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import * as api from "../../src/lib/api";
 import { ConversationDetailPage } from "../../src/pages/ConversationDetailPage";
 import type { ConversationDetail, ConversationStatus } from "../../src/types";
-import { SAMPLE_CONVERSATION } from "./fixtures";
+import { SAMPLE_CONVERSATION, SAMPLE_SUGGESTED_TOUR } from "./fixtures";
 
 const RESOLVE_BUTTON = { name: "Marcar como resolvida" };
 
@@ -65,6 +65,29 @@ describe("ConversationDetailPage", () => {
     expect(screen.getByText("+55 98 99999-8888")).toBeInTheDocument();
     expect(screen.getByText("transcrito de áudio")).toBeInTheDocument();
     expect(screen.getByText("Recomendo o bugre!")).toBeInTheDocument();
+  });
+
+  it("shows the tour the assistant suggested in the side panel", async () => {
+    vi.spyOn(api, "getConversation").mockResolvedValue({
+      ...SAMPLE_CONVERSATION,
+      passeio_sugerido: SAMPLE_SUGGESTED_TOUR,
+    });
+
+    renderAt("abc123");
+
+    const card = await screen.findByRole("region", { name: "Passeio sugerido pela IA" });
+    expect(within(card).getByText("Mirante Vila Acessível")).toBeInTheDocument();
+    expect(within(card).getByText("R$ 120")).toBeInTheDocument();
+  });
+
+  it("says no tour was suggested yet when the conversation has none", async () => {
+    vi.spyOn(api, "getConversation").mockResolvedValue(SAMPLE_CONVERSATION);
+
+    renderAt("abc123");
+
+    expect(
+      await screen.findByText("A IA ainda não sugeriu um passeio nesta conversa.")
+    ).toBeInTheDocument();
   });
 
   it("shows since when the customer talks to the agency and the detected language", async () => {
