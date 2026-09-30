@@ -31,6 +31,11 @@ class Message(Base):
     tipo: Mapped[MessageType] = mapped_column(String(20), default=MessageType.TEXTO)
     conteudo: Mapped[str] = mapped_column(Text)
     idioma: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # `message.id` da Meta em cada mensagem recebida: o índice único barra o reprocessamento quando
+    # ela reenvia o webhook. Nulo nas respostas do bot (saída).
+    whatsapp_message_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, unique=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

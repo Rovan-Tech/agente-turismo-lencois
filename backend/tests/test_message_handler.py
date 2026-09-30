@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 import app.services.transcription as transcription_module
 from app.core.config import get_settings
@@ -112,6 +113,7 @@ async def test_process_incoming_message_persists_reply_and_updates_status(
         db_session, get_settings(), IncomingMessage("5598900000004", "text", "quiero un tour")
     )
 
+    assert conversation is not None
     assert sent == ["Ya llamo a alguien."]
     assert conversation.idioma_detectado == "es"
     assert conversation.status == ConversationStatus.PRECISA_ATENCAO
@@ -147,6 +149,7 @@ async def test_process_incoming_message_refuses_oversized_audio_without_transcri
 
     conversation = await process_incoming_message(db_session, get_settings(), incoming)
 
+    assert conversation is not None
     assert oversized_audio["transcribed"] == []
     assert oversized_audio["asked"] == []
     assert oversized_audio["sent"] == [message_handler.AUDIO_TOO_LONG_REPLY]
@@ -195,3 +198,131 @@ async def test_process_incoming_message_logs_oversized_audio_without_personal_da
 
     assert "áudio recusado" in caplog.text
     assert "5598900000006" not in caplog.text
+
+
+@pytest.fixture
+def blind_duplicate_check(monkeypatch):
+    """Faz a checagem inicial não ver a duplicata, como num reenvio simultâneo em outra conexão."""
+
+    async def never_duplicate(db, whatsapp_message_id):
+        return False
+
+    monkeypatch.setattr(message_handler, "_is_duplicate", never_duplicate)
+
+
+async def _process(db, incoming):
+    return await process_incoming_message(db, get_settings(), incoming)
+
+
+@pytest.mark.asyncio
+async def test_process_incoming_message_skips_message_id_already_stored(db_session, pipeline_spies):
+    incoming = IncomingMessage("5598900000010", "text", "oi", message_id="wamid.x")
+
+    first = await _process(db_session, incoming)
+    second = await _process(db_session, incoming)
+
+    assert (first is None, second is None) == (False, True)
+    assert pipeline_spies["asked"] == ["oi"]
+    assert pipeline_spies["sent"] == ["ok"]
+
+
+@pytest.mark.asyncio
+async def test_process_incoming_message_drops_concurrent_duplicate_on_unique_conflict(
+    db_session, pipeline_spies, blind_duplicate_check
+):
+    """Dois reenvios em paralelo: o segundo passa da checagem, mas o índice único o barra."""
+    incoming = IncomingMessage("5598900000011", "text", "oi", message_id="wamid.corrida")
+    await _process(db_session, incoming)
+
+    assert await _process(db_session, incoming) is None
+    assert pipeline_spies["asked"] == ["oi"]
+    assert pipeline_spies["sent"] == ["ok"]
+
+
+@pytest.mark.asyncio
+async def test_process_incoming_message_without_message_id_is_never_a_duplicate(
+    db_session, pipeline_spies
+):
+    incoming = IncomingMessage("5598900000012", "text", "oi")
+
+    await _process(db_session, incoming)
+    await _process(db_session, incoming)
+
+    assert pipeline_spies["asked"] == ["oi", "oi"]
+
+
+@pytest.mark.asyncio
+async def test_duplicate_audio_is_skipped_before_downloading(
+    db_session, oversized_audio, monkeypatch
+):
+    downloads: list[str] = []
+
+    async def counting_download(settings, media_url, max_bytes):
+        downloads.append(media_url)
+        raise whatsapp_client.MediaTooLargeError(max_bytes)
+
+    monkeypatch.setattr(whatsapp_client, "download_media", counting_download)
+    incoming = IncomingMessage("5598900000013", "audio", media_id="m1", message_id="wamid.audio")
+
+    await _process(db_session, incoming)
+    await _process(db_session, incoming)
+
+    assert len(downloads) == 1
+    assert oversized_audio["sent"] == [message_handler.AUDIO_TOO_LONG_REPLY]
+
+
+class _WhatsAppDownError(Exception):
+    pass
+
+
+@pytest.mark.asyncio
+async def test_failed_send_leaves_message_unrecorded_so_the_retry_is_processed(
+    db_session, pipeline_spies, monkeypatch
+):
+    incoming = IncomingMessage("5598900000014", "text", "oi", message_id="wamid.envio")
+    working_send = whatsapp_client.send_text_message
+
+    async def failing_send(settings, to, body):
+        raise _WhatsAppDownError
+
+    monkeypatch.setattr(whatsapp_client, "send_text_message", failing_send)
+    with pytest.raises(_WhatsAppDownError):
+        await _process(db_session, incoming)
+    await db_session.rollback()  # o fim da requisição descarta a transação, como em produção
+
+    monkeypatch.setattr(whatsapp_client, "send_text_message", working_send)
+    retried = await _process(db_session, incoming)
+
+    assert retried is not None
+    assert pipeline_spies["sent"] == ["ok"]
+    stored = await db_session.execute(select(Message.conteudo).order_by(Message.created_at))
+    assert list(stored.scalars().all()) == ["oi", "ok"]
+
+
+@pytest.mark.asyncio
+async def test_concurrent_duplicate_oversized_audio_is_dropped_without_a_second_reply(
+    db_session, oversized_audio, blind_duplicate_check
+):
+    incoming = IncomingMessage("5598900000015", "audio", media_id="m2", message_id="wamid.audio2")
+    await _process(db_session, incoming)
+
+    assert await _process(db_session, incoming) is None
+    assert oversized_audio["sent"] == [message_handler.AUDIO_TOO_LONG_REPLY]
+
+
+@pytest.mark.asyncio
+async def test_integrity_error_without_message_id_is_not_mistaken_for_a_duplicate(
+    db_session, monkeypatch
+):
+    conversation = await get_or_create_open_conversation(db_session, "5598900000016")
+    incoming = IncomingMessage("5598900000016", "text", "oi")
+
+    async def failing_flush():
+        raise IntegrityError("INSERT", {}, ValueError("outra constraint"))
+
+    monkeypatch.setattr(db_session, "flush", failing_flush)
+
+    with pytest.raises(IntegrityError):
+        await message_handler._store_incoming(
+            db_session, conversation, incoming, MessageType.TEXTO, "oi"
+        )

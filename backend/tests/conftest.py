@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.main import app
 from app.models.tour import DifficultyLevel, Tour
 from app.services import message_handler, whatsapp_client
+from app.services.groq_client import GroqReply
 
 TEST_DASHBOARD_TOKEN = "test-dashboard-token"
 
@@ -56,6 +57,7 @@ def pipeline_spies(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[object]]:
 
     async def fake_ask_groq(settings, system_prompt, user_message):
         calls["asked"].append(user_message)
+        return GroqReply(idioma="pt", precisa_atencao_humana=False, resposta="ok")
 
     monkeypatch.setattr(whatsapp_client, "send_text_message", fake_send_text_message)
     monkeypatch.setattr(message_handler, "ask_groq", fake_ask_groq)
