@@ -29,3 +29,13 @@ Direção das dependências: `api/` (rotas) → `services/` → `models/`/`db/`;
 ## Decisões fixas (não reabrir sem o teste de qualidade documentado)
 Ver `docs/decisoes-de-arquitetura.md`: Groq como único LLM, faster-whisper self-hosted, sem
 LibreTranslate, WhatsApp Cloud API oficial, sem persistir áudio bruto, custo zero de infra.
+
+## Processo pré-código (Manual V5, §2)
+- **ADR (`GOV-1`)**: mudança de banco, nova biblioteca de infraestrutura, novo padrão de
+  comunicação ou novo provedor de LLM **não começa** sem ADR aprovado em `docs/adr/` (skill `/adr`):
+  Contexto, Opções avaliadas, Decisão, Consequências positivas e Riscos/trade-offs.
+- **Threat model (`GOV-2`)**: funcionalidade crítica (endpoint, webhook, autenticação, dado pessoal,
+  LLM) tem modelo STRIDE em `docs/threat-models/` **antes** do código (skill `/threat-model`); cada
+  mitigação vira teste automatizado.
+- Decisões anteriores ao processo estão em `docs/decisoes-de-arquitetura.md`; a adoção do manual e
+  as adaptações ao projeto, em `docs/adr/0001-adocao-do-manual-v5.md`.

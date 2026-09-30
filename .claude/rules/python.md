@@ -49,3 +49,23 @@ Ferramentas: `ruff` (lint+format, linha de 100), `mypy --strict`, `pytest`. O ga
 
 ## Nunca
 - Silenciar lint, tipo ou teste para passar no gate. Se a regra estiver errada, pergunte ao Patrick.
+
+## Manual V5 (itens do `docs/checklist-engenharia.md`)
+- **Contratos (`PY-3`)**: schema Pydantic v2 de entrada com `ConfigDict(strict=True, extra="forbid")`
+  e limites (`max_length`, `ge`/`le`). Nada de `dict` solto na fronteira. Única exceção: campo que
+  o JSON não expressa (`datetime`, `UUID`, `Enum`, `Decimal`) usa `Field(strict=False)` com
+  comentário do porquê. ✅ `model_config = ConfigDict(strict=True, extra="forbid")` ·
+  ❌ `extra="allow"`
+- **Erros (`PY-4`)**: exceções de domínio com hierarquia própria; resposta de erro no padrão
+  RFC 7807 (`type`, `title`, `status`, `detail`, `instance`, `code`, `timestamp`). Enquanto o handler
+  global não existe (TD-M5), use `HTTPException(detail=...)` e não invente outro formato.
+- **Resiliência (`PY-5`)**: toda chamada externa com timeout, retry só em operação idempotente
+  (backoff exponencial **com jitter**, teto de tentativas) e degradação graciosa (mensagem de
+  fallback ou handoff humano). Nunca laço de retry infinito.
+- **Eventos (`PY-6`)**: escrita no banco + publicação assíncrona na mesma transação (Transactional
+  Outbox). Dual write é proibido.
+- **Tipos (`PY-2`)**: `mypy --strict` sem erro novo; `Any` só com justificativa **na mesma linha**
+  (o hook acusa); `# type: ignore[codigo]  # porquê`.
+- **Camadas (`PY-1`)**: o mapa do Manual (`domain/application/infrastructure/presentation`)
+  corresponde a `services/` (regra, sem FastAPI/ORM em lógica pura), `models/db/` (persistência) e
+  `api/` (apresentação). A estrutura de pastas não muda sem ADR.

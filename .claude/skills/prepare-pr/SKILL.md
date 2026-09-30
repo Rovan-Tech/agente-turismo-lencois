@@ -44,7 +44,9 @@ Automatiza tudo entre "terminei de codar nesta branch" e "PR aberto, pronto para
 5. **Segurança**: rode o skill `/security-check`. Toda falha é corrigida com teste de regressão.
 
 6. **Fluxo de revisão e gate**: confirme que `code-reviewer` e `qa-tester` aprovaram o código
-   atual (o hook `SubagentStop` registra o veredito) e rode o gate completo, a mesma fonte do CI:
+   atual (o hook `SubagentStop` registra o veredito **e a contagem do checklist**; `FALHA = 0` nos
+   dois) e rode o gate completo, a mesma fonte do CI. Antes, confira o Anti-AI-slop (`GIT-3`): zero
+   `print`/`console.log`/`debugger`, código comentado e comentário redundante (`/clean-code`):
 
    ```bash
    python3 scripts/quality_gate.py --full
@@ -67,7 +69,12 @@ Automatiza tudo entre "terminei de codar nesta branch" e "PR aberto, pronto para
 
    ## Test plan
    - [x] `python3 scripts/quality_gate.py --full` verde
-   - [x] code-reviewer e qa-tester APROVADOS
+   - [x] code-reviewer e qa-tester APROVADOS (checklist `docs/checklist-engenharia.md`:
+         OK _n_ · N/A _n_ · FALHA 0)
+
+   ## Checklist de engenharia (N/A justificados)
+   - ID: motivo
+   - ADR: docs/adr/NNNN-… (se houve) · Threat model: docs/threat-models/… (se houve)
 
    ## Security
    - [x] bandit / pip-audit / npm audit / pentest local (/security-check)

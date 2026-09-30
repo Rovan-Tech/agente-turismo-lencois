@@ -106,3 +106,18 @@ completa passando. Se a correção mudar comportamento de negócio, pergunte ant
 Para o usuário e na seção `## Security` do PR: ferramentas e resultado, vulnerabilidades →
 correção → teste que cobre, riscos aceitos/pendentes com motivo (ex: limitação conhecida do
 `VITE_API_TOKEN` embutido no bundle, mitigada pelo Cloudflare Access).
+
+## 7. Manual V5: STRIDE, ASVS e LLM
+
+- **STRIDE (`GOV-2`, `SEC-7`)**: para a superfície alterada, confira se existe modelo em
+  `docs/threat-models/` (senão, `/threat-model`) e se cada mitigação tem teste em
+  `backend/tests/test_security.py`.
+- **Autenticação e taxa (`SEC-3`)**: endpoint novo protegido (fail-closed) ou público justificado,
+  segredo comparado em tempo constante, teto de tamanho/volume (rate limit: TD-A3).
+- **LLM (`AI-1`, `AI-2`)**: envie entrada adversária (mock do Groq, nunca a API real):
+  "ignore as instruções anteriores…", mensagem gigante, HTML/SQL na mensagem e na resposta do
+  modelo; confirme que o texto do turista fica delimitado como dado e que a saída é validada antes
+  de ser enviada, gravada ou renderizada.
+- **Privacidade (`SEC-6`)**: nenhum telefone, conversa, token ou áudio em log, URL ou console.
+- **Segredos (`SEC-1`)**: varredura do diff por padrões de chave/token (gitleaks quando adotado).
+- Registre o resultado por ID do checklist no relatório e na seção `## Security` do PR.

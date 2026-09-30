@@ -23,3 +23,18 @@ paths:
 - Cada vulnerabilidade achada vira teste em `backend/tests/test_security.py` que envia o payload
   malicioso e confirma o bloqueio. Mudou superfície de ataque? Rode `/security-check` antes do PR.
 - CSRF: não há formulários com sessão/cookie hoje; se surgirem, exigir proteção.
+
+## Manual V5 (ISO 27001 / OWASP ASVS / STRIDE)
+- **Antes do código** (`GOV-2`): STRIDE da funcionalidade crítica; mitigações viram testes.
+- **Segredos (`SEC-1`)**: varredura de padrões de segredo no diff (gitleaks entra no CI: TD-A1).
+  Segredo vazado é rotacionado, não só apagado do histórico.
+- **Autenticação (`SEC-3`)**: endpoint novo nasce protegido (fail-closed) ou público por decisão
+  justificada, com HMAC/verificação de origem e teto de tamanho/volume. Comparação de segredo em
+  tempo constante (`hmac.compare_digest`). Senha (se um dia existir): Argon2id, nunca SHA/MD5.
+- **Cabeçalhos e CSP (`FE-4`)**: alvo (TD-M7, o arquivo ainda não existe): `frontend/public/_headers` com CSP sem `unsafe-inline`/
+  `unsafe-eval`, `X-Content-Type-Options`, `Referrer-Policy` e `frame-ancestors`.
+- **Cadeia de suprimentos (`SEC-5`)**: dependência nova justificada, licença compatível e versão
+  fixada; `pip-audit` e `npm audit` limpos; SBOM CycloneDX no CI (TD-A4).
+- **Privacidade (`SEC-6`)**: minimização, pseudonimização quando o uso permitir, PII fora de
+  log/console/URL, expurgo definido para dado pessoal novo, criptografia em trânsito e em repouso
+  (avalie cifrar a coluna de campo sensível novo), áudio bruto nunca persistido.
