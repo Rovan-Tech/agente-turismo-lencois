@@ -78,6 +78,125 @@ def test_record_verdict_marks_invalid_after_retry(state, monkeypatch):
     assert saved["qa-tester"]["verdict"] == "INVALIDO"
 
 
+HANDBACK = "SubagentHandback"
+
+
+def _handback(message):
+    return {"type": "tool_use", "name": HANDBACK, "input": {"message": message}}
+
+
+def _record(state, monkeypatch, transcript_lines=None, **extra):
+    """Roda o hook do code-reviewer; devolve o veredito salvo. `transcript_lines` vira o JSONL."""
+    data = {"agent_type": "code-reviewer", **extra}
+    if transcript_lines is not None:
+        path = state / "agent-x.jsonl"
+        raw = transcript_lines if isinstance(transcript_lines, bytes) else transcript_lines.encode()
+        path.write_bytes(raw)
+        data["agent_transcript_path"] = str(path)
+    _hook_input(monkeypatch, rv, data)
+    rv.main()
+    saved = json.loads((state / "state" / "verdicts.json").read_text())
+    return saved["code-reviewer"]["verdict"]
+
+
+def _transcript(*turns):
+    return "\n".join(json.dumps({"message": {"content": blocks}}) for blocks in turns) + "\n"
+
+
+def test_record_verdict_reads_report_from_subagent_handback(state, monkeypatch):
+    lines = _transcript([_handback(REVIEWER_OK)])
+
+    verdict = _record(state, monkeypatch, lines, last_assistant_message="Entreguei o relatório.")
+
+    assert verdict == "APROVADO"
+    report = next((state / "reports").glob("*-code-reviewer.md"))
+    assert report.read_text(encoding="utf-8") == REVIEWER_OK
+
+
+def test_record_verdict_uses_last_handback_of_the_transcript(state, monkeypatch):
+    lines = _transcript(
+        [_handback(QA_OK)], [{"type": "text", "text": "ok"}, _handback(REVIEWER_OK)]
+    )
+
+    assert _record(state, monkeypatch, lines) == "APROVADO"
+
+
+def test_record_verdict_ignores_session_transcript_path(state, monkeypatch):
+    """`transcript_path` é o da sessão principal; só o do próprio subagent vale."""
+    session = state / "session.jsonl"
+    session.write_text(_transcript([_handback(REVIEWER_OK)]), encoding="utf-8")
+
+    verdict = _record(
+        state,
+        monkeypatch,
+        last_assistant_message="feito",
+        transcript_path=str(session),
+        stop_hook_active=True,
+    )
+
+    assert verdict == "INVALIDO"
+
+
+def _bad_handback(**block):
+    """Linha de transcript com um bloco SubagentHandback de estrutura inválida."""
+    return _transcript([{"type": "tool_use", "name": HANDBACK, **block}])
+
+
+MALFORMED_TRANSCRIPTS = {
+    "empty": "",
+    "broken-json": "{quebrado",
+    "no-handback": '{"type": "assistant"}',
+    "invalid-utf8": b"\xff\xfe\x00{\n",
+    "deeply-nested": "[" * 100_000,
+    "line-not-object": "[1]\n5\nnull\n",
+    "message-not-dict": '{"message": "x"}',
+    "content-not-list": _transcript("texto"),
+    "input-is-string": _bad_handback(input="x"),
+    "input-is-null": _bad_handback(input=None),
+    "input-is-list": _bad_handback(input=["x"]),
+    "message-not-string": _bad_handback(input={"message": 5}),
+}
+
+
+@pytest.mark.parametrize("content", MALFORMED_TRANSCRIPTS.values(), ids=MALFORMED_TRANSCRIPTS)
+def test_record_verdict_falls_back_when_transcript_is_unusable(state, monkeypatch, content):
+    verdict = _record(state, monkeypatch, content, last_assistant_message=REVIEWER_OK)
+
+    assert verdict == "APROVADO"
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["agent-x.txt", "agent-x.jsonl\x00", "a" * 5000 + ".jsonl"],
+    ids=["suffix", "nul-byte", "name-too-long"],
+)
+def test_record_verdict_ignores_unsafe_transcript_paths(state, monkeypatch, name):
+    """Um handback existe em `agent-x.txt`, mas o caminho inseguro faz o hook usar o fallback."""
+    (state / "agent-x.txt").write_text(_transcript([_handback(REVIEWER_OK)]), encoding="utf-8")
+    fallback = REVIEWER_OK.replace("Escopo: a.py", "Escopo: fallback.py")
+
+    verdict = _record(
+        state,
+        monkeypatch,
+        last_assistant_message=fallback,
+        agent_transcript_path=str(state / name),
+    )
+
+    assert verdict == "APROVADO"
+    report = next((state / "reports").glob("*-code-reviewer.md"))
+    assert report.read_text(encoding="utf-8") == fallback
+
+
+def test_record_verdict_falls_back_when_transcript_is_missing(state, monkeypatch):
+    missing = str(state / "nao-existe.jsonl")
+
+    verdict = _record(
+        state, monkeypatch, last_assistant_message=REVIEWER_OK, agent_transcript_path=missing
+    )
+
+    assert verdict == "APROVADO"
+
+
 def test_record_verdict_ignores_other_agents(state, monkeypatch):
     _hook_input(monkeypatch, rv, {"agent_type": "Explore", "last_assistant_message": "x"})
 
