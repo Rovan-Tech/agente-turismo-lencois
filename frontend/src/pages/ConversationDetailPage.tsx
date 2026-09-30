@@ -1,35 +1,40 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { ConversationSidePanel } from "../components/ConversationSidePanel";
+import { LanguageAvatar } from "../components/LanguageAvatar";
+import { MessageBubble } from "../components/MessageBubble";
 import { StatusBadge } from "../components/StatusBadge";
-import { getConversation, resolveConversation } from "../lib/api";
-import type { ConversationDetail } from "../types";
+import { ChevronLeftIcon } from "../components/icons";
+import { getConversation, updateConversationStatus } from "../lib/api";
+import { formatPhone, languageName } from "../lib/conversations";
+import { formatCustomerSince } from "../lib/time";
+import type { ConversationDetail, ConversationStatus } from "../types";
 
 export function ConversationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [conversation, setConversation] = useState<ConversationDetail | null | undefined>(
     undefined
   );
-
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const [resolving, setResolving] = useState(false);
-  const [resolveFailed, setResolveFailed] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [updateFailed, setUpdateFailed] = useState(false);
 
-  async function handleResolve() {
+  async function handleStatusChange(next: ConversationStatus) {
     if (!id) return;
-    setResolving(true);
-    setResolveFailed(false);
-    const result = await resolveConversation(id);
-    setResolving(false);
+    setUpdating(true);
+    setUpdateFailed(false);
+    const result = await updateConversationStatus(id, next);
+    setUpdating(false);
     if (result.ok) {
-      // O botão sai da tela: leva o foco ao título para o usuário de teclado não se perder.
-      titleRef.current?.focus();
+      // O botão "Marcar como resolvida" sai da tela: leva o foco ao título para não se perder.
+      if (next === "resolvida") titleRef.current?.focus();
       // Só aplica se a tela ainda mostra a mesma conversa (resposta atrasada não vaza para outra).
       setConversation((current) =>
         current?.id === result.data.id ? { ...current, status: result.data.status } : current
       );
     } else {
-      setResolveFailed(true);
+      setUpdateFailed(true);
     }
   }
 
@@ -44,63 +49,60 @@ export function ConversationDetailPage() {
     };
   }, [id]);
 
-  return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <Link to="/" className="text-sm text-link hover:underline">
-        ← voltar
-      </Link>
+  const language = conversation ? languageName(conversation.idioma_detectado) : null;
 
-      {conversation === undefined && <p className="mt-8 text-muted">Carregando…</p>}
-      {conversation === null && <p className="mt-8 text-muted">Conversa não encontrada.</p>}
+  return (
+    <main className="flex flex-1 flex-col md:flex-row">
+      <section className="min-w-0 flex-1">
+        <Link
+          to="/"
+          className="flex items-center gap-1 px-4 pt-4 text-sm font-semibold text-link hover:underline sm:px-6"
+        >
+          <ChevronLeftIcon />
+          Conversas
+        </Link>
+
+        {conversation === undefined && <p className="mt-8 px-6 text-muted">Carregando…</p>}
+        {conversation === null && <p className="mt-8 px-6 text-muted">Conversa não encontrada.</p>}
+
+        {conversation && (
+          <>
+            <header className="mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-subtle px-4 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <LanguageAvatar idioma={conversation.idioma_detectado} />
+                <div>
+                  <h1
+                    ref={titleRef}
+                    tabIndex={-1}
+                    className="font-display text-xl font-semibold text-primary"
+                  >
+                    {formatPhone(conversation.whatsapp_phone)}
+                  </h1>
+                  <p className="text-sm text-muted">
+                    Cliente desde {formatCustomerSince(conversation.created_at)}
+                    {language ? ` · ${language}` : ""}
+                  </p>
+                </div>
+              </div>
+              <StatusBadge status={conversation.status} />
+            </header>
+
+            <ul className="flex flex-col gap-4 px-4 py-6 sm:px-6">
+              {conversation.messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
 
       {conversation && (
-        <>
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <h1
-              ref={titleRef}
-              tabIndex={-1}
-              className="font-display text-xl font-semibold text-primary"
-            >
-              {conversation.whatsapp_phone}
-            </h1>
-            <div className="flex items-center gap-3">
-              <StatusBadge status={conversation.status} />
-              {conversation.status !== "resolvida" && (
-                <button
-                  type="button"
-                  onClick={handleResolve}
-                  disabled={resolving}
-                  className="rounded-md border border-subtle px-4 py-2 text-sm font-medium text-primary hover:bg-subtle active:bg-subtle disabled:bg-subtle disabled:text-muted"
-                >
-                  {resolving ? "Marcando…" : "Marcar como resolvida"}
-                </button>
-              )}
-            </div>
-          </div>
-          {resolveFailed && (
-            <p role="alert" className="mt-2 text-sm text-status-error">
-              Não foi possível marcar como resolvida. Tente novamente.
-            </p>
-          )}
-
-          <ul className="mt-6 space-y-3">
-            {conversation.messages.map((message) => (
-              <li
-                key={message.id}
-                className={`max-w-md rounded-lg px-4 py-2 ${
-                  message.direction === "entrada"
-                    ? "border border-subtle bg-surface text-primary"
-                    : "ml-auto bg-action text-on-action"
-                }`}
-              >
-                <p>{message.conteudo}</p>
-                {message.tipo === "audio_transcrito" && (
-                  <p className="mt-1 text-xs">transcrito de áudio</p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </>
+        <ConversationSidePanel
+          status={conversation.status}
+          updating={updating}
+          updateFailed={updateFailed}
+          onChange={handleStatusChange}
+        />
       )}
     </main>
   );

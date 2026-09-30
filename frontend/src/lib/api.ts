@@ -1,5 +1,7 @@
 import type {
   ConversationDetail,
+  ConversationHeader,
+  ConversationStatus,
   ConversationSummary,
   Tour,
   TourCreateInput,
@@ -76,12 +78,15 @@ export function getConversation(id: string): Promise<ConversationDetail | null> 
   return fetchJson<ConversationDetail>(`/api/conversations/${id}`);
 }
 
-/** Única troca manual de status permitida: `aberta`/`precisa_atencao` são decididas pela IA. */
-export function resolveConversation(id: string): Promise<ApiResult<ConversationSummary>> {
-  return sendJson<ConversationSummary>(
+/** Troca o status da conversa (inclusive reabrir); o assistente o reavalia a cada mensagem. */
+export function updateConversationStatus(
+  id: string,
+  status: ConversationStatus
+): Promise<ApiResult<ConversationHeader>> {
+  return sendJson<ConversationHeader>(
     `/api/conversations/${encodeURIComponent(id)}/status`,
     "PATCH",
-    { status: "resolvida" }
+    { status }
   );
 }
 

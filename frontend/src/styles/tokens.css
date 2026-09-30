@@ -106,6 +106,8 @@
   --color-border-subtle: var(--palette-neutral-100);
   --color-border-strong: var(--palette-neutral-500);
   --color-focus-ring: var(--palette-primary-600);
+  --color-border-attention: var(--palette-secondary-700);
+  --color-indicator-online: var(--palette-success-600);
   --color-accent-subtle-bg: var(--palette-primary-100);
   --color-accent-subtle-fg: var(--palette-primary-800);
   --color-neutral-subtle-bg: var(--palette-neutral-100);
@@ -150,6 +152,11 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
+
+  /* Larguras estruturais do painel (a escala de espaçamento acima não tem esses tamanhos) */
+  --size-sidebar: 14rem;
+  --size-panel: 20rem;
+  --size-search: 18rem;
 
   /* Raios, sombras, z-index e animação */
   --radius-sm: 0.25rem;
@@ -197,6 +204,8 @@
     --color-border-subtle: var(--palette-neutral-700);
     --color-border-strong: var(--palette-neutral-400);
     --color-focus-ring: var(--palette-primary-300);
+    --color-border-attention: var(--palette-secondary-300);
+    --color-indicator-online: var(--palette-success-300);
     --color-accent-subtle-bg: var(--palette-primary-800);
     --color-accent-subtle-fg: var(--palette-primary-100);
     --color-neutral-subtle-bg: var(--palette-neutral-700);
@@ -230,6 +239,8 @@
   --color-border-subtle: var(--palette-neutral-700);
   --color-border-strong: var(--palette-neutral-400);
   --color-focus-ring: var(--palette-primary-300);
+  --color-border-attention: var(--palette-secondary-300);
+  --color-indicator-online: var(--palette-success-300);
   --color-accent-subtle-bg: var(--palette-primary-800);
   --color-accent-subtle-fg: var(--palette-primary-100);
   --color-neutral-subtle-bg: var(--palette-neutral-700);
