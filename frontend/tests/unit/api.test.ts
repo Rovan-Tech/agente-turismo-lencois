@@ -6,6 +6,7 @@ import {
   getConversation,
   listConversations,
   listTours,
+  resolveConversation,
   updateTour,
 } from "../../src/lib/api";
 import { SAMPLE_TOUR } from "./fixtures";
@@ -113,6 +114,33 @@ describe("lib/api", () => {
       ok: false,
       status: 0,
       message: "falha de conexão com o servidor",
+    });
+  });
+
+  it("resolveConversation sends a PATCH with the resolvida status and returns the summary", async () => {
+    const summary = { id: "c1", status: "resolvida" };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, summary));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await resolveConversation("c1");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/api/conversations/c1/status");
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body)).toEqual({ status: "resolvida" });
+    expect(result).toEqual({ ok: true, data: summary });
+  });
+
+  it("resolveConversation reports the HTTP status when the API rejects the change", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse(404, { detail: "conversa não encontrada" }))
+    );
+
+    expect(await resolveConversation("x")).toEqual({
+      ok: false,
+      status: 404,
+      message: "conversa não encontrada",
     });
   });
 });

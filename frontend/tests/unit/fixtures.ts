@@ -1,6 +1,6 @@
 import { fireEvent, screen } from "@testing-library/react";
 
-import type { Tour } from "../../src/types";
+import type { ConversationDetail, Tour } from "../../src/types";
 
 export const SAMPLE_TOUR: Tour = {
   id: "passeio-bugre-orla",
@@ -26,3 +26,21 @@ export function fillTourFormRequiredFields(id: string, nome: string) {
     target: { value: "todas as idades" },
   });
 }
+
+export const SAMPLE_CONVERSATION: ConversationDetail = {
+  id: "abc123",
+  whatsapp_phone: "5598999998888",
+  status: "aberta",
+  idioma_detectado: "pt",
+  updated_at: "2026-09-25T12:01:00Z",
+  messages: [
+    {
+      id: "m1",
+      direction: "entrada",
+      tipo: "texto",
+      conteudo: "quero um passeio",
+      idioma: "pt",
+      created_at: "2026-09-25T12:00:00Z",
+    },
+  ],
+};

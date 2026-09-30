@@ -83,6 +83,11 @@ apareciam com menos cobertura do que realmente tinham — ver `[tool.coverage.ru
   `--no-cpu-throttling` (cobrança por instância, pode sair do free tier) ou fila/Cloud Tasks.
   A resposta é enviada antes do `commit`: se o envio falha, o reenvio da Meta reprocessa; no caso
   raro inverso (envio ok e `commit` falha), o reenvio responde o turista duas vezes.
+- Resolver uma conversa enquanto o bot ainda responde nela (a chamada ao Groq leva segundos):
+  `_record_reply` grava o status decidido pela IA sobre o objeto carregado antes e pode
+  sobrescrever o `resolvida` recém-gravado; se o valor for igual, a mensagem do turista fica dentro
+  de uma conversa resolvida. A próxima mensagem abre outra conversa (o telefone aparece duas vezes).
+  Sem perda de dados; endurecer com `refresh`/`UPDATE ... WHERE status != 'resolvida'`.
 - Observabilidade: o app não configura `logging` (sem `basicConfig` em `app/main.py`), então o logger
   raiz fica em WARNING e logs INFO, como o `áudio recusado: acima de N bytes` do handler, não
   aparecem no uvicorn. Configurar o nível/formato de log na inicialização.

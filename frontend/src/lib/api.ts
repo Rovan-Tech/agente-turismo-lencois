@@ -46,7 +46,7 @@ function extractErrorMessage(body: unknown): string {
 
 async function sendJson<T>(
   path: string,
-  method: "POST" | "PUT" | "DELETE",
+  method: "POST" | "PUT" | "PATCH" | "DELETE",
   body?: unknown
 ): Promise<ApiResult<T>> {
   try {
@@ -74,6 +74,15 @@ export function listConversations(): Promise<ConversationSummary[] | null> {
 
 export function getConversation(id: string): Promise<ConversationDetail | null> {
   return fetchJson<ConversationDetail>(`/api/conversations/${id}`);
+}
+
+/** Única troca manual de status permitida: `aberta`/`precisa_atencao` são decididas pela IA. */
+export function resolveConversation(id: string): Promise<ApiResult<ConversationSummary>> {
+  return sendJson<ConversationSummary>(
+    `/api/conversations/${encodeURIComponent(id)}/status`,
+    "PATCH",
+    { status: "resolvida" }
+  );
 }
 
 export function listTours(includeInactive = false): Promise<Tour[] | null> {

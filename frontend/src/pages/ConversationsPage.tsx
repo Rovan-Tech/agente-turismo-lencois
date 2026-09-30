@@ -39,7 +39,13 @@ export function ConversationsPage() {
               className="flex items-center justify-between gap-4 px-4 py-4 hover:bg-subtle"
             >
               <div>
-                <p className="font-medium text-primary">{conversation.whatsapp_phone}</p>
+                <p
+                  className={`font-medium ${
+                    conversation.status === "resolvida" ? "text-muted" : "text-primary"
+                  }`}
+                >
+                  {conversation.whatsapp_phone}
+                </p>
                 <p className="text-sm text-muted">
                   {new Date(conversation.updated_at).toLocaleString("pt-BR")}
                   {conversation.idioma_detectado ? ` · ${conversation.idioma_detectado}` : ""}
