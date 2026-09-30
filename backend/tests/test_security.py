@@ -1,9 +1,13 @@
 import hashlib
 import hmac
+from collections.abc import Callable
 
+import httpx
 import pytest
 
+from app.core.config import get_settings
 from app.core.security import is_valid_dashboard_token, is_valid_whatsapp_signature
+from app.services import message_handler
 
 
 def _sign(payload: bytes, secret: str) -> str:
@@ -160,3 +164,56 @@ async def test_conversations_endpoint_rejects_wrong_token(client):
 async def test_conversations_endpoint_accepts_valid_token(client):
     response = await client.get("/api/conversations")
     assert response.status_code == 200
+
+
+def _audio_webhook_payload() -> dict[str, object]:
+    message = {"from": "5598900000009", "type": "audio", "audio": {"id": "media-1"}}
+    return {"entry": [{"changes": [{"value": {"messages": [message]}}]}]}
+
+
+async def _oversized_stream():
+    for _ in range(50):
+        yield b"x" * 100
+
+
+def _media_server(
+    oversized_response: Callable[[], httpx.Response],
+) -> Callable[[httpx.Request], httpx.Response]:
+    """Meta simulada: `/media-1` devolve a URL da mídia; a mídia é o corpo grande demais."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/media-1"):
+            return httpx.Response(200, json={"url": "https://media.example/audio"})
+        return oversized_response()
+
+    return handler
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "oversized_response",
+    [
+        lambda: httpx.Response(200, headers={"Content-Length": "999999"}, content=b"x"),
+        lambda: httpx.Response(200, content=_oversized_stream()),
+    ],
+    ids=["content-length-declared", "streamed-without-content-length"],
+)
+async def test_webhook_refuses_oversized_audio_without_transcribing_or_calling_groq(
+    client, monkeypatch, pipeline_spies, oversized_response
+):
+    real_async_client = httpx.AsyncClient
+    monkeypatch.setattr(get_settings(), "max_audio_bytes", 1000)
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda *a, **kw: real_async_client(
+            *a, **{**kw, "transport": httpx.MockTransport(_media_server(oversized_response))}
+        ),
+    )
+
+    response = await client.post("/webhook/whatsapp", json=_audio_webhook_payload())
+
+    assert response.status_code == 200
+    assert pipeline_spies["transcribed"] == []
+    assert pipeline_spies["asked"] == []
+    assert pipeline_spies["sent"] == [message_handler.AUDIO_TOO_LONG_REPLY]

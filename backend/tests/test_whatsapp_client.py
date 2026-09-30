@@ -70,6 +70,61 @@ async def test_download_media_returns_bytes(settings, monkeypatch):
         monkeypatch, lambda request: httpx.Response(200, content=b"audio-bytes")
     )
 
-    audio_bytes = await whatsapp_client.download_media(settings, "https://media.example/x")
+    audio_bytes = await whatsapp_client.download_media(settings, "https://media.example/x", 1024)
 
     assert audio_bytes == b"audio-bytes"
+
+
+@pytest.mark.asyncio
+async def test_download_media_accepts_body_exactly_at_the_limit(settings, monkeypatch):
+    _install_mock_transport(monkeypatch, lambda request: httpx.Response(200, content=b"12345"))
+
+    audio_bytes = await whatsapp_client.download_media(settings, "https://media.example/x", 5)
+
+    assert audio_bytes == b"12345"
+
+
+async def _chunks(reads):
+    for _ in range(100):
+        reads.append(1)
+        yield b"x" * 4
+
+
+def _declared_oversized(reads):
+    return lambda request: httpx.Response(200, headers={"Content-Length": "999999"}, content=b"x")
+
+
+def _streamed_oversized(reads):
+    return lambda request: httpx.Response(200, content=_chunks(reads))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "make_handler",
+    [_declared_oversized, _streamed_oversized],
+    ids=["content-length-declared", "streamed-without-content-length"],
+)
+async def test_download_media_rejects_body_over_limit_and_stops_reading(
+    settings, monkeypatch, make_handler
+):
+    reads: list[int] = []
+    _install_mock_transport(monkeypatch, make_handler(reads))
+
+    with pytest.raises(whatsapp_client.MediaTooLargeError):
+        await whatsapp_client.download_media(settings, "https://media.example/x", 10)
+    assert len(reads) < 100
+
+
+@pytest.mark.asyncio
+async def test_download_media_asks_for_uncompressed_body(settings, monkeypatch):
+    seen = []
+
+    def handler(request):
+        seen.append(request.headers.get("Accept-Encoding"))
+        return httpx.Response(200, content=b"ok")
+
+    _install_mock_transport(monkeypatch, handler)
+
+    await whatsapp_client.download_media(settings, "https://media.example/x", 10)
+
+    assert seen == ["identity"]

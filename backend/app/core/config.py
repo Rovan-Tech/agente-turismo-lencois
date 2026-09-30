@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     whatsapp_api_base_url: str = "https://graph.facebook.com/v21.0"
 
     whisper_model_size: str = "base"
+    # Teto do áudio baixado da Meta antes de transcrever: uma mensagem de voz normal (Opus) fica
+    # bem abaixo disso, e acima dele o Whisper ocuparia a instância do Cloud Run à toa.
+    max_audio_bytes: int = 5 * 1024 * 1024
 
     agency_name: str = "Agência de Turismo em Lençóis"
     frontend_origin: str = "http://localhost:5173"

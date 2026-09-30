@@ -18,3 +18,8 @@ def test_leaves_url_without_query_untouched():
 def test_leaves_unrelated_query_params_untouched():
     settings = Settings(database_url="postgresql+asyncpg://user:pass@host/db?application_name=api")
     assert settings.database_url == "postgresql+asyncpg://user:pass@host/db?application_name=api"
+
+
+def test_max_audio_bytes_defaults_to_five_megabytes(monkeypatch):
+    monkeypatch.delenv("MAX_AUDIO_BYTES", raising=False)
+    assert Settings(_env_file=None).max_audio_bytes == 5 * 1024 * 1024

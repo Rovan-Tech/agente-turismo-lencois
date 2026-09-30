@@ -28,9 +28,42 @@ async def get_media_url(settings: Settings, media_id: str) -> str:
         return response.json()["url"]
 
 
-async def download_media(settings: Settings, media_url: str) -> bytes:
-    headers = {"Authorization": f"Bearer {settings.whatsapp_token}"}
-    async with httpx.AsyncClient(timeout=30) as client:
-        response = await client.get(media_url, headers=headers)
+class MediaTooLargeError(Exception):
+    """A mídia recebida da Meta passa do tamanho máximo aceito."""
+
+    def __init__(self, max_bytes: int) -> None:
+        """Guarda o teto que foi excedido."""
+        super().__init__(f"mídia acima do limite de {max_bytes} bytes")
+        self.max_bytes = max_bytes
+
+
+async def download_media(settings: Settings, media_url: str, max_bytes: int) -> bytes:
+    """Baixa a mídia em streaming e aborta assim que passar de `max_bytes`.
+
+    Args:
+        settings: Configurações com o token da API do WhatsApp.
+        media_url: URL de download da mídia informada pela Meta.
+        max_bytes: Tamanho máximo aceito, em bytes.
+
+    Returns:
+        Os bytes da mídia baixada.
+
+    Raises:
+        MediaTooLargeError: `Content-Length` declarado ou corpo recebido acima do limite.
+    """
+    # `identity`: áudio Opus não comprime, e assim o teto vale para os bytes que chegam de fato.
+    headers = {"Authorization": f"Bearer {settings.whatsapp_token}", "Accept-Encoding": "identity"}
+    async with (
+        httpx.AsyncClient(timeout=30) as client,
+        client.stream("GET", media_url, headers=headers) as response,
+    ):
         response.raise_for_status()
-        return response.content
+        declared = response.headers.get("Content-Length", "")
+        if declared.isdigit() and int(declared) > max_bytes:
+            raise MediaTooLargeError(max_bytes)
+        body = bytearray()
+        async for chunk in response.aiter_bytes():
+            body.extend(chunk)
+            if len(body) > max_bytes:
+                raise MediaTooLargeError(max_bytes)
+        return bytes(body)
