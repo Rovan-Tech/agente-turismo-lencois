@@ -65,7 +65,9 @@ def main() -> int:
         "Código alterado sem aprovação completa. Faltam vereditos APROVADO para o código atual de: "
         + ", ".join(missing)
         + ". Rode o gate rápido, invoque o code-reviewer e depois o qa-tester (briefing completo) "
-        f"e corrija o que reprovarem. (bloqueio {blocks}/{MAX_BLOCKS})",
+        "e corrija o que reprovarem: qualquer FALHA no checklist "
+        "(docs/checklist-engenharia.md) é REPROVADO. "
+        f"(bloqueio {blocks}/{MAX_BLOCKS})",
     )
     return 0
 

@@ -11,9 +11,11 @@ import sys
 import hook_common as common
 
 REMINDER = (
-    "Fluxo obrigatório para alterar código: implementar com testes -> gate rápido "
-    "(make gate-fast) -> subagent code-reviewer -> subagent qa-tester -> "
-    "entregar. Qualquer mudança de código invalida as aprovações. Sem commit/push sem autorização."
+    "Fluxo obrigatório para alterar código: ler docs/checklist-engenharia.md -> ADR/STRIDE se "
+    "aplicável -> implementar com testes -> gate rápido (make gate-fast) -> subagent code-reviewer "
+    "-> subagent qa-tester -> entregar. Os dois agents preenchem o checklist inteiro (OK/N/A com "
+    "evidência/FALHA); qualquer FALHA = REPROVADO, sem exceção. Qualquer mudança de código "
+    "invalida as aprovações. Sem commit/push sem autorização."
 )
 
 
@@ -29,7 +31,14 @@ def verdict_lines(current: str) -> list[str]:
         valid = (
             "vale para o código atual" if info.get("fingerprint") == current else "DESATUALIZADO"
         )
-        lines.append(f"- {agent}: {info.get('verdict')} em {info.get('at')} ({valid})")
+        counts = info.get("checklist") or {}
+        summary = (
+            f", checklist OK {counts.get('OK', 0)} · N/A {counts.get('N/A', 0)} · "
+            f"FALHA {counts.get('FALHA', 0)}"
+            if counts
+            else ""
+        )
+        lines.append(f"- {agent}: {info.get('verdict')} em {info.get('at')} ({valid}{summary})")
     return lines
 
 

@@ -48,7 +48,45 @@ ANTI_PATTERNS: tuple[tuple[re.Pattern[str], str, frozenset[str]], ...] = (
         frozenset({".ts", ".tsx", ".js"}),
     ),
     (re.compile(r"(?<![\w.])print\("), "`print(` (use logging)", frozenset({".py"})),
-    (re.compile(r"\bconsole\.log\("), "`console.log(` no painel", frozenset({".ts", ".tsx"})),
+    (
+        re.compile(r"\bconsole\.(log|debug|info|trace)\("),
+        "`console.*` de depuração no painel",
+        frozenset({".ts", ".tsx"}),
+    ),
+    (
+        re.compile(r":\s*any\b|\bas\s+any\b|<any>|\bany\[\]|[=,]\s*any\s*>"),
+        "`any` no TypeScript (use `unknown` + type guard ou Zod)",
+        frozenset({".ts", ".tsx"}),
+    ),
+    (
+        re.compile(r"dangerouslySetInnerHTML"),
+        "`dangerouslySetInnerHTML` (XSS; se inevitável, DOMPurify com whitelist)",
+        frozenset({".tsx"}),
+    ),
+    (
+        re.compile(
+            r"(local|session)Storage\.\w+\(\s*[\"'`][^\"'`]*(token|jwt|auth(?!ors?\b)|session|passw|secret)",
+            re.I,
+        ),
+        "credencial em `localStorage`/`sessionStorage` (use cookie HttpOnly)",
+        frozenset({".ts", ".tsx"}),
+    ),
+    (
+        re.compile(r"""^[^#"']*(?::|->)[^#="']*\bAny\b(?!.*\s#)"""),
+        "`Any` sem justificativa em comentário na mesma linha",
+        frozenset({".py"}),
+    ),
+    (
+        re.compile(r"extra\s*=\s*[\"']allow[\"']"),
+        'schema Pydantic com `extra="allow"` (use `forbid`)',
+        frozenset({".py"}),
+    ),
+    (
+        re.compile(r"allow_origins\s*=\s*\[\s*[\"']\*[\"']"),
+        "CORS aberto para qualquer origem",
+        frozenset({".py"}),
+    ),
+    (re.compile(r"@\w+\.on_event\("), "`on_event` depreciado (use `lifespan`)", frozenset({".py"})),
     (re.compile(r"except\s*:\s*(pass)?\s*$"), "`except:` nu", frozenset({".py"})),
     (
         re.compile(r"except\s+\w[\w.]*(\s+as\s+\w+)?\s*:\s*pass\b"),

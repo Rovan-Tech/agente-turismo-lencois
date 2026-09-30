@@ -25,6 +25,12 @@ def state(tmp_path, monkeypatch):
         ".gitignore",
         "frontend/tsconfig.json",
         ".claude/settings.json",
+        "docs/checklist-engenharia.md",
+        ".claude/agents/qa-tester.md",
+        ".claude/rules/reliability-data.md",
+        ".claude/skills/checklist/SKILL.md",
+        ".claude/skills/adr/SKILL.md",
+        ".claude/skills/threat-model/SKILL.md",
     ],
 )
 def test_is_code_file_covers_code_and_gate_configs(rel):
@@ -107,3 +113,26 @@ def test_reconcile_invalidates_verdict_when_code_changed_during_review(state):
 
 def test_reconcile_without_start_record_uses_current_fingerprint(state):
     assert rv.reconcile_with_start("desconhecido", "APROVADO", "fp-now") == ("APROVADO", "fp-now")
+
+
+def _verdict_line(monkeypatch, tmp_path, **info):
+    import session_start as ss
+
+    state = {"code-reviewer": {"verdict": "APROVADO", "at": "t", "fingerprint": "fp", **info}}
+    monkeypatch.setattr(common, "STATE_DIR", tmp_path)
+    common.write_json(tmp_path / "verdicts.json", state)
+    return ss.verdict_lines("fp")[0]
+
+
+def test_session_start_verdict_lines_show_checklist_counts(monkeypatch, tmp_path):
+    counts = {"OK": 40, "N/A": 9, "FALHA": 0}
+
+    line = _verdict_line(monkeypatch, tmp_path, checklist=counts)
+
+    assert "checklist OK 40 · N/A 9 · FALHA 0" in line
+
+
+def test_session_start_verdict_lines_accept_legacy_state_without_checklist(monkeypatch, tmp_path):
+    line = _verdict_line(monkeypatch, tmp_path)
+
+    assert line == "- code-reviewer: APROVADO em t (vale para o código atual)"

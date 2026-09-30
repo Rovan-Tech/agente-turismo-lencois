@@ -36,6 +36,11 @@ def test_decide_denies_secrets_lockfiles_and_state(tool, rel):
         ".claude/agents/code-reviewer.md",
         "scripts/quality_gate.py",
         ".coverage-baseline.json",
+        "docs/checklist-engenharia.md",
+        ".claude/rules/ai-governance.md",
+        ".claude/skills/checklist/SKILL.md",
+        ".claude/skills/adr/SKILL.md",
+        ".claude/skills/threat-model/SKILL.md",
     ],
 )
 def test_decide_asks_before_editing_quality_configs(rel):
