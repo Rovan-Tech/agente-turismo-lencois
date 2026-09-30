@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { App } from "../../src/App";
@@ -17,7 +17,7 @@ describe("App routing", () => {
 
     render(<App />);
 
-    await expectHeading("Conversas no WhatsApp");
+    await expectHeading("Conversas");
   });
 
   it("shows the tours page at /passeios", async () => {
@@ -35,9 +35,11 @@ describe("App routing", () => {
     window.history.pushState({}, "", "/");
 
     render(<App />);
-    await screen.findByRole("heading", { name: "Conversas no WhatsApp" });
+    await screen.findByRole("heading", { name: "Conversas" });
 
-    screen.getByRole("link", { name: "Passeios" }).click();
+    within(screen.getByRole("complementary", { name: "Barra lateral" }))
+      .getByRole("link", { name: "Passeios" })
+      .click();
 
     await expectHeading("Catálogo de passeios");
   });

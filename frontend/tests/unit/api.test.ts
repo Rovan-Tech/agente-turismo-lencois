@@ -6,7 +6,7 @@ import {
   getConversation,
   listConversations,
   listTours,
-  resolveConversation,
+  updateConversationStatus,
   updateTour,
 } from "../../src/lib/api";
 import { SAMPLE_TOUR } from "./fixtures";
@@ -117,27 +117,27 @@ describe("lib/api", () => {
     });
   });
 
-  it("resolveConversation sends a PATCH with the resolvida status and returns the summary", async () => {
-    const summary = { id: "c1", status: "resolvida" };
+  it("updateConversationStatus sends a PATCH with the chosen status and returns the summary", async () => {
+    const summary = { id: "c1", status: "aberta" };
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, summary));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await resolveConversation("c1");
+    const result = await updateConversationStatus("c1", "aberta");
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/api/conversations/c1/status");
     expect(init.method).toBe("PATCH");
-    expect(JSON.parse(init.body)).toEqual({ status: "resolvida" });
+    expect(JSON.parse(init.body)).toEqual({ status: "aberta" });
     expect(result).toEqual({ ok: true, data: summary });
   });
 
-  it("resolveConversation reports the HTTP status when the API rejects the change", async () => {
+  it("updateConversationStatus reports the HTTP status when the API rejects the change", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(jsonResponse(404, { detail: "conversa não encontrada" }))
     );
 
-    expect(await resolveConversation("x")).toEqual({
+    expect(await updateConversationStatus("x", "resolvida")).toEqual({
       ok: false,
       status: 404,
       message: "conversa não encontrada",

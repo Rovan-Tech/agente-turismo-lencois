@@ -88,6 +88,14 @@ apareciam com menos cobertura do que realmente tinham — ver `[tool.coverage.ru
   sobrescrever o `resolvida` recém-gravado; se o valor for igual, a mensagem do turista fica dentro
   de uma conversa resolvida. A próxima mensagem abre outra conversa (o telefone aparece duas vezes).
   Sem perda de dados; endurecer com `refresh`/`UPDATE ... WHERE status != 'resolvida'`.
+- Painel (lista): a busca é feita no navegador sobre o telefone e a **prévia da última mensagem**
+  (a API trunca em 200 caracteres). Achar uma palavra dita no meio da conversa exige um parâmetro
+  de busca na API. O indicativo "Assistente de IA respondendo agora" da barra lateral é fixo: não
+  reflete o estado real do bot.
+- Lista de conversas: a prévia da última mensagem usa `row_number() OVER (PARTITION BY ...)`, que
+  percorre todas as mensagens a cada GET (só há índice em `conversation_id`), e a lista não tem
+  paginação. Serve ao volume do portfólio; com muito histórico, trocar por `LATERAL ... LIMIT 1`
+  (Postgres) ou criar o índice `(conversation_id, created_at)` e paginar.
 - Observabilidade: o app não configura `logging` (sem `basicConfig` em `app/main.py`), então o logger
   raiz fica em WARNING e logs INFO, como o `áudio recusado: acima de N bytes` do handler, não
   aparecem no uvicorn. Configurar o nível/formato de log na inicialização.

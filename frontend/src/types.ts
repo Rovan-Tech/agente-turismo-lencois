@@ -1,13 +1,5 @@
 export type ConversationStatus = "aberta" | "precisa_atencao" | "resolvida";
 
-export interface ConversationSummary {
-  id: string;
-  whatsapp_phone: string;
-  status: ConversationStatus;
-  idioma_detectado: string | null;
-  updated_at: string;
-}
-
 export interface ConversationMessage {
   id: string;
   direction: "entrada" | "saida";
@@ -17,7 +9,27 @@ export interface ConversationMessage {
   created_at: string;
 }
 
-export interface ConversationDetail extends ConversationSummary {
+/** Campos comuns a tudo que a API devolve sobre uma conversa. */
+export interface ConversationHeader {
+  id: string;
+  whatsapp_phone: string;
+  status: ConversationStatus;
+  idioma_detectado: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Última mensagem da conversa, truncada pela API para a prévia da lista. */
+export type LastMessage = Pick<
+  ConversationMessage,
+  "conteudo" | "tipo" | "direction" | "created_at"
+>;
+
+export interface ConversationSummary extends ConversationHeader {
+  ultima_mensagem: LastMessage | null;
+}
+
+export interface ConversationDetail extends ConversationHeader {
   messages: ConversationMessage[];
 }
 

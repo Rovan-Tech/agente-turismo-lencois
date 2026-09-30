@@ -10,6 +10,7 @@ const surfaces = {
   "action-hover": cssVar("color-action-primary-hover"),
   "action-active": cssVar("color-action-primary-active"),
   "action-secondary": cssVar("color-action-secondary"),
+  online: cssVar("color-indicator-online"),
   "accent-subtle": cssVar("color-accent-subtle-bg"),
   "neutral-subtle": cssVar("color-neutral-subtle-bg"),
   "status-success": cssVar("color-status-success-bg"),
@@ -37,6 +38,7 @@ const borders = {
   subtle: cssVar("color-border-subtle"),
   strong: cssVar("color-border-strong"),
   focus: cssVar("color-focus-ring"),
+  attention: cssVar("color-border-attention"),
 };
 
 const spacingScale = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 16];
@@ -102,7 +104,13 @@ export default {
       slow: cssVar("duration-slow"),
     },
     screens: { sm: "640px", md: "768px", lg: "1024px", xl: "1280px" },
-    extend: {},
+    extend: {
+      width: {
+        sidebar: cssVar("size-sidebar"),
+        panel: cssVar("size-panel"),
+        search: cssVar("size-search"),
+      },
+    },
   },
   plugins: [],
 };

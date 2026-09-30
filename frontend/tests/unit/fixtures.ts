@@ -1,6 +1,11 @@
 import { fireEvent, screen } from "@testing-library/react";
 
-import type { ConversationDetail, Tour } from "../../src/types";
+import type {
+  ConversationDetail,
+  ConversationHeader,
+  ConversationSummary,
+  Tour,
+} from "../../src/types";
 
 export const SAMPLE_TOUR: Tour = {
   id: "passeio-bugre-orla",
@@ -27,12 +32,17 @@ export function fillTourFormRequiredFields(id: string, nome: string) {
   });
 }
 
-export const SAMPLE_CONVERSATION: ConversationDetail = {
+const SAMPLE_HEADER: ConversationHeader = {
   id: "abc123",
   whatsapp_phone: "5598999998888",
   status: "aberta",
   idioma_detectado: "pt",
+  created_at: "2026-09-25T12:00:00Z",
   updated_at: "2026-09-25T12:01:00Z",
+};
+
+export const SAMPLE_CONVERSATION: ConversationDetail = {
+  ...SAMPLE_HEADER,
   messages: [
     {
       id: "m1",
@@ -44,3 +54,7 @@ export const SAMPLE_CONVERSATION: ConversationDetail = {
     },
   ],
 };
+
+export function summary(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
+  return { ...SAMPLE_HEADER, ultima_mensagem: null, ...overrides };
+}

@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 import pytest
 
 from app.models.conversation import Conversation, ConversationStatus
@@ -79,35 +81,32 @@ async def _create_conversation(db_session, phone, status):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("target", list(ConversationStatus))
 @pytest.mark.parametrize("initial", list(ConversationStatus))
-async def test_resolve_conversation_marks_it_resolved_and_persists(client, db_session, initial):
-    """Inclui `resolvida -> resolvida`: repetir a ação é inofensivo (idempotente)."""
+async def test_change_status_accepts_any_status_from_any_origin(
+    client, db_session, initial, target
+):
+    """Inclui reabrir (`resolvida -> aberta`) e repetir o mesmo status (idempotente)."""
     conversation = await _create_conversation(db_session, "5598900001001", initial)
 
     response = await client.patch(
-        f"/api/conversations/{conversation.id}/status", json={"status": "resolvida"}
+        f"/api/conversations/{conversation.id}/status", json={"status": target.value}
     )
 
     assert response.status_code == 200
-    assert response.json()["status"] == "resolvida"
+    assert response.json()["status"] == target.value
     assert response.json()["id"] == conversation.id
     detail = await client.get(f"/api/conversations/{conversation.id}")
-    assert detail.json()["status"] == "resolvida"
+    assert detail.json()["status"] == target.value
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "body",
-    [
-        {"status": "aberta"},
-        {"status": "precisa_atencao"},
-        {"status": "qualquer-coisa"},
-        {"status": None},
-        {},
-    ],
-    ids=["aberta", "precisa_atencao", "invalid", "null", "missing"],
+    [{"status": "qualquer-coisa"}, {"status": "RESOLVIDA"}, {"status": None}, {"status": 1}, {}],
+    ids=["invalid", "wrong-case", "null", "number", "missing"],
 )
-async def test_manual_status_change_only_accepts_resolvida(client, db_session, body):
+async def test_change_status_rejects_values_that_are_not_a_status(client, db_session, body):
     conversation = await _create_conversation(
         db_session, "5598900001003", ConversationStatus.PRECISA_ATENCAO
     )
@@ -157,3 +156,114 @@ async def test_list_puts_resolved_conversations_after_the_pending_ones(client, d
     listing = (await client.get("/api/conversations")).json()
 
     assert [c["id"] for c in listing] == [pending.id, resolved.id]
+
+
+async def _add_message(db_session, conversation, text, minutes, direction=MessageDirection.ENTRADA):
+    db_session.add(
+        Message(
+            conversation_id=conversation.id,
+            direction=direction,
+            tipo=MessageType.AUDIO_TRANSCRITO,
+            conteudo=text,
+            created_at=datetime(2026, 9, 28, 9, minutes, tzinfo=UTC),
+        )
+    )
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_list_includes_the_last_message_preview_of_each_conversation(client, db_session):
+    first = await _create_conversation(db_session, "5598900002001", ConversationStatus.ABERTA)
+    second = await _create_conversation(db_session, "5598900002002", ConversationStatus.ABERTA)
+    await _add_message(db_session, first, "primeira", 1)
+    await _add_message(db_session, first, "mais recente", 5, MessageDirection.SAIDA)
+    await _add_message(db_session, first, "intermediária", 3)
+    await _add_message(db_session, second, "de outra conversa", 2)
+
+    listing = {c["id"]: c for c in (await client.get("/api/conversations")).json()}
+
+    last = listing[first.id]["ultima_mensagem"]
+    assert last["conteudo"] == "mais recente"
+    assert last["direction"] == "saida"
+    assert last["tipo"] == "audio_transcrito"
+    assert last["created_at"].startswith("2026-09-28T09:05")
+    assert listing[second.id]["ultima_mensagem"]["conteudo"] == "de outra conversa"
+
+
+@pytest.mark.asyncio
+async def test_list_returns_null_preview_for_a_conversation_without_messages(client, db_session):
+    await _create_conversation(db_session, "5598900002003", ConversationStatus.ABERTA)
+
+    [summary] = (await client.get("/api/conversations")).json()
+
+    assert summary["ultima_mensagem"] is None
+
+
+@pytest.mark.asyncio
+async def test_list_and_detail_expose_when_the_conversation_started(client, db_session):
+    conversation = await _create_conversation(
+        db_session, "5598900002004", ConversationStatus.ABERTA
+    )
+
+    [summary] = (await client.get("/api/conversations")).json()
+    detail = (await client.get(f"/api/conversations/{conversation.id}")).json()
+
+    assert summary["created_at"] == detail["created_at"] == conversation.created_at.isoformat()
+
+
+@pytest.mark.asyncio
+async def test_preview_is_truncated_to_200_characters(client, db_session):
+    conversation = await _create_conversation(
+        db_session, "5598900002005", ConversationStatus.ABERTA
+    )
+    await _add_message(db_session, conversation, "ã" * 500, 1)
+
+    [summary] = (await client.get("/api/conversations")).json()
+
+    assert summary["ultima_mensagem"]["conteudo"] == "ã" * 200
+
+
+@pytest.mark.asyncio
+async def test_preview_breaks_a_created_at_tie_by_the_highest_message_id(client, db_session):
+    conversation = await _create_conversation(
+        db_session, "5598900002006", ConversationStatus.ABERTA
+    )
+    same_instant = datetime(2026, 9, 28, 9, 30, tzinfo=UTC)
+    for message_id, text in (("m-a", "empate A"), ("m-b", "empate B")):
+        db_session.add(
+            Message(
+                id=message_id,
+                conversation_id=conversation.id,
+                direction=MessageDirection.ENTRADA,
+                tipo=MessageType.TEXTO,
+                conteudo=text,
+                created_at=same_instant,
+            )
+        )
+    await db_session.commit()
+
+    [summary] = (await client.get("/api/conversations")).json()
+
+    assert summary["ultima_mensagem"]["conteudo"] == "empate B"
+
+
+@pytest.mark.asyncio
+async def test_timestamps_are_always_serialized_as_utc(client, db_session):
+    """O SQLite devolve datas sem fuso; o navegador leria como hora local e deslocaria tudo."""
+    conversation = await _create_conversation(
+        db_session, "5598900002007", ConversationStatus.ABERTA
+    )
+    await _add_message(db_session, conversation, "oi", 5)
+    db_session.expire_all()
+
+    [summary] = (await client.get("/api/conversations")).json()
+    detail = (await client.get(f"/api/conversations/{conversation.id}")).json()
+
+    stamps = [
+        summary["created_at"],
+        summary["updated_at"],
+        summary["ultima_mensagem"]["created_at"],
+        detail["messages"][0]["created_at"],
+    ]
+    assert all(stamp.endswith("+00:00") for stamp in stamps)
+    assert summary["ultima_mensagem"]["created_at"] == "2026-09-28T09:05:00+00:00"

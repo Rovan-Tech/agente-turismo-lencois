@@ -53,6 +53,8 @@ Cores literais (hex/rgb/hsl) só existem em `tokens.css`. Um hook e o gate acusa
 | `--color-border-subtle`         | `#e4e4e0` | `#50585a` | divisores e bordas de cartão                      |
 | `--color-border-strong`         | `#828787` | `#9a9e9d` | bordas de campos (≥ 3:1)                          |
 | `--color-focus-ring`            | `#0f7a8c` | `#80b9c2` | anel de foco                                      |
+| `--color-border-attention`      | `#9c5227` | `#d1af9b` | borda esquerda das conversas que precisam de atenção |
+| `--color-indicator-online`      | `#1e7a3c` | `#88b998` | ponto do indicativo "Assistente de IA respondendo" |
 | `--color-accent-subtle-bg`      | `#cbe2e6` | `#0b4049` | selo "Aberta"                                     |
 | `--color-accent-subtle-fg`      | `#0b4049` | `#cbe2e6` | texto do selo "Aberta"                            |
 | `--color-neutral-subtle-bg`     | `#e4e4e0` | `#50585a` | selo "Resolvida"                                  |
@@ -115,6 +117,8 @@ Contraste mínimo de 4,5:1 (texto) e 3:1 (texto grande, borda de campo e anel de
 | anel de foco na página (`focus-ring` / `bg-page`)                               | 4.85:1  | 6.74:1  |
 | anel de foco em cartões (`focus-ring` / `bg-surface`)                           | 5.02:1  | 4.80:1  |
 | borda de campos (`border-strong` / `bg-page`)                                   | 3.52:1  | 5.42:1  |
+| borda de atenção (`border-attention` / `bg-page`), mínimo 3:1                   | 5.56:1  | 7.22:1  |
+| indicador online (`indicator-online` / `bg-page`), mínimo 3:1                   | 5.20:1  | 6.61:1  |
 
 Regras: foco sempre visível (`:focus-visible` global), tudo operável por teclado, `alt` em imagens, `label` em todo campo, estado nunca só por cor (o selo de status sempre traz texto).
 
@@ -123,4 +127,7 @@ Regras: foco sempre visível (`:focus-visible` global), tudo operável por tecla
 - `lagoa`, `terracota`, `areia` e `grafite` viraram tokens (`primary-600`, `secondary-700`, `neutral-50`, `neutral-900`); as classes legadas foram removidas.
 - Opacidades soltas (`text-grafite/60`, `opacity-70`, `bg-lagoa/10`) viraram tokens com contraste verificado: `text-muted`, `text-secondary`, `bg-accent-subtle`.
 - Fontes Inter/Sora, antes duplicadas em `index.css` e no Tailwind, agora vêm de `--font-sans` / `--font-display`.
+- Modo claro e escuro: o painel abre no **claro** (como o desenho), mesmo que o sistema prefira escuro, e o botão de sol/lua no topo alterna. A escolha fica em `localStorage` (`painel-tema`) e vira o atributo `data-theme` da página, que aciona os tokens escuros de `tokens.css`. Sem `data-theme`, os tokens ainda seguem `prefers-color-scheme`.
+- Larguras estruturais do painel (`--size-sidebar` 14rem, `--size-panel` 20rem, `--size-search` 18rem) são tokens, usados como `w-sidebar`, `w-panel` e `w-search`. A escala de espaçamento é restrita: uma classe fora dela (ex.: `w-56`, `py-1.5`) não gera CSS e não dá erro, então o e2e confere as larguras reais.
+- Redesign do painel: casca com barra lateral e topo, lista com abas de status, busca e avatar de idioma, conversa em balões com painel lateral. Só reaproveitou a paleta existente; os dois tokens novos acima apontam para cores que já estavam na paleta. Os contrastes dos selos de status estão comentados em `StatusBadge.tsx`.
 - Corrigido: o texto de "transcrito de áudio" usava `opacity-70` sobre o balão enviado e perdia contraste.

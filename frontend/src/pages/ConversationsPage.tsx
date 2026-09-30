@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
-import { StatusBadge } from "../components/StatusBadge";
+import { ConversationRow } from "../components/ConversationRow";
+import { SearchBox } from "../components/SearchBox";
+import { StatusFilterTabs } from "../components/StatusFilterTabs";
+import { countByFilter, filterConversations, type StatusFilter } from "../lib/conversations";
 import { listConversations } from "../lib/api";
 import type { ConversationSummary } from "../types";
 
 export function ConversationsPage() {
   const [conversations, setConversations] = useState<ConversationSummary[] | null>(null);
+  const [filter, setFilter] = useState<StatusFilter>("todas");
+  const [query, setQuery] = useState("");
+  const [now] = useState(() => new Date());
 
   useEffect(() => {
     let active = true;
@@ -18,12 +23,19 @@ export function ConversationsPage() {
     };
   }, []);
 
+  const visible = conversations ? filterConversations(conversations, filter, query) : [];
+
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="font-display text-2xl font-semibold text-primary">Conversas no WhatsApp</h1>
-      <p className="mt-1 text-sm text-secondary">
-        Conversas com turistas atendidas pelo assistente virtual.
-      </p>
+    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-primary">Conversas</h1>
+          <p className="mt-1 text-sm text-secondary">
+            Conversas com turistas atendidas pelo assistente virtual no WhatsApp.
+          </p>
+        </div>
+        <SearchBox value={query} onChange={setQuery} />
+      </div>
 
       {conversations === null && <p className="mt-8 text-muted">Carregando…</p>}
 
@@ -31,31 +43,25 @@ export function ConversationsPage() {
         <p className="mt-8 text-muted">Nenhuma conversa encontrada.</p>
       )}
 
-      <ul className="mt-6 divide-y divide-subtle rounded-lg border border-subtle bg-surface">
-        {conversations?.map((conversation) => (
-          <li key={conversation.id}>
-            <Link
-              to={`/conversas/${conversation.id}`}
-              className="flex items-center justify-between gap-4 px-4 py-4 hover:bg-subtle"
-            >
-              <div>
-                <p
-                  className={`font-medium ${
-                    conversation.status === "resolvida" ? "text-muted" : "text-primary"
-                  }`}
-                >
-                  {conversation.whatsapp_phone}
-                </p>
-                <p className="text-sm text-muted">
-                  {new Date(conversation.updated_at).toLocaleString("pt-BR")}
-                  {conversation.idioma_detectado ? ` · ${conversation.idioma_detectado}` : ""}
-                </p>
-              </div>
-              <StatusBadge status={conversation.status} />
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {conversations !== null && conversations.length > 0 && (
+        <>
+          <div className="mt-6">
+            <StatusFilterTabs
+              active={filter}
+              counts={countByFilter(conversations)}
+              onChange={setFilter}
+            />
+          </div>
+          {visible.length === 0 && (
+            <p className="mt-8 text-muted">Nenhuma conversa corresponde ao filtro ou à busca.</p>
+          )}
+          <ul className="mt-4 divide-y divide-subtle overflow-hidden rounded-lg border border-subtle bg-surface">
+            {visible.map((conversation) => (
+              <ConversationRow key={conversation.id} conversation={conversation} now={now} />
+            ))}
+          </ul>
+        </>
+      )}
     </main>
   );
 }
