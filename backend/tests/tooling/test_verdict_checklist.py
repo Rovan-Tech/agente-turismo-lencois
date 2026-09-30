@@ -97,8 +97,8 @@ def test_record_verdict_does_not_trust_a_clean_retry_after_a_contradiction(state
 
 
 def _marks(state):
-    path = state / "state" / "contradictions.json"
-    return json.loads(path.read_text()) if path.exists() else {}
+    folder = state / "state" / "contradictions"
+    return sorted(folder.glob("*.mark")) if folder.exists() else []
 
 
 def test_contradiction_mark_does_not_leak_to_another_agent_run(state, monkeypatch):
@@ -111,11 +111,11 @@ def test_contradiction_mark_does_not_leak_to_another_agent_run(state, monkeypatc
 
 def test_contradiction_mark_is_consumed_by_the_retry(state, monkeypatch):
     _run(state, monkeypatch, _report(checklist_lines=FAILED_LINES), agent_id="a1")
-    assert "a1" in _marks(state)
+    assert len(_marks(state)) == 1
 
     _run(state, monkeypatch, _report(), agent_id="a1", stop_hook_active=True)
 
-    assert "a1" not in _marks(state)
+    assert _marks(state) == []
 
 
 def test_contradiction_mark_only_applies_on_the_retry(state, monkeypatch):
@@ -130,9 +130,8 @@ def test_contradiction_marks_file_is_capped(state, monkeypatch):
     for index in range(rv.MAX_MARKS + 1):
         _run(state, monkeypatch, _report(checklist_lines=FAILED_LINES), agent_id=f"a{index}")
 
-    marks = _marks(state)
-    assert len(marks) == rv.MAX_MARKS
-    assert "a0" not in marks
+    assert len(_marks(state)) == rv.MAX_MARKS
+    assert rv._mark_path("a0") not in _marks(state)
 
 
 def test_parse_report_refuses_oversized_report():
@@ -148,3 +147,27 @@ def test_record_verdict_saves_checklist_counts(state, monkeypatch):
     saved = _run(state, monkeypatch, _report())
 
     assert saved["checklist"] == {"OK": 1, "N/A": 1, "FALHA": 0}
+
+
+QA_LINES = "Checklist:\nGATE-2: OK — gate completo verde em 4m12s\n"
+QA_REPORT = (
+    f"VEREDITO: APROVADO\nTestes: 1/1\nCritérios de aceite:\n[✅] x — ok\n{QA_LINES}Bugs: nenhum\n"
+)
+
+
+@pytest.mark.parametrize(
+    ("agent", "report"),
+    [
+        ("code-reviewer", _report().replace("Checklist:\n", "")),
+        ("qa-tester", QA_REPORT.replace("Checklist:\n", "")),
+    ],
+)
+def test_parse_report_requires_the_checklist_heading(agent, report):
+    verdict, reason = rv.parse_report(agent, report)
+
+    assert verdict is None
+    assert "Checklist:" in reason
+
+
+def test_parse_report_accepts_a_complete_qa_report():
+    assert rv.parse_report("qa-tester", QA_REPORT) == ("APROVADO", "")

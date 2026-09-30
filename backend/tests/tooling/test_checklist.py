@@ -56,8 +56,9 @@ def test_required_items_fails_closed_on_unknown_owner(table):
     _assert_qa_items_fail_with(checklist.ChecklistMalformedError)
 
 
-def test_required_items_fails_closed_on_row_with_missing_columns(table):
-    table.write_text(TABLE + "| GATE-9 | Gate | x | qa |\n", encoding="utf-8")
+@pytest.mark.parametrize("row", ["| GATE-9 | Gate | x | qa |", "| GATE-9 | Gate | x | — | qa |"])
+def test_required_items_fails_closed_on_row_with_missing_columns(table, row):
+    table.write_text(TABLE + row + "\n", encoding="utf-8")
 
     _assert_qa_items_fail_with(checklist.ChecklistMalformedError)
 

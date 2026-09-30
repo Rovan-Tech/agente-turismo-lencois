@@ -12,9 +12,11 @@ veredito, a contagem do checklist, a data e o fingerprint do código avaliado em
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -120,18 +122,32 @@ def reconcile_with_start(
     return verdict, current
 
 
-def _marks_file() -> Path:
-    """Arquivo com os agentes cujo `APROVADO` já foi recusado por contradição."""
-    return common.STATE_DIR / "contradictions.json"
+def _mark_path(key: str) -> Path:
+    """Arquivo de marca do agente `key` (nome por hash: a chave vem do stdin)."""
+    digest = hashlib.sha256(key.encode()).hexdigest()[:24]
+    return common.STATE_DIR / "contradictions" / f"{digest}.mark"
+
+
+def _mark_age(mark: Path) -> int:
+    """Instante (ns) gravado na marca; ilegível conta como a mais antiga."""
+    try:
+        return int(mark.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0
 
 
 def _remember_contradiction(key: str) -> None:
-    """Guarda que o primeiro relatório de `key` se contradisse (limita o tamanho do arquivo)."""
-    marks = common.read_json(_marks_file(), {})
-    marks[key] = True
-    for old in list(marks)[:-MAX_MARKS]:
-        marks.pop(old)
-    common.write_json(_marks_file(), marks)
+    """Marca que o primeiro relatório de `key` se contradisse.
+
+    Um arquivo por agente: não há leitura-modificação-escrita de estado compartilhado, então
+    subagents em paralelo não perdem a marca um do outro. Mantém só as `MAX_MARKS` mais novas.
+    """
+    path = _mark_path(key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(str(time.time_ns()), encoding="utf-8")
+    marks = sorted(path.parent.glob("*.mark"), key=_mark_age)
+    for old in marks[:-MAX_MARKS]:
+        old.unlink(missing_ok=True)
 
 
 def _final_verdict(verdict: str | None, reason: str, key: str, retried: bool) -> str | None:
@@ -140,10 +156,9 @@ def _final_verdict(verdict: str | None, reason: str, key: str, retried: bool) ->
     Um `APROVADO` contraditório vira `REPROVADO`; e se o primeiro relatório já tinha se
     contradito, nenhum texto novo o salva (trocar `FALHA` por `OK` na retentativa não basta).
     """
-    marks = common.read_json(_marks_file(), {})
-    was_marked = marks.pop(key, None) is not None
-    if was_marked:
-        common.write_json(_marks_file(), marks)
+    path = _mark_path(key)
+    was_marked = path.exists()
+    path.unlink(missing_ok=True)
     was_contradicted = was_marked and retried
     if reason.startswith(CONTRADICTION) or (was_contradicted and verdict == "APROVADO"):
         return "REPROVADO"
