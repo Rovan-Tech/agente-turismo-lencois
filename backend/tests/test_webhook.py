@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from app.services import message_handler
@@ -9,20 +11,11 @@ def _patch_dependencies(monkeypatch, ask_groq_fn, send_text_fn):
     monkeypatch.setattr(message_handler, "ask_groq", ask_groq_fn)
 
 
-def _text_payload(phone: str, body: str) -> dict:
-    return {
-        "entry": [
-            {
-                "changes": [
-                    {
-                        "value": {
-                            "messages": [{"from": phone, "type": "text", "text": {"body": body}}]
-                        }
-                    }
-                ]
-            }
-        ]
-    }
+def _text_payload(phone: str, body: str, message_id: str | None = None) -> dict[str, Any]:
+    message: dict[str, Any] = {"from": phone, "type": "text", "text": {"body": body}}
+    if message_id:
+        message["id"] = message_id
+    return {"entry": [{"changes": [{"value": {"messages": [message]}}]}]}
 
 
 @pytest.mark.asyncio
@@ -95,3 +88,45 @@ async def test_webhook_ignores_messages_without_phone(client):
 
     conversations = (await client.get("/api/conversations")).json()
     assert conversations == []
+
+
+@pytest.mark.asyncio
+async def test_same_webhook_delivered_twice_creates_one_message_and_one_reply(
+    client, pipeline_spies
+):
+    payload = _text_payload("5598999990001", "oi", message_id="wamid.duplicada")
+
+    first = await client.post("/webhook/whatsapp", json=payload)
+    second = await client.post("/webhook/whatsapp", json=payload)
+
+    assert (first.status_code, second.status_code) == (200, 200)
+    assert pipeline_spies["asked"] == ["oi"]
+    assert pipeline_spies["sent"] == ["ok"]
+    conversation_id = (await client.get("/api/conversations")).json()[0]["id"]
+    detail = (await client.get(f"/api/conversations/{conversation_id}")).json()
+    assert [m["conteudo"] for m in detail["messages"]] == ["oi", "ok"]
+
+
+@pytest.mark.asyncio
+async def test_different_message_ids_are_processed_separately(client, pipeline_spies):
+    await client.post("/webhook/whatsapp", json=_text_payload("5598999990002", "a", "wamid.a"))
+    await client.post("/webhook/whatsapp", json=_text_payload("5598999990002", "b", "wamid.b"))
+
+    assert pipeline_spies["asked"] == ["a", "b"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "bad_id", ["", 12345, {"a": 1}, "w" * 200], ids=["empty", "number", "object", "too-long"]
+)
+async def test_malformed_message_id_is_ignored_and_message_is_still_processed(
+    client, pipeline_spies, bad_id
+):
+    payload = _text_payload("5598999990005", "oi")
+    payload["entry"][0]["changes"][0]["value"]["messages"][0]["id"] = bad_id
+
+    first = await client.post("/webhook/whatsapp", json=payload)
+    second = await client.post("/webhook/whatsapp", json=payload)
+
+    assert (first.status_code, second.status_code) == (200, 200)
+    assert pipeline_spies["asked"] == ["oi", "oi"]

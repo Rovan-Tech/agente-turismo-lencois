@@ -5,6 +5,7 @@ import tempfile
 from dataclasses import dataclass
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -75,32 +76,80 @@ class IncomingMessage:
     message_type: str
     text_body: str | None = None
     media_id: str | None = None
+    message_id: str | None = None
+
+
+async def _is_duplicate(db: AsyncSession, whatsapp_message_id: str | None) -> bool:
+    """Diz se a Meta já entregou (e nós já registramos) uma mensagem com este id."""
+    if not whatsapp_message_id:
+        return False
+    result = await db.execute(
+        select(Message.id).where(Message.whatsapp_message_id == whatsapp_message_id)
+    )
+    return result.first() is not None
+
+
+async def _store_incoming(
+    db: AsyncSession,
+    conversation: Conversation,
+    incoming: IncomingMessage,
+    tipo: MessageType,
+    content: str,
+) -> bool:
+    """Grava a mensagem do turista já, para que o índice único barre reenvios simultâneos.
+
+    Returns:
+        `False` se outra entrega do mesmo `message_id` chegou antes (a transação é desfeita).
+    """
+    db.add(
+        Message(
+            conversation_id=conversation.id,
+            direction=MessageDirection.ENTRADA,
+            tipo=tipo,
+            conteudo=content,
+            whatsapp_message_id=incoming.message_id,
+        )
+    )
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        if incoming.message_id is None:
+            raise  # sem id não há duplicata: é outra constraint, não pode sumir em silêncio
+        logger.info("entrega duplicada descartada")
+        return False
+    return True
+
+
+async def _send_then_commit(db: AsyncSession, settings: Settings, phone: str, body: str) -> None:
+    """Envia a resposta e só então confirma a transação.
+
+    Se o envio falhar, nada fica gravado (nem o `message_id`), então o reenvio do webhook pela
+    Meta é processado em vez de descartado como duplicado e o turista não fica sem resposta.
+    """
+    await whatsapp_client.send_text_message(settings, phone, body)
+    await db.commit()
 
 
 async def _refuse_oversized_audio(
-    db: AsyncSession, settings: Settings, conversation: Conversation, phone: str
-) -> Conversation:
+    db: AsyncSession, settings: Settings, conversation: Conversation, incoming: IncomingMessage
+) -> Conversation | None:
     """Registra o áudio recusado e avisa o turista, sem transcrever nem chamar o Groq."""
-    db.add_all(
-        [
-            Message(
-                conversation_id=conversation.id,
-                direction=MessageDirection.ENTRADA,
-                tipo=MessageType.TEXTO,
-                conteudo=AUDIO_TOO_LONG_NOTE,
-            ),
-            Message(
-                conversation_id=conversation.id,
-                direction=MessageDirection.SAIDA,
-                tipo=MessageType.TEXTO,
-                conteudo=AUDIO_TOO_LONG_REPLY,
-            ),
-        ]
+    if not await _store_incoming(
+        db, conversation, incoming, MessageType.TEXTO, AUDIO_TOO_LONG_NOTE
+    ):
+        return None
+    db.add(
+        Message(
+            conversation_id=conversation.id,
+            direction=MessageDirection.SAIDA,
+            tipo=MessageType.TEXTO,
+            conteudo=AUDIO_TOO_LONG_REPLY,
+        )
     )
-    await db.commit()
     # Sem telefone nem conteúdo no log (LGPD): serve só para medir quantos turistas batem no teto.
     logger.info("áudio recusado: acima de %d bytes", settings.max_audio_bytes)
-    await whatsapp_client.send_text_message(settings, phone, AUDIO_TOO_LONG_REPLY)
+    await _send_then_commit(db, settings, incoming.phone, AUDIO_TOO_LONG_REPLY)
     return conversation
 
 
@@ -133,10 +182,13 @@ def _record_reply(db: AsyncSession, conversation: Conversation, reply: GroqReply
 
 async def process_incoming_message(
     db: AsyncSession, settings: Settings, incoming: IncomingMessage
-) -> Conversation:
+) -> Conversation | None:
     """Processa uma mensagem do turista: registra, pede a resposta ao Groq e a envia.
 
     Áudio acima de `max_audio_bytes` é recusado com um aviso, sem transcrever nem chamar o Groq.
+    A Meta reenvia o webhook quando demora; uma mensagem cujo `message_id` já foi registrada é
+    ignorada, sem baixar áudio, chamar o Groq nem responder de novo. A resposta é enviada antes do
+    `commit`: se o envio falhar, a exceção sobe (a Meta reenvia) e nada fica gravado.
 
     Args:
         db: Sessão do banco.
@@ -144,8 +196,10 @@ async def process_incoming_message(
         incoming: Mensagem extraída do payload do webhook.
 
     Returns:
-        A conversa atualizada.
+        A conversa atualizada, ou `None` se a mensagem era uma entrega repetida.
     """
+    if await _is_duplicate(db, incoming.message_id):
+        return None
     conversation = await get_or_create_open_conversation(db, incoming.phone)
 
     try:
@@ -153,23 +207,12 @@ async def process_incoming_message(
             settings, incoming.message_type, incoming.text_body, incoming.media_id
         )
     except whatsapp_client.MediaTooLargeError:
-        return await _refuse_oversized_audio(db, settings, conversation, incoming.phone)
+        return await _refuse_oversized_audio(db, settings, conversation, incoming)
 
-    db.add(
-        Message(
-            conversation_id=conversation.id,
-            direction=MessageDirection.ENTRADA,
-            tipo=tipo,
-            conteudo=content,
-        )
-    )
+    if not await _store_incoming(db, conversation, incoming, tipo, content):
+        return None
 
     reply = await _generate_reply(db, settings, content)
-
     _record_reply(db, conversation, reply)
-
-    await db.commit()
-
-    await whatsapp_client.send_text_message(settings, incoming.phone, reply.resposta)
-
+    await _send_then_commit(db, settings, incoming.phone, reply.resposta)
     return conversation

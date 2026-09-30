@@ -76,9 +76,13 @@ apareciam com menos cobertura do que realmente tinham — ver `[tool.coverage.ru
 - Funções acima de 40 linhas: `alembic/versions/0001_initial_schema.py:upgrade` (44, gerada), `tests/conftest.py:sample_tours` (45).
 - Áudio: o teto é só em bytes (`MAX_AUDIO_BYTES`, 5 MiB ≈ 20–30 min de Opus do WhatsApp); um limite
   por duração (ler o cabeçalho Ogg antes do Whisper) segue pendente.
-- `process_incoming_message` faz `commit` e só depois `send_text_message`: se o envio falhar, o
-  webhook devolve 500 e o reenvio da Meta duplica as mensagens no painel. A idempotência por
-  `message.id` está na tarefa "Processar o webhook em background e tornar idempotente".
+- Webhook: só a **idempotência** foi feita (índice único em `messages.whatsapp_message_id`). O
+  processamento continua dentro da requisição de propósito: no Cloud Run com cobrança por
+  requisição (`--min-instances=0`, sem `--no-cpu-throttling`) o trabalho depois do 200 é
+  "background activity" sem CPU garantida e pode se perder. Responder 200 na hora exige
+  `--no-cpu-throttling` (cobrança por instância, pode sair do free tier) ou fila/Cloud Tasks.
+  A resposta é enviada antes do `commit`: se o envio falha, o reenvio da Meta reprocessa; no caso
+  raro inverso (envio ok e `commit` falha), o reenvio responde o turista duas vezes.
 - Observabilidade: o app não configura `logging` (sem `basicConfig` em `app/main.py`), então o logger
   raiz fica em WARNING e logs INFO, como o `áudio recusado: acima de N bytes` do handler, não
   aparecem no uvicorn. Configurar o nível/formato de log na inicialização.
