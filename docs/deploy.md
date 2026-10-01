@@ -57,6 +57,9 @@ Access é controlada por **variáveis do repositório** (Settings → Secrets an
   Pages Function (`frontend/functions/api/[[path]].ts`) repassa ao Cloud Run com o JWT do Access, que
   o backend valida (assinatura RS256, emissor, audiência, validade). `access` deixa o token fixo
   responder 401 e fecha o CORS do navegador.
+- **Antes de `access`, procure quem mais usa o token fixo.** O n8n lia o catálogo com ele; agora lê
+  em `/api/ingest/catalogo` com o `INGEST_API_TOKEN`. Qualquer outro cliente do `DASHBOARD_API_TOKEN`
+  (script, monitor) deixa de funcionar no modo `access`.
 - **Ordem da migração:** defina `ACCESS_TEAM_DOMAIN` e `ACCESS_AUD`, depois `PANEL_AUTH_MODE=both`
   e faça o deploy (`/redeploy`). Entre no painel (janela anônima, código por e-mail) e confira as
   telas e uma mudança (marcar uma conversa). Só então `PANEL_AUTH_MODE=access` e outro deploy.
@@ -89,7 +92,7 @@ painel tem 90 dias. Para rodar à mão: `cd backend && python -m app.purge_conve
 ## Fluxo do WhatsApp no n8n (ADR-0004 e ADR-0005)
 
 O atendimento também pode rodar no n8n Cloud, fora do `deploy.yml`: o n8n recebe o webhook da
-Meta, lê o catálogo do backend (`GET /api/tours`, com o `DASHBOARD_API_TOKEN`), chama o Gemini no
+Meta, lê o catálogo do backend (`GET /api/ingest/catalogo`, com o `INGEST_API_TOKEN`), chama o Gemini no
 Vertex AI e responde pelo número +55. Depois de responder, registra o atendimento no backend
 (`POST /api/ingest/atendimentos`, com o `INGEST_API_TOKEN`) para o painel mostrar a conversa. O
 workflow está exportado em `docs/n8n/` e **não é publicado por CI**: importe o JSON, troque
@@ -103,7 +106,8 @@ credencial e o workflow novo no n8n.
   conversas chegam ao painel pelo `POST /api/ingest/atendimentos`, só as de **texto** (o áudio
   segue ignorado pelo n8n, TD-N4).
 - **Segredos:** token do usuário do sistema da Meta, chave da service account do Vertex e o
-  `DASHBOARD_API_TOKEN` e `INGEST_API_TOKEN` ficam **só nas credenciais do n8n**, nunca no repositório. Os valores
+  `INGEST_API_TOKEN` ficam **só nas credenciais do n8n**, nunca no repositório (o n8n não usa o
+  `DASHBOARD_API_TOKEN`: ele lê o catálogo em `/api/ingest/catalogo`). Os valores
   atuais de `WHATSAPP_*` no Cloud Run pertencem à conta de teste antiga.
 - **Reversão:** desative o workflow, aponte o callback do app para
   `https://<backend>/webhook/whatsapp` com o `WHATSAPP_VERIFY_TOKEN` e atualize `WHATSAPP_TOKEN` e
