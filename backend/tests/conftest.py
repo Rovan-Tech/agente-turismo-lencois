@@ -1,7 +1,12 @@
+import json
 import os
+import uuid
 
+import jwt
 import pytest
 import pytest_asyncio
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -13,6 +18,7 @@ from app.main import app
 from app.models.tour import DifficultyLevel, Tour
 from app.services import message_handler, whatsapp_client
 from app.services.groq_client import GroqReply
+from tests.access_support import AUDIENCE, KID, AccessEnv
 from tests.ingest_support import INGEST_BEARER
 
 TEST_DASHBOARD_TOKEN = "test-dashboard-token"
@@ -145,3 +151,39 @@ def sample_tours() -> list[Tour]:
             ativo=True,
         ),
     ]
+
+
+@pytest.fixture(scope="module")
+def rsa_keys() -> tuple[RSAPrivateKey, RSAPrivateKey]:
+    return (
+        rsa.generate_private_key(public_exponent=65537, key_size=2048),
+        rsa.generate_private_key(public_exponent=65537, key_size=2048),
+    )
+
+
+def _configure(monkeypatch: pytest.MonkeyPatch, mode: str, issuer: str, audience: str) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "panel_auth_mode", mode)
+    monkeypatch.setattr(settings, "access_team_domain", issuer)
+    monkeypatch.setattr(settings, "access_aud", audience)
+
+
+@pytest.fixture
+def access(
+    monkeypatch: pytest.MonkeyPatch, rsa_keys: tuple[RSAPrivateKey, RSAPrivateKey]
+) -> AccessEnv:
+    """Modo `access` com um JWKS de teste (sem rede). Cada teste usa uma equipe nova: o cache é
+    por endereço, então um teste não enxerga o JWKS do outro."""
+    private_key, other_key = rsa_keys
+    issuer = f"https://t{uuid.uuid4().hex[:10]}.cloudflareaccess.com"
+    jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(private_key.public_key()))
+    jwk |= {"kid": KID, "use": "sig", "alg": "RS256"}
+    fetches: list[int] = []
+
+    def fake_fetch(self: object) -> dict[str, object]:
+        fetches.append(1)
+        return {"keys": [jwk]}
+
+    monkeypatch.setattr(jwt.PyJWKClient, "fetch_data", fake_fetch)
+    _configure(monkeypatch, "access", issuer, AUDIENCE)
+    return AccessEnv(issuer, private_key, other_key, fetches)

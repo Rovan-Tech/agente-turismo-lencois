@@ -1,0 +1,8 @@
+# Pages Function do painel (`functions/api/[[path]].ts`): repassa `/api/*` ao Cloud Run.
+# A origem é pública (já aparece no bundle) e o proxy só a aceita se for exatamente `https://host`.
+name = "agente-turismo-lencois"
+compatibility_date = "2026-10-01"
+pages_build_output_dir = "dist"
+
+[vars]
+API_ORIGIN = "https://agente-turismo-lencois-backend-6yjkqvbuoq-rj.a.run.app"

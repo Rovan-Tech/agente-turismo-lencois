@@ -18,6 +18,11 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const API_TOKEN = import.meta.env.VITE_API_TOKEN;
 
+// Atrás do Cloudflare Access a sessão é um cookie que o navegador envia sozinho. Em toda mudança
+// o painel manda este cabeçalho, que uma página de terceiro não consegue enviar (CSRF); o proxy e
+// o backend o exigem.
+const PANEL_HEADER = { "X-Panel-Request": "1" };
+
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; message: string };
 
 /**
@@ -72,6 +77,7 @@ async function sendJson<T>(
       method,
       headers: {
         "Content-Type": "application/json",
+        ...PANEL_HEADER,
         ...(API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

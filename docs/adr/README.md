@@ -17,3 +17,5 @@ um ADR aprovado aqui** (Manual V5 §2; item `GOV-1` do `docs/checklist-engenhari
 | [0003](0003-revisao-por-convergencia-e-entregas-menores.md) | Revisão por convergência, pré-voo obrigatório e entregas menores | Proposto |
 | [0004](0004-n8n-orquestra-gemini-vertex-numero-de-producao.md) | Orquestrar o atendimento no n8n, usar Gemini no Vertex AI e um número +55 de produção | Proposto |
 | [0005](0005-endpoint-de-entrada-para-o-n8n-registrar-atendimentos.md) | Criar um endpoint de entrada no backend para o n8n registrar os atendimentos | Aprovado |
+| [0006](0006-login-do-painel-com-cloudflare-access.md) | Proteger o painel com Cloudflare Access e identificar cada pessoa pelo JWT | Aprovado |
+| [0007](0007-demonstracao-publica-do-painel-sem-backend.md) | Publicar uma demonstração do painel, sem backend, e manter o painel real privado | Aprovado |
