@@ -28,12 +28,22 @@ function json(status: number, detail: string, headers: Record<string, string> = 
   });
 }
 
-/** Só caminhos de `/api/` sem truques de codificação e fora da rota do n8n (`/api/ingest`). */
+// Teto do corpo declarado: as mudanças do painel são minúsculas (o backend também limita).
+const MAX_BODY_BYTES = 64 * 1024;
+
+// Lista de permitidos: só os recursos que o painel usa, com segmentos simples (letras, números,
+// `_` e `-`). Sem `%`, `.` nem barra no fim, não há codificação, dot-segment ou caminho oculto
+// (como `%69ngest`) a conferir, e a rota do n8n (`/api/ingest`) fica de fora por construção.
+const PANEL_PATH = /^\/api\/(?:tours|conversations)(?:\/[A-Za-z0-9_-]+)*$/;
+
 function isAllowedPath(pathname: string): boolean {
-  if (!pathname.startsWith("/api/")) return false;
-  if (/%2e|%2f|%5c|\\|\/\//i.test(pathname)) return false;
-  const lower = pathname.toLowerCase();
-  return lower !== "/api/ingest" && !lower.startsWith("/api/ingest/");
+  return PANEL_PATH.test(pathname);
+}
+
+/** Corpo declarado acima do teto; sem `Content-Length` a plataforma e o backend é que limitam. */
+function isBodyTooLarge(request: Request): boolean {
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  return Number.isFinite(declared) && declared > MAX_BODY_BYTES;
 }
 
 /** A origem precisa ser exatamente `https://host`, sem caminho nem barra no fim. */
@@ -61,6 +71,7 @@ export async function handleApiProxy(
   if (request.method !== "GET" && request.headers.get("x-panel-request") !== "1") {
     return json(403, "cabeçalho do painel ausente");
   }
+  if (isBodyTooLarge(request)) return json(413, "corpo grande demais");
   const origin = resolveOrigin(env);
   if (!origin) return json(500, "proxy mal configurado");
 
@@ -84,7 +95,13 @@ export async function handleApiProxy(
   }
 
   const response = new Response(upstream.body, upstream);
-  response.headers.delete("set-cookie");
+  // Nada do que identifica o Cloud Run volta ao navegador: cookie, destino de redirecionamento
+  // (apontaria direto para o `run.app`) e cabeçalhos CORS do backend.
+  for (const name of [...response.headers.keys()]) {
+    if (name === "set-cookie" || name === "location" || name.startsWith("access-control-")) {
+      response.headers.delete(name);
+    }
+  }
   response.headers.set("cache-control", "no-store");
   return response;
 }
