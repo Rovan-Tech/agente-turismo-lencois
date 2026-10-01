@@ -14,3 +14,4 @@ um ADR aprovado aqui** (Manual V5 §2; item `GOV-1` do `docs/checklist-engenhari
 |---|---|---|
 | [0001](0001-adocao-do-manual-v5.md) | Adoção do Manual Corporativo V5 e adaptações ao projeto | Aprovado |
 | [0002](0002-pipeline-de-ci-cd-em-camadas.md) | Pipeline de CI/CD em camadas (portão de PR, noturno e deploy com rollback) | Aprovado |
+| [0003](0003-revisao-por-convergencia-e-entregas-menores.md) | Revisão por convergência, pré-voo obrigatório e entregas menores | Proposto |
