@@ -44,6 +44,11 @@ def jwt_header(token: str) -> dict[str, str]:
     return {**NO_BEARER, "Cf-Access-Jwt-Assertion": token}
 
 
+def panel_headers(token: str) -> dict[str, str]:
+    """Cabeçalhos de quem está logado no painel e faz uma mudança (JWT mais o cabeçalho de CSRF)."""
+    return jwt_header(token) | {"X-Panel-Request": "1"}
+
+
 async def get_panel(client: httpx.AsyncClient, token: str) -> httpx.Response:
     return await client.get(PANEL_URL, headers=jwt_header(token))
 

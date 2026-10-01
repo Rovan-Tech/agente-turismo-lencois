@@ -30,6 +30,9 @@ Turista ──WhatsApp──▶ Meta (Cloud API) ──webhook──▶ n8n ─�
 > de **texto** atendidas pelo n8n chegam ao painel por `POST /api/ingest/atendimentos`
 > ([ADR-0005](docs/adr/0005-endpoint-de-entrada-para-o-n8n-registrar-atendimentos.md)); o áudio
 > segue ignorado pelo n8n (TD-N4). Conversas sem atividade há 90 dias são apagadas (LGPD).
+> Uma pessoa da equipe pode **assumir a conversa** no painel e responder no lugar da IA
+> ([ADR-0008](docs/adr/0008-atendimento-humano-pelo-painel.md)); o turista é avisado com o primeiro
+> nome dela.
 
 ## Pastas
 
@@ -61,7 +64,7 @@ Para receber mensagens reais do WhatsApp localmente é preciso expor a porta 800
 
 Só os nomes; os valores nunca vão para o repositório (`backend/.env.example` tem os modelos).
 
-`DATABASE_URL`, `DASHBOARD_API_TOKEN`, `INGEST_API_TOKEN`, `CONVERSATION_RETENTION_DAYS`, `PANEL_AUTH_MODE`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `FRONTEND_ORIGIN`, `AGENCY_NAME`, `WHATSAPP_TOKEN`,
+`DATABASE_URL`, `DASHBOARD_API_TOKEN`, `INGEST_API_TOKEN`, `CONVERSATION_RETENTION_DAYS`, `HUMAN_HANDOFF_IDLE_HOURS`, `HUMAN_SEND_CAP_PER_HOUR`, `PANEL_AUTH_MODE`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `FRONTEND_ORIGIN`, `AGENCY_NAME`, `WHATSAPP_TOKEN`,
 `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `GROQ_API_KEY`,
 `GROQ_MODEL`, `WHISPER_MODEL_SIZE`, `MAX_AUDIO_BYTES`.
 

@@ -65,6 +65,22 @@ def test_conversation_retention_must_be_at_least_one_day(days):
         Settings.model_validate({"conversation_retention_days": days})
 
 
+def test_human_handoff_defaults_to_two_idle_hours_and_sixty_messages_per_hour(monkeypatch):
+    monkeypatch.delenv("HUMAN_HANDOFF_IDLE_HOURS", raising=False)
+    monkeypatch.delenv("HUMAN_SEND_CAP_PER_HOUR", raising=False)
+
+    settings = Settings(_env_file=None)
+
+    assert (settings.human_handoff_idle_hours, settings.human_send_cap_per_hour) == (2, 60)
+
+
+@pytest.mark.parametrize("field", ["human_handoff_idle_hours", "human_send_cap_per_hour"])
+@pytest.mark.parametrize("value", [0, -1])
+def test_human_handoff_limits_must_be_at_least_one(field, value):
+    with pytest.raises(ValidationError, match=field):
+        Settings.model_validate({field: value})
+
+
 def test_panel_auth_defaults_keep_the_current_behaviour(monkeypatch):
     for variable in ("PANEL_AUTH_MODE", "ACCESS_TEAM_DOMAIN", "ACCESS_AUD"):
         monkeypatch.delenv(variable, raising=False)

@@ -61,6 +61,12 @@ class Settings(BaseSettings):
     # Mínimo de 1: com 0 ou negativo o corte cairia no futuro e o expurgo apagaria tudo.
     conversation_retention_days: int = Field(default=90, ge=1)
 
+    # Atendimento humano (ADR-0008): sem mensagem do atendente por tanto tempo, a conversa volta
+    # para a IA; e o teto de mensagens de atendente por conversa por hora limita o dano de um erro
+    # ou de um login comprometido.
+    human_handoff_idle_hours: int = Field(default=2, ge=1)
+    human_send_cap_per_hour: int = Field(default=60, ge=1)
+
     # Login do painel (ADR-0006). `token`: só o token fixo (como hoje). `both`: token fixo ou JWT do
     # Cloudflare Access, para testar. `access`: só o JWT. Sem `ACCESS_*`, o JWT é sempre recusado.
     panel_auth_mode: Literal["token", "both", "access"] = "token"

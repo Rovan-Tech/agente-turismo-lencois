@@ -16,6 +16,7 @@ from app.services.message_handler import (
     process_incoming_message,
     resolve_incoming_text,
 )
+from tests.handoff_support import PHONE, holding
 
 
 @pytest.mark.asyncio
@@ -316,3 +317,19 @@ async def test_integrity_error_without_message_id_is_not_mistaken_for_a_duplicat
         await message_handler.store_incoming(
             db_session, conversation, incoming, MessageType.TEXTO, "oi"
         )
+
+
+@pytest.mark.asyncio
+async def test_process_incoming_message_oversized_audio_with_an_attendant_is_noted_without_a_reply(
+    db_session, oversized_audio
+):
+    await holding(db_session)
+    incoming = IncomingMessage(PHONE, "audio", media_id="m1", message_id="wamid.audio-humano")
+
+    await _process(db_session, incoming)
+
+    notes = await db_session.execute(
+        select(Message.conteudo).where(Message.conteudo == message_handler.AUDIO_TOO_LONG_NOTE)
+    )
+    assert oversized_audio["sent"] == []
+    assert len(notes.all()) == 1

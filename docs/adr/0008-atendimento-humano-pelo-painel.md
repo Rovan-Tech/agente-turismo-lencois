@@ -77,8 +77,8 @@ Adotar a **opção 1**, com estas regras:
   última mensagem do turista tem mais de 24 horas** (o painel desabilita o campo e explica). O envio
   vem **antes** da gravação: se a Meta recusar, nada fica gravado e o atendente vê o motivo, sem
   telefone nem token.
-- **IA pausada:** o n8n passa a chamar `GET /api/ingest/conversas/atendimento?telefone=…`
-  (`INGEST_API_TOKEN`) antes de gerar a resposta. Com a conversa em `humano`, o n8n **só registra**
+- **IA pausada:** o n8n passa a chamar `POST /api/ingest/conversas/atendimento`
+  com o telefone no **corpo** (`INGEST_API_TOKEN`; na URL o telefone cairia no log de acesso) antes de gerar a resposta. Com a conversa em `humano`, o n8n **só registra**
   a mensagem do turista (rota de ingest só de entrada) e **não responde**. Se a consulta falhar, o
   fluxo cai na contingência (nunca responde "no escuro" por cima de um humano).
 - **Devolução automática:** depois de `HUMAN_HANDOFF_IDLE_HOURS` (padrão **2**) sem mensagem do
@@ -92,6 +92,9 @@ Adotar a **opção 1**, com estas regras:
   escreve). O texto da lateral ("o assistente também atualiza o status…") é corrigido.
 - **Segredos:** `WHATSAPP_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID` de **produção** nos secrets do GitHub
   (feito por quem tem o token da Meta, nunca no repositório nem na conversa).
+- **Concorrência:** assumir, devolver e enviar travam a linha da conversa (`SELECT … FOR UPDATE`) e
+  reavaliam o estado depois da trava, então dois cliques ou duas pessoas ao mesmo tempo não mandam
+  dois avisos: o segundo vira "mesma pessoa" (200, sem reenviar) ou 409.
 - **Log:** só método, molde da rota, `sub` e o resultado; nunca texto, telefone nem token.
 
 Decisões que dependem do Patrick estão em
@@ -120,6 +123,9 @@ Decisões que dependem do Patrick estão em
   testado).
 - **Corrida humano × IA:** uma mensagem do turista que chega no instante em que o atendente assume
   pode ser respondida pela IA uma última vez. Aceito e raro.
+- **Entrega e gravação não são atômicas:** se a Meta aceitar a mensagem e a gravação falhar (ou o
+  tempo esgotar com a mensagem já entregue), a nova tentativa reenvia e o turista pode receber a
+  mesma mensagem duas vezes. Não há outbox; aceito pelo volume baixo.
 - **Sem aviso em tempo real:** o atendente só vê a mensagem nova quando a tela atualiza (15 s) ou ele
   abre o painel. Notificação (e-mail, push) fica fora deste ADR.
 - **Sem limite de taxa geral (TD-A3):** o teto de 60 mensagens por conversa por hora limita o dano de

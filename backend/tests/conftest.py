@@ -8,17 +8,19 @@ import pytest_asyncio
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.models.conversation import Conversation
 from app.models.tour import DifficultyLevel, Tour
 from app.services import message_handler, whatsapp_client
 from app.services.groq_client import GroqReply
 from tests.access_support import AUDIENCE, KID, AccessEnv
+from tests.handoff_support import Outbox, holding, make_conversation
 from tests.ingest_support import INGEST_BEARER
 
 TEST_DASHBOARD_TOKEN = "test-dashboard-token"
@@ -187,3 +189,29 @@ def access(
     monkeypatch.setattr(jwt.PyJWKClient, "fetch_data", fake_fetch)
     _configure(monkeypatch, "access", issuer, AUDIENCE)
     return AccessEnv(issuer, private_key, other_key, fetches)
+
+
+@pytest.fixture
+def outbox(monkeypatch: pytest.MonkeyPatch) -> Outbox:
+    """Troca o envio ao WhatsApp por um registro do que seria enviado (e por falhas sob demanda)."""
+    box = Outbox()
+
+    async def fake_send(settings: object, to: str, body: str) -> None:
+        if box.failure is not None:
+            raise box.failure
+        box.sent.append((to, body))
+
+    monkeypatch.setattr(whatsapp_client, "send_text_message", fake_send)
+    return box
+
+
+@pytest_asyncio.fixture
+async def conversation(db_session: AsyncSession) -> Conversation:
+    """Conversa com a IA, com uma mensagem do turista de 5 minutos atrás."""
+    return await make_conversation(db_session)
+
+
+@pytest_asyncio.fixture
+async def held(db_session: AsyncSession) -> Conversation:
+    """Conversa que a pessoa `pessoa-123` assumiu há pouco."""
+    return await holding(db_session)

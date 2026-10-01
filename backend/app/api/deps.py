@@ -73,6 +73,7 @@ async def require_dashboard_auth(
     if mode == "token" or not cf_access_jwt_assertion:
         raise HTTPException(status_code=401, detail="não autorizado")
     identity = await _identity_from_access_jwt(cf_access_jwt_assertion, settings)
+    request.state.identity = identity
     _require_panel_header(request, x_panel_request)
     if request.method not in SAFE_METHODS:
         # Só o `sub` (opaco): nem o e-mail nem o JWT entram no log. Vai o molde da rota
@@ -85,6 +86,20 @@ async def require_dashboard_auth(
             identity.sub,
             extra={"event": "panel_mutation", "actor": identity.sub},
         )
+
+
+async def require_panel_identity(request: Request) -> AccessIdentity:
+    """Exige uma pessoa logada (JWT do Access): o token fixo do painel não diz quem agiu.
+
+    Roda depois de `require_dashboard_auth` (dependência do roteador), que guarda a identidade.
+
+    Raises:
+        HTTPException: 403 se a autenticação foi pelo token fixo, sem uma pessoa por trás.
+    """
+    identity = getattr(request.state, "identity", None)
+    if not isinstance(identity, AccessIdentity):
+        raise HTTPException(status_code=403, detail="entre com o seu login para fazer isto")
+    return identity
 
 
 async def require_ingest_auth(

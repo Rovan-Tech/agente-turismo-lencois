@@ -89,6 +89,29 @@ prazo é o padrão da aplicação (`CONVERSATION_RETENTION_DAYS`, mínimo 1): pa
 variável no `env` do workflow. O log traz só a quantidade apagada. Pelo prazo, o histórico do
 painel tem 90 dias. Para rodar à mão: `cd backend && python -m app.purge_conversations`.
 
+## Atendimento humano pelo painel (ADR-0008)
+
+A pessoa logada assume a conversa no painel e responde **pelo backend**, que envia pela Cloud API da
+Meta. Para isso o backend precisa dos dados do número **de produção**:
+
+- **Secrets do GitHub** (`WHATSAPP_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID`): hoje guardam a conta de
+  teste antiga. Troque-os pelos do número +55 (token do usuário do sistema, escopo só de
+  mensagens) antes de testar de verdade, **sem colar o valor no chat nem no repositório**. Se o
+  token vazar, rotacione-o na Meta e atualize o secret.
+- **Janela de 24 h:** a Meta só aceita texto livre até 24 h depois da última mensagem do turista
+  (erro `131047`); o painel desabilita o campo e o backend recusa com 409.
+- **Ajustes** (opcionais, no `env` do deploy): `HUMAN_HANDOFF_IDLE_HOURS` (padrão 2: sem mensagem do
+  atendente por esse tempo, a conversa volta para a IA) e `HUMAN_SEND_CAP_PER_HOUR` (padrão 60
+  mensagens de atendente por conversa por hora).
+- **Quem pode:** só quem entra pelo login do Access (o token fixo do painel recebe 403 em
+  assumir, devolver e enviar). O nome que o turista vê é o primeiro nome do e-mail do login.
+- **n8n:** antes de chamar o Gemini o fluxo pergunta `POST /api/ingest/conversas/atendimento` (telefone
+  no corpo; com o `INGEST_API_TOKEN`); com `humano` ele só registra a mensagem em
+  `POST /api/ingest/mensagens` e não responde. **Ordem:** deploy do backend, depois o fluxo.
+- **Migração `0004`:** colunas novas em `conversations` e `messages`; `alembic downgrade 0003`
+  desfaz (as mensagens de atendente enviadas somem junto com a coluna de autoria, mas o texto fica
+  no histórico). A migração do agendamento passa a `0005`.
+
 ## Fluxo do WhatsApp no n8n (ADR-0004 e ADR-0005)
 
 O atendimento também pode rodar no n8n Cloud, fora do `deploy.yml`: o n8n recebe o webhook da
