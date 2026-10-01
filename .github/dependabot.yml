@@ -1,17 +1,26 @@
-# Atualizações automáticas de dependências. Cada PR passa pelo mesmo CI dos demais; os de
-# patch/minor vêm agrupados para não gerar uma enxurrada de PRs.
+# Atualizações automáticas de dependências. Cada PR passa pelo mesmo CI dos demais; patch e minor
+# vêm agrupados para não gerar uma enxurrada de PRs.
 #
-# Versão MAIOR (major) é migração: pode quebrar o app e exige ajuste de código e teste. Por isso
-# o robô não a propõe (ignore abaixo); ela entra por tarefa própria, com PR e revisão. Correção de
-# segurança não depende destas regras: o Dependabot security updates ignora o `ignore`.
+# Versão MAIOR (major) é migração: pode quebrar o app e exige ajuste de código e teste.
+# - Sem major por robô: pip /backend, npm /frontend e a imagem `python` (`ignore` abaixo). Entram por
+#   tarefa própria, com PR e revisão. Mesma regra para as ações do Google e do Cloudflare: só o deploy
+#   na `main` as executa, então o CI do PR não prova que continuam funcionando.
+# - Com major, de propósito: as demais ações (fixadas por SHA; o CI do PR as exercita) e as
+#   ferramentas só do CI em /scripts/ci.
+#
+# `update-types` vale só para atualização de versão e NÃO bloqueia correção de segurança. Um `ignore`
+# sem `update-types` (ou com `versions`) bloqueia também a de segurança: não o use em dependência
+# que tenha correção de segurança. O Dependabot security updates estava desligado em 2026-10-01
+# (Settings > Code security); enquanto estiver, alerta de segurança não vira PR.
+#
+# `cooldown`: espera 7 dias antes de propor uma versão recém-publicada, para que uma versão retirada
+# ou maliciosa nem chegue a virar PR. Não atrasa atualização de segurança.
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /backend
     schedule:
       interval: weekly
-    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
-    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
     cooldown:
       default-days: 7
     commit-message:
@@ -37,8 +46,6 @@ updates:
     directory: /scripts/ci
     schedule:
       interval: weekly
-    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
-    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
     cooldown:
       default-days: 7
     commit-message:
@@ -53,8 +60,6 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
-    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
-    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
     cooldown:
       default-days: 7
     commit-message:
@@ -74,8 +79,6 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
-    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
     cooldown:
       default-days: 7
     commit-message:
@@ -84,13 +87,17 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+    ignore:
+      # Só o deploy na `main` executa estas ações: o CI do PR não prova que o major funciona.
+      - dependency-name: "google-github-actions/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "cloudflare/wrangler-action"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /backend
     schedule:
       interval: weekly
-    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
-    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
     cooldown:
       default-days: 7
     commit-message:

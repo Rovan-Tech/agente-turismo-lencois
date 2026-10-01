@@ -95,12 +95,18 @@ job vermelho, inclusive instabilidade de rede (banco do Trivy, pull de imagem). 
 
 ## Mantendo o pipeline
 
-- **O que o Dependabot propõe.** Só patch e minor, agrupados, com **7 dias de espera** (`cooldown`)
-  antes de propor uma versão recém-publicada. **Versão maior (major) não vem por robô**: é migração
-  (React 19, TypeScript 7 e Python 3.14 reprovaram o CI) e entra por tarefa própria. SQLAlchemy e ruff
-  só sobem à mão em minor (o 2.1 deixou de instalar o `greenlet`; cada minor do ruff muda regras).
-  Correção de segurança não segue essas regras. Para aceitar uma migração, tire o item do `ignore`
-  em `.github/dependabot.yml` no mesmo PR que ajusta o código.
+- **O que o Dependabot propõe.** Patch e minor, agrupados, com **7 dias de espera** (`cooldown`) antes
+  de propor uma versão recém-publicada. **Versão maior (major) não vem por robô** em pip `/backend`,
+  npm e na imagem `python`: é migração (React 19, TypeScript 7 e Python 3.14 reprovaram o CI) e entra
+  por tarefa própria. O mesmo vale para `google-github-actions/*` e `cloudflare/wrangler-action`, que só
+  o deploy na `main` executa (o CI do PR não prova que o major funciona). As demais ações e as
+  ferramentas de `/scripts/ci` **continuam recebendo major** de propósito. SQLAlchemy e ruff só sobem à
+  mão em minor (o 2.1 deixou de instalar o `greenlet`; cada minor do ruff muda regras). Para aceitar uma
+  migração, tire o item do `ignore` em `.github/dependabot.yml` no mesmo PR que ajusta o código.
+- **Segurança e Dependabot.** As regras com `update-types` não valem para correção de segurança, mas um
+  `ignore` sem `update-types` (ou com `versions`) vale: não o use em dependência com correção de
+  segurança. O *Dependabot security updates* estava **desligado** em 2026-10-01: enquanto estiver, alerta
+  de segurança não vira PR (fica no alerta e no `pip-audit`/`npm audit`).
 - **Ações** estão fixadas por SHA de commit (com a versão no comentário) e **imagens Docker por
   digest**. O Dependabot (`.github/dependabot.yml`, semanal e agrupado) propõe as atualizações de
   ações, pip, npm e do Dockerfile. Os digests de `ci.yml` e `nightly.yml` (gitleaks, actionlint,
