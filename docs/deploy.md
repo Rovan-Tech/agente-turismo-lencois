@@ -91,10 +91,12 @@ painel tem 90 dias. Para rodar à mão: `cd backend && python -m app.purge_conve
 
 ## Atendimento humano pelo painel (ADR-0008)
 
-> **Ordem de entrada em produção:** (1) backend (já no ar); (2) painel (botões e campo de
-> resposta); (3) **só então** importar o fluxo novo no n8n. O fluxo exportado em `docs/n8n/` já
-> traz a consulta de atendimento, mas o n8n é publicado à mão: **até ele ser atualizado, assumir a
-> conversa não silencia a IA**. Não oriente a equipe a usar antes de conferir os três passos.
+> **Ordem de entrada em produção:** (1) backend (no ar desde o PR #55); (2) **fluxo novo no n8n**
+> (importar `docs/n8n/`, testar e ativar: sozinho ele só recebe `ia` e se comporta como o antigo);
+> (3) **só então o painel** (botões e campo de resposta). Com o painel antes do n8n, "Assumir
+> conversa" avisaria o turista de que uma pessoa fala, mas o n8n antigo continuaria respondendo com
+> a IA por cima. Até o n8n ser atualizado, **assumir a conversa não silencia a IA**: não oriente a
+> equipe a usar. O painel é publicado no merge; por isso o n8n vem antes do merge.
 
 A pessoa logada assume a conversa no painel e responde **pelo backend**, que envia pela Cloud API da
 Meta. Para isso o backend precisa dos dados do número **de produção**:

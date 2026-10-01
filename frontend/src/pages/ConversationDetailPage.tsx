@@ -1,9 +1,9 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { SuggestedTourCard } from "../features/suggested-tour/components/SuggestedTourCard";
-import { HandoffSection } from "../features/handoff/HandoffSection";
-import { ReplyComposer } from "../features/handoff/ReplyComposer";
+import { GIVE_BACK_ID, HandoffSection, TAKE_OVER_ID } from "../features/handoff/HandoffSection";
+import { REPLY_FIELD_ID, ReplyComposer } from "../features/handoff/ReplyComposer";
 import { useConversationActions } from "../features/handoff/useConversationActions";
 import { useConversationDetail } from "../features/handoff/useConversationDetail";
 import { useMe } from "../features/handoff/useMe";
@@ -53,10 +53,24 @@ export function ConversationDetailPage() {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [conversation, setConversation, reload] = useConversationDetail(id);
   const me = useMe();
-  // O botão "Marcar como resolvida" sai da tela: leva o foco ao título para não se perder.
-  const actions = useConversationActions(id, setConversation, reload, () =>
-    titleRef.current?.focus()
-  );
+  // Quando uma ação desmonta o botão que tinha o foco, ele vai para o que a pessoa usa em seguida
+  // (a releitura que segue a ação ainda não terminou, então o foco espera a tela mudar).
+  const [focusNext, setFocusNext] = useState<"reply" | "take-over" | null>(null);
+  const actions = useConversationActions(id, setConversation, reload, {
+    // O botão "Marcar como resolvida" sai da tela: leva o foco ao título para não se perder.
+    onResolved: () => titleRef.current?.focus(),
+    onTookOver: () => setFocusNext("reply"),
+    onGaveBack: () => setFocusNext("take-over"),
+  });
+  useEffect(() => {
+    if (!focusNext) return;
+    const candidates = focusNext === "reply" ? [REPLY_FIELD_ID, GIVE_BACK_ID] : [TAKE_OVER_ID];
+    const target = candidates
+      .map((elementId) => document.getElementById(elementId))
+      .find((element) => element !== null && !(element as HTMLButtonElement).disabled);
+    (target ?? titleRef.current)?.focus();
+    setFocusNext(null);
+  }, [focusNext, conversation]);
   const isMine =
     conversation?.atendimento === "humano" && me !== null && conversation.atendente_sub === me.sub;
 

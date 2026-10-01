@@ -2,6 +2,10 @@ import { ErrorAlert } from "../../components/ErrorAlert";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import type { ConversationHeader, Me } from "../../types";
 
+/** Ids dos botões: a página leva o foco a um deles quando a troca de estado desmonta o outro. */
+export const TAKE_OVER_ID = "take-over-button";
+export const GIVE_BACK_ID = "give-back-button";
+
 const BUTTON =
   "rounded-md border border-subtle px-4 py-2 text-sm font-medium text-primary hover:bg-subtle active:bg-subtle disabled:bg-subtle disabled:text-muted";
 
@@ -43,7 +47,13 @@ export function HandoffSection({
         <>
           <p className="text-sm font-semibold text-primary">{holderLabel(conversation, isMine)}</p>
           <p className="text-xs text-muted">O assistente de IA não responde enquanto isso.</p>
-          <button type="button" onClick={onGiveBack} disabled={busy} className={BUTTON}>
+          <button
+            id={GIVE_BACK_ID}
+            type="button"
+            onClick={onGiveBack}
+            disabled={busy}
+            className={BUTTON}
+          >
             {busy ? "Devolvendo…" : "Devolver para a IA"}
           </button>
         </>
@@ -55,7 +65,7 @@ export function HandoffSection({
           ) : (
             <>
               <p className="text-xs text-muted">{announcementPreview(me)}</p>
-              <PrimaryButton onClick={onTakeOver} disabled={busy}>
+              <PrimaryButton id={TAKE_OVER_ID} onClick={onTakeOver} disabled={busy}>
                 {busy ? "Assumindo…" : "Assumir conversa"}
               </PrimaryButton>
             </>

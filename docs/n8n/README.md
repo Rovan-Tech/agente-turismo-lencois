@@ -34,7 +34,11 @@ WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Consu
   àquele telefone. Com `humano` (uma pessoa assumiu a conversa no painel), o fluxo **só registra** a
   mensagem do turista (`POST /api/ingest/mensagens`) e **não chama o Gemini nem responde**. Com
   `ia`, segue o fluxo normal. Se a consulta falhar (3 tentativas, 5 s cada), cai na contingência: o
-  fluxo nunca responde "no escuro" por cima de um humano. O backend devolve a conversa para a IA
+  fluxo nunca deixa a IA responder por cima de um humano, mas **um aviso fixo de contingência ainda
+  é enviado ao turista** (e gravado no painel como mensagem da IA). Uma mensagem do turista que
+  chega durante o atendimento fica **sem resposta** se a pessoa sumir: ela só é respondida pela IA na
+  próxima mensagem depois da devolução automática (e se "Registrar mensagem" falhar nas 3
+  tentativas, a mensagem só existe na execução do n8n). O backend devolve a conversa para a IA
   depois de 2 horas sem mensagem do atendente.
 - O catálogo vem de `GET /api/ingest/catalogo`, com o `INGEST_API_TOKEN` (o mesmo do registro de
   atendimentos), e é tentado até 3 vezes (o Neon fecha conexões ociosas). O n8n **não** usa o token do
