@@ -34,7 +34,7 @@ const MAX_BODY_BYTES = 64 * 1024;
 // Lista de permitidos: só os recursos que o painel usa, com segmentos simples (letras, números,
 // `_` e `-`). Sem `%`, `.` nem barra no fim, não há codificação, dot-segment ou caminho oculto
 // (como `%69ngest`) a conferir, e a rota do n8n (`/api/ingest`) fica de fora por construção.
-const PANEL_PATH = /^\/api\/(?:tours|conversations)(?:\/[A-Za-z0-9_-]+)*$/;
+const PANEL_PATH = /^\/api\/(?:(?:tours|conversations)(?:\/[A-Za-z0-9_-]+)*|me)$/;
 
 function isAllowedPath(pathname: string): boolean {
   return PANEL_PATH.test(pathname);

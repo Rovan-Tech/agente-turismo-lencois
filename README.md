@@ -30,9 +30,10 @@ Turista ──WhatsApp──▶ Meta (Cloud API) ──webhook──▶ n8n ─�
 > de **texto** atendidas pelo n8n chegam ao painel por `POST /api/ingest/atendimentos`
 > ([ADR-0005](docs/adr/0005-endpoint-de-entrada-para-o-n8n-registrar-atendimentos.md)); o áudio
 > segue ignorado pelo n8n (TD-N4). Conversas sem atividade há 90 dias são apagadas (LGPD).
-> **Em andamento:** uma pessoa da equipe poderá **assumir a conversa** e responder no lugar da IA
-> ([ADR-0008](docs/adr/0008-atendimento-humano-pelo-painel.md)). O backend já tem as rotas; o painel
-> e o fluxo do n8n ainda não, então por enquanto a IA continua respondendo.
+> Uma pessoa da equipe pode **assumir a conversa** no painel e responder no lugar da IA
+> ([ADR-0008](docs/adr/0008-atendimento-humano-pelo-painel.md)); o turista é avisado com o primeiro
+> nome dela. O fluxo do n8n exportado já consulta o estado, mas ele é publicado à mão: até lá a IA
+> continua respondendo (ver `docs/deploy.md`).
 
 ## Pastas
 

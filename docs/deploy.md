@@ -91,9 +91,10 @@ painel tem 90 dias. Para rodar à mão: `cd backend && python -m app.purge_conve
 
 ## Atendimento humano pelo painel (ADR-0008)
 
-> **Só o backend está pronto (PR 1).** O fluxo do n8n e o painel ainda não foram alterados: até o
-> PR 2, assumir a conversa **não silencia a IA** e não há botões no painel. Não oriente a equipe a
-> usar antes.
+> **Ordem de entrada em produção:** (1) backend (já no ar); (2) painel (botões e campo de
+> resposta); (3) **só então** importar o fluxo novo no n8n. O fluxo exportado em `docs/n8n/` já
+> traz a consulta de atendimento, mas o n8n é publicado à mão: **até ele ser atualizado, assumir a
+> conversa não silencia a IA**. Não oriente a equipe a usar antes de conferir os três passos.
 
 A pessoa logada assume a conversa no painel e responde **pelo backend**, que envia pela Cloud API da
 Meta. Para isso o backend precisa dos dados do número **de produção**:
@@ -109,7 +110,7 @@ Meta. Para isso o backend precisa dos dados do número **de produção**:
   mensagens de atendente por conversa por hora).
 - **Quem pode:** só quem entra pelo login do Access (o token fixo do painel recebe 403 em
   assumir, devolver e enviar). O nome que o turista vê é o primeiro nome do e-mail do login.
-- **n8n (PR 2, ainda não feito):** antes de chamar o Gemini o fluxo vai perguntar `POST /api/ingest/conversas/atendimento` (telefone
+- **n8n:** antes de chamar o Gemini o fluxo pergunta `POST /api/ingest/conversas/atendimento` (telefone
   no corpo; com o `INGEST_API_TOKEN`); com `humano` ele só registra a mensagem em
   `POST /api/ingest/mensagens` e não responde. **Ordem:** deploy do backend, depois o fluxo.
 - **Migração `0004`:** colunas novas em `conversations` e `messages`; `alembic downgrade 0003`

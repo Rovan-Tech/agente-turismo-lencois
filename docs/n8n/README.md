@@ -15,11 +15,13 @@ serviços de terceiros**. Dois marcadores precisam ser trocados depois de import
 ## Como funciona
 
 ```
-WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Buscar catálogo]
-        → [Preparar entrada] → [Gerar resposta (Gemini 2.5 Flash, Vertex AI)] → [Enviar resposta]
-                                                                  → [Registrar atendimento no painel]
-                 falha no catálogo ou no modelo → [Enviar aviso de contingência]
-                                                → [Registrar atendimento (contingência)]
+WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Consultar atendimento]
+        → [Uma pessoa está atendendo?] ─ sim → [Registrar mensagem (atendente ativo)]  (e não responde)
+                                       └ não → [Buscar catálogo] → [Preparar entrada]
+        → [Gerar resposta (Gemini 2.5 Flash, Vertex AI)] → [Enviar resposta]
+                                                         → [Registrar atendimento no painel]
+   falha na consulta, no catálogo ou no modelo → [Enviar aviso de contingência]
+                                               → [Registrar atendimento (contingência)]
 ```
 
 - O gatilho valida a assinatura `X-Hub-Signature-256` com o App Secret e descarta o que não confere.
@@ -27,6 +29,13 @@ WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Busca
   e entra no prompt como **dado delimitado**. O telefone não vai ao modelo.
 - A saída do Gemini é validada por esquema JSON (`idioma` ∈ `pt|en|es`, `passeio_sugerido_id`
   texto ou nulo). Resposta enviada tem no máximo 4000 caracteres.
+- **Atendimento humano (ADR-0008):** antes de tudo, "Consultar atendimento" pergunta ao backend
+  (`POST /api/ingest/conversas/atendimento`, telefone no corpo, `INGEST_API_TOKEN`) quem responde
+  àquele telefone. Com `humano` (uma pessoa assumiu a conversa no painel), o fluxo **só registra** a
+  mensagem do turista (`POST /api/ingest/mensagens`) e **não chama o Gemini nem responde**. Com
+  `ia`, segue o fluxo normal. Se a consulta falhar (3 tentativas, 5 s cada), cai na contingência: o
+  fluxo nunca responde "no escuro" por cima de um humano. O backend devolve a conversa para a IA
+  depois de 2 horas sem mensagem do atendente.
 - O catálogo vem de `GET /api/ingest/catalogo`, com o `INGEST_API_TOKEN` (o mesmo do registro de
   atendimentos), e é tentado até 3 vezes (o Neon fecha conexões ociosas). O n8n **não** usa o token do
   painel: com o painel atrás do Cloudflare Access (ADR-0006) esse token deixa de valer.
@@ -50,7 +59,7 @@ Crie cada uma em **Credentials** e ligue ao nó correspondente depois de importa
 |---|---|---|---|
 | WhatsApp OAuth account | WhatsApp OAuth API | Receber WhatsApp | ID do app Meta e App Secret |
 | WhatsApp account | WhatsApp API | Enviar resposta, Enviar aviso | Token do usuário do sistema da Meta e ID da conta WhatsApp Business |
-| Ingest API Token account | Simplified Custom Auth | Buscar catálogo e Registrar atendimento (3 nós) | Modelo `{"headers":{"Authorization":"Bearer {{api_key}}"}}` e o `INGEST_API_TOKEN` |
+| Ingest API Token account | Simplified Custom Auth | Consultar atendimento, Registrar mensagem, Buscar catálogo e Registrar atendimento (5 nós) | Modelo `{"headers":{"Authorization":"Bearer {{api_key}}"}}` e o `INGEST_API_TOKEN` |
 | Google Service Account account | Google Service Account API | Gemini 2.5 Flash | E-mail e chave privada de uma service account com **só** `roles/aiplatform.user` |
 
 **Nenhum segredo vai para o repositório.** Gere o token do WhatsApp como usuário do sistema, com

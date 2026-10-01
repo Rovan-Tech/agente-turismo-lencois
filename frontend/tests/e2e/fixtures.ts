@@ -12,3 +12,6 @@ export const SUGGESTED_TOUR = {
   faixa_etaria_recomendada: "a partir de 4 anos",
   preco_reais: 180.5,
 };
+
+/** Campos de atendimento de uma conversa que a IA responde (nenhuma pessoa assumiu). */
+export const HANDLING_BY_AI = { atendimento: "ia", atendente_nome: null, atendente_sub: null };

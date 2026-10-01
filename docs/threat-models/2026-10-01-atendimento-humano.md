@@ -1,8 +1,9 @@
 # Threat model: atendimento humano pelo painel (assumir a conversa e responder)
 
-> **Estado da entrega:** a 1ª entrega é só o **backend**. O fluxo do n8n e o painel (botões, campo
-> de resposta) **não** foram alterados: até o passo 5 do ADR, assumir a conversa **não silencia a
-> IA** (o n8n continua respondendo a toda mensagem). Não oriente a equipe a usar antes disso.
+> **Estado da entrega:** o backend (PR #55) e o painel mais o fluxo do n8n **exportado** (PR 2)
+> estão no repositório. O fluxo do n8n em produção é publicado à mão: **até ele ser atualizado,
+> assumir a conversa não silencia a IA** (o n8n continua respondendo a toda mensagem). Não oriente
+> a equipe a usar antes disso.
 
 - **Data:** 2026-10-01
 - **Escopo:** assumir e devolver a conversa, enviar mensagem de WhatsApp pelo painel como a agência, a
@@ -55,7 +56,7 @@ painel em `frontend/tests/unit/` (Vitest). Todos são escritos antes do código 
 | **I**nformation disclosure | O token da Meta de produção existe também no GitHub e no Cloud Run | Se vazar, envio de mensagens como a agência | Token do usuário do sistema com escopo só de mensagens, só em secret (nunca no repositório, no log ou na conversa), com rotação documentada; a rota de envio só funciona com login | n/a (operacional) | **Médio:** segundo lugar para a credencial (o ADR descreve a alternativa de enviar pelo n8n) |
 | **D**enial of service | Atendente (ou login comprometido) envia mensagens em massa | Custo, bloqueio do número pela Meta | Teto de 60 mensagens de atendente por conversa por hora (429); texto limitado; só conversas existentes | `test_send_is_capped_per_conversation_per_hour` | **Médio:** sem limite geral por todas as conversas (TD-A3) |
 | **D**enial of service | IA muda para silêncio para sempre porque alguém esqueceu a conversa em `humano` | Turista sem resposta | Devolução automática para a IA depois de `HUMAN_HANDOFF_IDLE_HOURS` (padrão 2) sem mensagem do atendente | `test_state_returns_to_ia_after_the_idle_hours` (parametrizado nos dois lados do corte) | Baixo |
-| **D**enial of service | A consulta do estado fica fora do ar | O n8n responderia por cima de um humano, ou trava | Planejado (PR 2): a consulta falha → o n8n cai na contingência (não responde com a IA no escuro); timeout curto e 3 tentativas | **PENDENTE:** o fluxo do n8n ainda não foi alterado nem exportado nesta entrega. No backend só existe o 503 dos dois endpoints novos: `test_handoff_ingest_endpoints_return_503_without_personal_data_when_the_database_fails` | **Médio** até o fluxo ser exportado e conferido: sem ele o backend sozinho não silencia a IA |
+| **D**enial of service | A consulta do estado fica fora do ar | O n8n responderia por cima de um humano, ou trava | A consulta falha → o n8n cai na contingência (não responde com a IA no escuro); timeout curto e 3 tentativas | Fluxo exportado em `docs/n8n/` (nó "Consultar atendimento" com `continueErrorOutput` ligado à contingência, 3 tentativas de 5 s; conferido por leitura do JSON) e **PENDENTE** o teste ponta a ponta no n8n de produção. No backend, o 503 dos dois endpoints novos: `test_handoff_ingest_endpoints_return_503_without_personal_data_when_the_database_fails` | **Médio** até o fluxo novo ser publicado e testado no n8n: sem ele o backend sozinho não silencia a IA |
 | **E**levation of privilege | Quem tem o token do n8n assume conversas ou envia mensagens | Escrita além do necessário | O `INGEST_API_TOKEN` só lê o estado e grava entradas; assumir, devolver e enviar exigem o login do painel | `test_ingest_token_cannot_take_over_or_send`, `test_state_endpoint_writes_nothing` | Baixo |
 | **E**levation of privilege | Pessoa autorizada assume conversa de outra, ou todas | Qualquer pessoa da equipe fala por qualquer conversa | Aceito: sem papéis (como no ADR-0006); o registro de quem assumiu e respondeu dá a rastreabilidade | n/a | Médio: aceito |
 

@@ -4,8 +4,12 @@ import {
   createTour,
   deleteTour,
   getConversation,
+  getMe,
+  giveBackConversation,
   listConversations,
   listTours,
+  sendConversationReply,
+  takeOverConversation,
   updateConversationStatus,
   updateTour,
 } from "../../src/lib/api";
@@ -203,5 +207,63 @@ describe("lib/api", () => {
       status: 200,
       message: "resposta inesperada do servidor",
     });
+  });
+
+  it.each([
+    ["takeOverConversation", takeOverConversation, "assumir"],
+    ["giveBackConversation", giveBackConversation, "devolver"],
+  ])("%s sends a POST without a body, with the panel header", async (_name, act, action) => {
+    const { ultima_mensagem: _preview, ...updated } = summary({ id: "c1", atendimento: "humano" });
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, updated));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await act("c1");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain(`/api/conversations/c1/${action}`);
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeUndefined();
+    expect(init.headers["X-Panel-Request"]).toBe("1");
+    expect(result).toEqual({ ok: true, data: updated });
+  });
+
+  it("sendConversationReply posts the text and the client id, never a phone number", async () => {
+    const [saved] = SAMPLE_CONVERSATION.messages;
+    const sentMessage = { ...saved, id: "m9", direction: "saida", autor: "atendente" };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, sentMessage));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await sendConversationReply("c1", "Olá!", "envio-0001");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/api/conversations/c1/mensagens");
+    expect(JSON.parse(init.body)).toEqual({ texto: "Olá!", client_message_id: "envio-0001" });
+    expect(result).toEqual({ ok: true, data: sentMessage });
+  });
+
+  it("sendConversationReply gives the server's reason when it refuses", async () => {
+    const reason = "A última mensagem do turista tem mais de 24 horas.";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse(409, { detail: reason })));
+
+    expect(await sendConversationReply("c1", "Oi", "envio-0001")).toEqual({
+      ok: false,
+      status: 409,
+      message: reason,
+    });
+  });
+
+  it("getMe returns the person who is logged in, or null for an unexpected body", async () => {
+    respondWith({ sub: "pessoa-123", nome: "Ana" });
+    expect(await getMe()).toEqual({ sub: "pessoa-123", nome: "Ana" });
+
+    respondWith({ sub: 123 });
+    expect(await getMe()).toBeNull();
+  });
+
+  it("rejects a conversation that does not say who is answering", async () => {
+    const { atendimento: _handling, ...incomplete } = SAMPLE_CONVERSATION;
+    respondWith(incomplete);
+
+    expect(await getConversation("abc123")).toBeNull();
   });
 });
