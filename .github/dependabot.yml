@@ -3,8 +3,10 @@
 #
 # Versão MAIOR (major) é migração: pode quebrar o app e exige ajuste de código e teste.
 # - Sem major por robô: pip /backend, npm /frontend e a imagem `python` (`ignore` abaixo). Entram por
-#   tarefa própria, com PR e revisão. Mesma regra para as ações do Google e do Cloudflare: só o deploy
-#   na `main` as executa, então o CI do PR não prova que continuam funcionando.
+#   tarefa própria, com PR e revisão. Mesma regra para as ações que só o `deploy.yml` executa
+#   (google-github-actions/*, cloudflare/wrangler-action e actions/attest-build-provenance): o deploy
+#   só roda na `main`, então o CI do PR não prova que o major funciona. Ao usar uma ação nova só no
+#   deploy, acrescente-a ao `ignore` de github-actions.
 # - Com major, de propósito: as demais ações (fixadas por SHA; o CI do PR as exercita) e as
 #   ferramentas só do CI em /scripts/ci.
 #
@@ -88,10 +90,12 @@ updates:
       actions:
         patterns: ["*"]
     ignore:
-      # Só o deploy na `main` executa estas ações: o CI do PR não prova que o major funciona.
+      # Só o deploy na `main` executa estas ações (confira com `grep uses: .github/workflows`).
       - dependency-name: "google-github-actions/*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "cloudflare/wrangler-action"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/attest-build-provenance"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
