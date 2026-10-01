@@ -31,12 +31,39 @@ não tem nenhum configurado):
 
 Depois do primeiro deploy: configurar o webhook no painel da Meta
 (`https://<url-do-cloud-run>/webhook/whatsapp`, com o mesmo `WHATSAPP_VERIFY_TOKEN`), proteger
-`agente-turismo-lencois.pages.dev` com **Cloudflare Access** (barreira real de acesso ao
+`agente-turismo-lencois.pages.dev` com **Cloudflare Access** (**feito em 2026-10-01**; barreira real de acesso ao
 painel — ver Segurança acima), e checar branch protection da `main` exigindo o check `ci-ok`
 (detalhes em `docs/ci-cd.md`).
 
 O deploy confere a revisão nova com um teste de fumaça e **volta sozinho para a anterior** se ela
 não responder saudável (`scripts/ci/verify_deploy.sh`); ver `docs/ci-cd.md`.
+
+## Login do painel (Cloudflare Access, ADR-0006)
+
+O painel fica atrás do **Cloudflare Access** (aplicativo "Agente Turismo - Painel", login só por
+código de uso único, política com os e-mails da equipe). A migração do token fixo para o login do
+Access é controlada por **variáveis do repositório** (Settings → Secrets and variables → Actions →
+**Variables**, não Secrets), lidas pelo `deploy.yml`:
+
+| Variável | Valor |
+|---|---|
+| `PANEL_AUTH_MODE` | `token` (padrão, como era), `both` (token fixo **ou** Access) ou `access` (só Access) |
+| `ACCESS_TEAM_DOMAIN` | `https://<equipe>.cloudflareaccess.com` |
+| `ACCESS_AUD` | AUD tag do aplicativo no Access (Zero Trust → Access controls → Applications → o aplicativo) |
+
+- **`token`**: o painel fala direto com o Cloud Run, com o token fixo no bundle (hoje em produção).
+- **`both`** e **`access`**: o bundle sai **sem token** e chama `/api/*` na própria origem; a
+  Pages Function (`frontend/functions/api/[[path]].ts`) repassa ao Cloud Run com o JWT do Access, que
+  o backend valida (assinatura RS256, emissor, audiência, validade). `access` deixa o token fixo
+  responder 401 e fecha o CORS do navegador.
+- **Ordem da migração:** defina `ACCESS_TEAM_DOMAIN` e `ACCESS_AUD`, depois `PANEL_AUTH_MODE=both`
+  e faça o deploy (`/redeploy`). Entre no painel (janela anônima, código por e-mail) e confira as
+  telas e uma mudança (marcar uma conversa). Só então `PANEL_AUTH_MODE=access` e outro deploy.
+- **Reversão:** volte `PANEL_AUTH_MODE` para `token` e faça o deploy; o token fixo e o bundle antigo
+  voltam a valer. O Access na frente do `pages.dev` continua fechado ao público em qualquer modo.
+- **Quem entra:** a política do aplicativo no Cloudflare. Adicionar ou tirar alguém não exige deploy.
+- A origem do Cloud Run usada pelo proxy está em `frontend/wrangler.toml` (`API_ORIGIN`); se o
+  serviço mudar de endereço, atualize-a.
 
 ## Expurgo de conversas (LGPD, ADR-0005)
 
