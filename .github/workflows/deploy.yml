@@ -31,18 +31,18 @@ jobs:
       sha: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       # nosemgrep: yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
           persist-credentials: false
 
       - id: auth
-        uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
-      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
 
       - name: Autentica o Docker no Artifact Registry
         env:
@@ -112,7 +112,7 @@ jobs:
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
 
       - id: deploy
-        uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2
+        uses: google-github-actions/deploy-cloudrun@2028e2d7d30a78c6910e0632e48dd561b064884d # v3.0.1
         with:
           service: agente-turismo-lencois-backend
           region: ${{ secrets.GCP_REGION }}
@@ -155,7 +155,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.deploy-backend.outputs.sha }}
           persist-credentials: false
