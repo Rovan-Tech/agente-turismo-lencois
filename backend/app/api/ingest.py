@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import require_ingest_auth
 from app.db.session import get_db
 from app.services import ingest as ingest_service
+from app.services import tour_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -113,3 +114,15 @@ async def record_exchange(request: Request, db: AsyncSession = Depends(get_db)) 
         "atendimento do n8n: %s", outcome, extra={"event": "ingest_exchange", "outcome": outcome}
     )
     return {"status": outcome, "conversa_id": recorded.conversation_id}
+
+
+@router.get("/catalogo")
+async def tour_catalog_for_n8n(db: AsyncSession = Depends(get_db)) -> list[dict[str, object]]:
+    """Passeios ativos para o n8n montar a resposta ao turista (mesmos campos que iam ao LLM).
+
+    O n8n lia o catálogo em `/api/tours` com o token do painel; com o painel só no login do Access
+    esse token não vale mais, então o n8n lê aqui, com o próprio `INGEST_API_TOKEN`. Só os campos
+    do catálogo: sem capacidade diária nem estado, que são da gestão do painel.
+    """
+    tours = await tour_catalog.list_tours(db, incluir_inativos=False)
+    return [tour.to_catalog_dict() for tour in tours]
