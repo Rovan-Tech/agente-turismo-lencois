@@ -1,0 +1,10 @@
+# Configuração do zizmor (auditoria de segurança dos workflows do GitHub Actions).
+rules:
+  dangerous-triggers:
+    ignore:
+      # deploy.yml: `workflow_run` é de propósito (só publica depois que o CI passou na main). O job
+      # só roda para `push` na `main`, faz checkout do SHA já testado e não executa código de PR.
+      - deploy.yml
+      # pr-feedback-clickup.yml: reage a falha de check de PR. Não faz checkout de código de PR;
+      # título e corpo do PR (dados não confiáveis) só passam por variáveis de ambiente e `jq --arg`.
+      - pr-feedback-clickup.yml
