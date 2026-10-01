@@ -1,15 +1,18 @@
 import type { Theme } from "../lib/theme";
-import { ThemeToggle } from "./ThemeToggle";
-import { UserIcon } from "./icons";
 import { formatLongDate } from "../lib/time";
+import type { Me } from "../types";
+import { ThemeToggle } from "./ThemeToggle";
+import { UserMenu } from "./UserMenu";
 
-/** Faixa do topo (desktop): data de hoje e o usuário da equipe. */
+/** Faixa do topo (desktop): data de hoje, o tema e quem está logado, com o botão para sair. */
 export function Topbar({
   now,
+  me,
   theme,
   onToggleTheme,
 }: {
   now: Date;
+  me: Me | null;
   theme: Theme;
   onToggleTheme: () => void;
 }) {
@@ -20,12 +23,7 @@ export function Topbar({
       </time>
       <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       <span aria-hidden="true" className="h-5 w-px bg-neutral-subtle" />
-      <span className="flex items-center gap-2 font-medium text-primary">
-        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-subtle text-neutral-subtle">
-          <UserIcon />
-        </span>
-        Equipe
-      </span>
+      <UserMenu me={me} />
     </header>
   );
 }
