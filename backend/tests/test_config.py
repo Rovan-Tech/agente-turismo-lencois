@@ -63,3 +63,63 @@ def test_settings_accept_distinct_or_unset_tokens(ingest, dashboard):
 def test_conversation_retention_must_be_at_least_one_day(days):
     with pytest.raises(ValidationError, match="conversation_retention_days"):
         Settings.model_validate({"conversation_retention_days": days})
+
+
+def test_panel_auth_defaults_keep_the_current_behaviour(monkeypatch):
+    for variable in ("PANEL_AUTH_MODE", "ACCESS_TEAM_DOMAIN", "ACCESS_AUD"):
+        monkeypatch.delenv(variable, raising=False)
+
+    settings = Settings(_env_file=None)
+
+    assert (settings.panel_auth_mode, settings.access_team_domain, settings.access_aud) == (
+        "token",
+        "",
+        "",
+    )
+
+
+@pytest.mark.parametrize("mode", ["token", "both", "access"])
+def test_panel_auth_mode_accepts_the_three_stages(mode):
+    assert Settings.model_validate({"panel_auth_mode": mode}).panel_auth_mode == mode
+
+
+@pytest.mark.parametrize("mode", ["off", "ACCESS", "", "jwt"])
+def test_panel_auth_mode_rejects_anything_else(mode):
+    with pytest.raises(ValidationError, match="panel_auth_mode"):
+        Settings.model_validate({"panel_auth_mode": mode})
+
+
+@pytest.mark.parametrize("domain", ["https://equipe.cloudflareaccess.com", ""])
+def test_access_team_domain_accepts_a_cloudflare_team_url_or_empty(domain):
+    assert Settings.model_validate({"access_team_domain": domain}).access_team_domain == domain
+
+
+@pytest.mark.parametrize(
+    "domain",
+    [
+        "http://equipe.cloudflareaccess.com",
+        "https://equipe.exemplo.com",
+        "https://equipe.cloudflareaccess.com/",
+        "https://evil.com/.cloudflareaccess.com",
+        "equipe.cloudflareaccess.com",
+    ],
+)
+def test_access_team_domain_rejects_anything_that_is_not_a_team_url(domain):
+    with pytest.raises(ValidationError, match="access_team_domain"):
+        Settings.model_validate({"access_team_domain": domain})
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [
+        ("token", ["https://painel.exemplo.com"]),
+        ("both", ["https://painel.exemplo.com"]),
+        ("access", []),
+    ],
+)
+def test_browser_origins_close_in_access_mode(mode, expected):
+    settings = Settings.model_validate(
+        {"panel_auth_mode": mode, "frontend_origin": "https://painel.exemplo.com"}
+    )
+
+    assert settings.browser_origins == expected

@@ -1,4 +1,8 @@
+"""Configuração da aplicação, lida de variáveis de ambiente (pydantic-settings)."""
+
+import re
 from functools import lru_cache
+from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from pydantic import Field, field_validator, model_validator
@@ -56,6 +60,29 @@ class Settings(BaseSettings):
     # Conversa sem atividade há mais que isso é apagada com as mensagens (LGPD, ADR-0005).
     # Mínimo de 1: com 0 ou negativo o corte cairia no futuro e o expurgo apagaria tudo.
     conversation_retention_days: int = Field(default=90, ge=1)
+
+    # Login do painel (ADR-0006). `token`: só o token fixo (como hoje). `both`: token fixo ou JWT do
+    # Cloudflare Access, para testar. `access`: só o JWT. Sem `ACCESS_*`, o JWT é sempre recusado.
+    panel_auth_mode: Literal["token", "both", "access"] = "token"
+    access_team_domain: str = ""  # https://<equipe>.cloudflareaccess.com
+    access_aud: str = ""  # "Application Audience (AUD) tag" do aplicativo no Access
+
+    @field_validator("access_team_domain")
+    @classmethod
+    def _access_team_domain_must_be_a_cloudflare_team_url(cls, value: str) -> str:
+        if value and not re.fullmatch(r"https://[a-z0-9-]+\.cloudflareaccess\.com", value):
+            msg = "ACCESS_TEAM_DOMAIN deve ser https://<equipe>.cloudflareaccess.com"
+            raise ValueError(msg)
+        return value
+
+    @property
+    def browser_origins(self) -> list[str]:
+        """Origens de navegador aceitas no CORS.
+
+        Nenhuma no modo `access`: o painel fala com a API pela própria origem (proxy do Pages) e
+        nunca direto com o Cloud Run.
+        """
+        return [] if self.panel_auth_mode == "access" else [self.frontend_origin]
 
     @model_validator(mode="after")
     def _ingest_token_must_differ_from_dashboard_token(self) -> "Settings":
