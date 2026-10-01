@@ -4,6 +4,8 @@ import logging
 
 import httpx
 import pytest
+from sqlalchemy import event
+from sqlalchemy.orm import ORMExecuteState
 from sqlalchemy import select
 
 from app.models.conversation import Conversation
@@ -208,7 +210,15 @@ async def test_take_over_records_who_and_when(client, db_session, access, conver
     assert conversation.humano_desde is not None
 
 
-@pytest.mark.parametrize("failure", [None, meta_rejection()], ids=["sent", "meta_rejected"])
+@pytest.mark.parametrize(
+    "failure",
+    [
+        None,
+        meta_rejection(),
+        httpx.ConnectTimeout("falha em https://graph.facebook.com/v21.0/PHONE_ID_SECRETO/messages"),
+    ],
+    ids=["sent", "meta_rejected", "timeout"],
+)
 async def test_send_never_logs_text_phone_or_token(client, access, held, outbox, caplog, failure):
     caplog.set_level(logging.DEBUG, logger="app")
     outbox.failure = failure
@@ -259,3 +269,21 @@ async def test_send_cannot_replay_a_client_message_id_of_another_conversation(
 
     assert response.status_code == 409
     assert len(outbox.sent) == 1
+
+
+@pytest.mark.parametrize("action", ACTIONS)
+async def test_handoff_routes_lock_the_conversation_row_and_reread_it(
+    client, db_session, access, held, outbox, action
+):
+    """Sem a trava (ou sem reler a linha) dois cliques mandariam dois avisos ao turista."""
+    locked: list[bool] = []
+
+    def record(state: ORMExecuteState) -> None:
+        if state.is_select and state.statement._for_update_arg is not None:
+            locked.append(bool(state.execution_options.get("populate_existing")))
+
+    event.listen(db_session.sync_session, "do_orm_execute", record)
+
+    await _post(client, held, action, panel_headers(access.token()))
+
+    assert locked == [True]

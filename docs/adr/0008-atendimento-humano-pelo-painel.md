@@ -117,7 +117,7 @@ Decisões que dependem do Patrick estão em
 - **O nome da pessoa vai a um terceiro (o turista):** só o primeiro nome, derivado do e-mail do
   login, e a pessoa fica sabendo disso ao assumir (o painel mostra "o turista verá: Patrick"). Se o
   e-mail não der um nome razoável, o aviso sai sem nome.
-- **Migração do banco:** três colunas em `conversations`, três em `messages`. O número da migração
+- **Migração do banco:** cinco colunas em `conversations`, três em `messages`. O número da migração
   depende de a `0004` do agendamento ser mergeada antes; se não for, a nossa vira `0004` e a do
   agendamento precisa ser renumerada (cabeçalhos múltiplos do Alembic). Reversível (`downgrade`
   testado).
@@ -126,6 +126,9 @@ Decisões que dependem do Patrick estão em
 - **Entrega e gravação não são atômicas:** se a Meta aceitar a mensagem e a gravação falhar (ou o
   tempo esgotar com a mensagem já entregue), a nova tentativa reenvia e o turista pode receber a
   mesma mensagem duas vezes. Não há outbox; aceito pelo volume baixo.
+- **A trava espera a Meta:** a linha da conversa fica travada até 15 s durante o envio, e a gravação
+  de mensagem do n8n na mesma conversa (por causa da chave estrangeira) espera junto. Sem deadlock,
+  e a espera só vale dentro de uma conversa.
 - **Sem aviso em tempo real:** o atendente só vê a mensagem nova quando a tela atualiza (15 s) ou ele
   abre o painel. Notificação (e-mail, push) fica fora deste ADR.
 - **Sem limite de taxa geral (TD-A3):** o teto de 60 mensagens por conversa por hora limita o dano de
@@ -133,6 +136,10 @@ Decisões que dependem do Patrick estão em
 - **Qualquer pessoa autorizada pode assumir qualquer conversa** (sem papéis, como no ADR-0006).
 
 ## Plano de adoção e reversão
+
+> **Entrega em duas partes.** O PR 1 é só o backend (rotas, migração, ingest). O fluxo do n8n e o
+> painel (passos 4 e 5 abaixo) vêm no PR 2. **Até lá, assumir a conversa não silencia a IA** (o n8n
+> não consulta o estado) e não há botões no painel: a equipe não deve ser orientada a usar antes.
 
 1. Aprovação deste ADR e do threat model pelo Patrick (feita em 2026-10-01, com as opções
    recomendadas: o backend envia; só o primeiro nome no aviso; aviso curto ao devolver para a IA;

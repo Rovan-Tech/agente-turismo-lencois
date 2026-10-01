@@ -216,6 +216,17 @@ async def test_state_endpoint_tells_n8n_whether_a_person_is_attending(client, db
 
 
 @pytest.mark.usefixtures("ingest_token")
+async def test_state_endpoint_writes_nothing(client, db_session, held):
+    await db_session.refresh(held)  # mesma leitura nos dois lados (o SQLite devolve datas sem fuso)
+    before = (held.updated_at, held.humano_atividade_em, await _count(db_session))
+
+    await _ask_state(client, PHONE)
+
+    await db_session.refresh(held)
+    assert (held.updated_at, held.humano_atividade_em, await _count(db_session)) == before
+
+
+@pytest.mark.usefixtures("ingest_token")
 async def test_state_endpoint_answers_ia_for_a_phone_without_a_conversation(client, db_session):
     await holding(db_session)
 

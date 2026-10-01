@@ -1,7 +1,7 @@
 """Atendimento humano: assumir e devolver a conversa, com o aviso ao turista (ADR-0008)."""
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -106,14 +106,18 @@ async def test_take_over_never_stores_logs_or_sends_the_email(
 
 
 async def test_take_over_again_by_the_same_person_does_not_resend_the_announcement(
-    client, access, conversation, outbox
+    client, db_session, access, conversation, outbox
 ):
     await take_over(client, access, conversation)
+    long_ago = datetime.now(UTC) - timedelta(hours=1)
+    conversation.humano_atividade_em = long_ago
+    await db_session.commit()
 
     again = await take_over(client, access, conversation)
 
-    assert again.status_code == 200
-    assert len(outbox.sent) == 1
+    await db_session.refresh(conversation)
+    assert (again.status_code, len(outbox.sent)) == (200, 1)
+    assert conversation.humano_atividade_em.replace(tzinfo=UTC) > long_ago + timedelta(minutes=30)
 
 
 async def test_take_over_a_conversation_held_by_another_person_is_409(

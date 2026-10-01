@@ -28,7 +28,9 @@ def meta_rejection(code: int = 131047) -> httpx.HTTPStatusError:
     response = httpx.Response(
         400, json={"error": {"code": code, "message": "detalhe-interno-da-meta"}}, request=request
     )
-    return httpx.HTTPStatusError("Client error", request=request, response=response)
+    # A mensagem real do httpx traz a URL, e com ela o phone_number_id: o log não pode repeti-la.
+    message = f"Client error '400 Bad Request' for url '{request.url}'"
+    return httpx.HTTPStatusError(message, request=request, response=response)
 
 
 def meta_html_error() -> httpx.HTTPStatusError:

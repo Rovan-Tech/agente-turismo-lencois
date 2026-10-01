@@ -183,7 +183,8 @@ async def update_conversation_status(
     settings: Settings = Depends(get_settings),
 ) -> dict[str, object]:
     """Troca o status da conversa. Resolver também devolve a conversa para a IA."""
-    conversation = await _load(db, conversation_id)
+    # Travada: resolver em paralelo com assumir deixaria a conversa resolvida e ainda `humano`.
+    conversation = await _load(db, conversation_id, lock=True)
     conversation.status = payload.status
     if payload.status == ConversationStatus.RESOLVIDA:
         handoff.clear_handling(conversation)
