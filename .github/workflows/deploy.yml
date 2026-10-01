@@ -126,6 +126,7 @@ jobs:
             WHATSAPP_VERIFY_TOKEN=${{ secrets.WHATSAPP_VERIFY_TOKEN }}
             WHATSAPP_APP_SECRET=${{ secrets.WHATSAPP_APP_SECRET }}
             DASHBOARD_API_TOKEN=${{ secrets.DASHBOARD_API_TOKEN }}
+            INGEST_API_TOKEN=${{ secrets.INGEST_API_TOKEN }}
             FRONTEND_ORIGIN=https://agente-turismo-lencois.pages.dev
 
       # Depois de um rollback o Cloud Run mantém o tráfego fixo na revisão antiga e deploys novos
