@@ -11,9 +11,10 @@ na `main` (mesmo padrão do `ocr-placas-previsao-filas`) — ou manualmente por
    o tráfego, depois publica no Cloud Run (`agente-turismo-lencois-backend`,
    `--allow-unauthenticated` — o webhook da Meta precisa alcançar o serviço sem autenticação de
    plataforma).
-2. **Frontend**: builda `frontend/` com `VITE_API_BASE_URL` apontando pra URL do Cloud Run que
-   acabou de subir e `VITE_API_TOKEN` = `DASHBOARD_API_TOKEN`, publica no Cloudflare Pages
-   (projeto `agente-turismo-lencois`).
+2. **Frontend**: builda `frontend/` e publica no Cloudflare Pages (projeto
+   `agente-turismo-lencois`). No modo `token` (padrão) usa `VITE_API_BASE_URL` apontando pra URL do
+   Cloud Run que acabou de subir e `VITE_API_TOKEN` = `DASHBOARD_API_TOKEN`; nos outros modos o
+   bundle sai sem token e com `VITE_API_BASE_URL` vazio (ver "Login do painel").
 
 Secrets esperados no repositório GitHub (`Settings → Secrets and variables → Actions` —
 segredos são por repositório, não herdam de outro, nem de org: confirmado que hoje este repo
@@ -60,7 +61,19 @@ Access é controlada por **variáveis do repositório** (Settings → Secrets an
   e faça o deploy (`/redeploy`). Entre no painel (janela anônima, código por e-mail) e confira as
   telas e uma mudança (marcar uma conversa). Só então `PANEL_AUTH_MODE=access` e outro deploy.
 - **Reversão:** volte `PANEL_AUTH_MODE` para `token` e faça o deploy; o token fixo e o bundle antigo
-  voltam a valer. O Access na frente do `pages.dev` continua fechado ao público em qualquer modo.
+  voltam a valer.
+- **Previews ainda abertos:** o Access cobre hoje só `agente-turismo-lencois.pages.dev`. As URLs de
+  preview e por hash (`*.agente-turismo-lencois.pages.dev`) **não** estão atrás do Access: em modo
+  `token` o bundle delas traz o token fixo, e em `both`/`access` o proxy responde ali sem Access e só
+  a validação do JWT no backend protege. **Antes de ligar `both`**, edite o aplicativo no Cloudflare
+  e acrescente o hostname `*.agente-turismo-lencois.pages.dev` (Subdomain `*`) na mesma política.
+- **Conferir na fase `both`, antes de passar para `access`:** (1) o painel abre logado e as telas
+  carregam; (2) uma mudança funciona (marcar uma conversa), o que prova o JWT, o proxy e o cabeçalho
+  anti-CSRF; (3) o log do Cloud Run não mostra "chaves do Cloudflare Access indisponíveis" (o backend
+  alcança o JWKS da equipe com o `User-Agent` próprio); (4) o `API_ORIGIN` do `wrangler.toml` vale em
+  produção: se faltar, o proxy responde 500 "proxy mal configurado".
+- **Sessão expirada:** depois das 24 horas o Access redireciona a requisição para o login e o painel
+  mostra um erro genérico; recarregar a página leva ao login.
 - **Quem entra:** a política do aplicativo no Cloudflare. Adicionar ou tirar alguém não exige deploy.
 - A origem do Cloud Run usada pelo proxy está em `frontend/wrangler.toml` (`API_ORIGIN`); se o
   serviço mudar de endereço, atualize-a.
