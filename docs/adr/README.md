@@ -16,3 +16,4 @@ um ADR aprovado aqui** (Manual V5 §2; item `GOV-1` do `docs/checklist-engenhari
 | [0002](0002-pipeline-de-ci-cd-em-camadas.md) | Pipeline de CI/CD em camadas (portão de PR, noturno e deploy com rollback) | Aprovado |
 | [0003](0003-revisao-por-convergencia-e-entregas-menores.md) | Revisão por convergência, pré-voo obrigatório e entregas menores | Proposto |
 | [0004](0004-n8n-orquestra-gemini-vertex-numero-de-producao.md) | Orquestrar o atendimento no n8n, usar Gemini no Vertex AI e um número +55 de produção | Proposto |
+| [0005](0005-endpoint-de-entrada-para-o-n8n-registrar-atendimentos.md) | Criar um endpoint de entrada no backend para o n8n registrar os atendimentos | Aprovado |
