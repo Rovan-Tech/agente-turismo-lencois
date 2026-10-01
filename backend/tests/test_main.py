@@ -41,3 +41,16 @@ async def test_validation_error_handler_survives_non_json_native_ctx():
     body = json.loads(bytes(response.body))
     assert body["detail"][0]["msg"] == "erro customizado"
     assert body["detail"][0]["ctx"]["limite"] == 10
+
+
+def test_app_logger_emits_info_with_its_own_handler():
+    """O uvicorn só configura os próprios loggers: sem isto, os INFO do app nunca saem."""
+    import logging
+
+    from app import main
+
+    app_logger = logging.getLogger("app")
+
+    assert main.app.title  # a configuração do logger roda na importação de `app.main`
+    assert app_logger.isEnabledFor(logging.INFO)
+    assert app_logger.handlers

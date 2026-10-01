@@ -13,6 +13,7 @@ from app.main import app
 from app.models.tour import DifficultyLevel, Tour
 from app.services import message_handler, whatsapp_client
 from app.services.groq_client import GroqReply
+from tests.ingest_support import INGEST_BEARER
 
 TEST_DASHBOARD_TOKEN = "test-dashboard-token"
 
@@ -57,6 +58,23 @@ async def client(db_session, monkeypatch):
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def ingest_token(monkeypatch):
+    """Configura o `INGEST_API_TOKEN` do n8n, distinto do token do painel."""
+    monkeypatch.setattr(get_settings(), "ingest_api_token", INGEST_BEARER)
+    return INGEST_BEARER
+
+
+@pytest.fixture
+def blind_duplicate_check(monkeypatch):
+    """Faz a checagem inicial não ver a duplicata, como num reenvio simultâneo em outra conexão."""
+
+    async def never_duplicate(db, whatsapp_message_id):
+        return False
+
+    monkeypatch.setattr(message_handler, "is_duplicate_delivery", never_duplicate)
 
 
 @pytest.fixture

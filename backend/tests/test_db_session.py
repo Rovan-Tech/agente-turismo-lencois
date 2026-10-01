@@ -22,3 +22,10 @@ def test_pool_args_recycle_before_neon_closes_idle_connections():
 
 def test_engine_is_built_with_pre_ping():
     assert engine.pool._pre_ping is True
+
+
+def test_engine_hides_sql_parameters_from_error_messages():
+    """O texto de uma exceção do banco não pode carregar telefone e conversa do turista."""
+    from app.db.session import engine
+
+    assert engine.sync_engine.hide_parameters is True
