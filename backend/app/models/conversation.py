@@ -20,6 +20,13 @@ class ConversationStatus(str, enum.Enum):
     RESOLVIDA = "resolvida"
 
 
+class Handling(str, enum.Enum):
+    """Quem responde ao turista: o assistente de IA ou uma pessoa da equipe (ADR-0008)."""
+
+    IA = "ia"
+    HUMANO = "humano"
+
+
 class Conversation(Base):
     __tablename__ = "conversations"
 
@@ -32,6 +39,15 @@ class Conversation(Base):
     # Último passeio que o assistente recomendou (validado contra os candidatos enviados ao LLM).
     passeio_sugerido_id: Mapped[str | None] = mapped_column(
         ForeignKey("tours.id"), nullable=True, index=True
+    )
+    atendimento: Mapped[Handling] = mapped_column(String(10), default=Handling.IA)
+    # Quem assumiu (`sub` do login), o primeiro nome mostrado ao turista e quando. Só valem enquanto
+    # `atendimento` for `humano`; a última mensagem do atendente renova `humano_atividade_em`.
+    humano_sub: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    humano_nome: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    humano_desde: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    humano_atividade_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

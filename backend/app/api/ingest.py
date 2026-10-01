@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Annotated, Literal
+from collections.abc import Awaitable
+from typing import Annotated, Literal, TypeVar
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError
@@ -11,9 +12,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_ingest_auth
+from app.core.config import Settings, get_settings
 from app.db.session import get_db
+from app.services import handoff, tour_catalog
 from app.services import ingest as ingest_service
-from app.services import tour_catalog
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,7 @@ MAX_BODY_BYTES = 16 * 1024
 
 # NUL não existe em texto de WhatsApp e o Postgres o recusa: barrar aqui evita um erro de banco.
 _NO_NUL = r"^[^\x00]*$"
+_PHONE = r"^[0-9]{8,15}$"
 # Texto entre 1 e 4096 (o teto de uma mensagem do WhatsApp), sem espaços nas pontas.
 _Text = Annotated[
     str,
@@ -32,17 +35,30 @@ _Text = Annotated[
 ]
 
 
-class ExchangePayload(BaseModel):
-    """Atendimento enviado pelo n8n; os nomes são os da saída do Gemini no fluxo."""
+class InboundPayload(BaseModel):
+    """Mensagem do turista que o n8n só registra (sem resposta da IA, ADR-0008)."""
 
     # strict: tipos trocados ("true", 1) são erro, não conversão. forbid: campo desconhecido é 422.
     model_config = ConfigDict(strict=True, extra="forbid")
 
     whatsapp_message_id: str = Field(min_length=1, max_length=128, pattern=_NO_NUL)
-    telefone: str = Field(pattern=r"^[0-9]{8,15}$")
+    telefone: str = Field(pattern=_PHONE)
     texto: _Text
-    resposta: _Text
     idioma: Literal["pt", "en", "es"] | None
+
+
+class HandlingQuery(BaseModel):
+    """Pergunta do n8n sobre quem responde a um telefone (só o telefone, no corpo)."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    telefone: str = Field(pattern=_PHONE)
+
+
+class ExchangePayload(InboundPayload):
+    """Atendimento enviado pelo n8n; os nomes são os da saída do Gemini no fluxo."""
+
+    resposta: _Text
     passeio_sugerido_id: str | None = Field(max_length=128, pattern=_NO_NUL)
     precisa_atencao_humana: bool
 
@@ -80,6 +96,35 @@ def _to_exchange(payload: ExchangePayload) -> ingest_service.Exchange:
     )
 
 
+_T = TypeVar("_T")
+_Payload = TypeVar("_Payload", bound=BaseModel)
+
+
+async def _guarded(operation: Awaitable[_T]) -> _T:
+    """Roda a operação de banco; se falhar vira 503 (o n8n tenta de novo, e repetir é seguro)."""
+    try:
+        return await operation
+    except (SQLAlchemyError, OSError) as error:
+        # O texto da exceção traz os parâmetros do SQL (telefone e conversa): só o tipo vai ao log.
+        # `OSError`: com o banco fora do ar o asyncpg levanta ConnectionRefusedError.
+        logger.exception(
+            "falha de banco no ingest: %s",
+            type(error).__name__,
+            exc_info=False,
+            extra={"event": "ingest_db_error", "error_type": type(error).__name__},
+        )
+        raise HTTPException(status_code=503, detail="banco indisponível") from None
+
+
+async def _parse(request: Request, model: type[_Payload]) -> _Payload:
+    """Lê o corpo com teto e o valida; o 422 nunca devolve os valores enviados."""
+    body = await _read_limited_body(request)
+    try:
+        return model.model_validate_json(body)
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=_safe_errors(error)) from None
+
+
 @router.post("/atendimentos")
 async def record_exchange(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     """Grava o atendimento (mensagem do turista e resposta enviada), uma vez por mensagem da Meta.
@@ -91,29 +136,51 @@ async def record_exchange(request: Request, db: AsyncSession = Depends(get_db)) 
         HTTPException: 413 se o corpo passar de 16 KiB; 422 se o contrato não for cumprido; 503 se o
             banco falhar (o n8n tenta de novo, e repetir é seguro).
     """
-    body = await _read_limited_body(request)
-    try:
-        payload = ExchangePayload.model_validate_json(body)
-    except ValidationError as error:
-        raise HTTPException(status_code=422, detail=_safe_errors(error)) from None
-
-    try:
-        recorded = await ingest_service.record_exchange(db, _to_exchange(payload))
-    except (SQLAlchemyError, OSError) as error:
-        # O texto da exceção traz os parâmetros do SQL (telefone e conversa): só o tipo vai ao log.
-        # `OSError`: com o banco fora do ar o asyncpg levanta ConnectionRefusedError.
-        logger.exception(
-            "falha de banco ao registrar atendimento: %s",
-            type(error).__name__,
-            exc_info=False,
-            extra={"event": "ingest_db_error", "error_type": type(error).__name__},
-        )
-        raise HTTPException(status_code=503, detail="banco indisponível") from None
+    payload = await _parse(request, ExchangePayload)
+    recorded = await _guarded(ingest_service.record_exchange(db, _to_exchange(payload)))
     outcome = "criado" if recorded.created else "duplicado"
     logger.info(
         "atendimento do n8n: %s", outcome, extra={"event": "ingest_exchange", "outcome": outcome}
     )
     return {"status": outcome, "conversa_id": recorded.conversation_id}
+
+
+@router.post("/mensagens")
+async def record_inbound(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
+    """Grava só a mensagem do turista, sem resposta: o n8n usa quando uma pessoa está atendendo.
+
+    Raises:
+        HTTPException: 413 se o corpo passar de 16 KiB; 422 se o contrato não for cumprido; 503 se o
+            banco falhar (o n8n tenta de novo, e repetir é seguro).
+    """
+    payload = await _parse(request, InboundPayload)
+    inbound = ingest_service.Inbound(
+        payload.whatsapp_message_id, payload.telefone, payload.texto, payload.idioma
+    )
+    recorded = await _guarded(ingest_service.record_inbound(db, inbound))
+    outcome = "criado" if recorded.created else "duplicado"
+    logger.info(
+        "mensagem do turista (atendimento humano): %s",
+        outcome,
+        extra={"event": "ingest_inbound", "outcome": outcome},
+    )
+    return {"status": outcome, "conversa_id": recorded.conversation_id}
+
+
+@router.post("/conversas/atendimento")
+async def conversation_handling(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, str]:
+    """Diz ao n8n quem responde a este telefone: `ia` ou `humano` (então ele só registra).
+
+    É um POST só para o telefone ir no corpo: na URL ele cairia no log de acesso do servidor.
+    Um telefone sem conversa aberta é `ia`. Não grava nada.
+    """
+    payload = await _parse(request, HandlingQuery)
+    handling = await _guarded(handoff.handling_for_phone(db, settings, payload.telefone))
+    return {"atendimento": handling.value}
 
 
 @router.get("/catalogo")

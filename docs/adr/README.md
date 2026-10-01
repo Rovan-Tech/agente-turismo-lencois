@@ -19,3 +19,5 @@ um ADR aprovado aqui** (Manual V5 §2; item `GOV-1` do `docs/checklist-engenhari
 | [0005](0005-endpoint-de-entrada-para-o-n8n-registrar-atendimentos.md) | Criar um endpoint de entrada no backend para o n8n registrar os atendimentos | Aprovado |
 | [0006](0006-login-do-painel-com-cloudflare-access.md) | Proteger o painel com Cloudflare Access e identificar cada pessoa pelo JWT | Aprovado |
 | [0007](0007-demonstracao-publica-do-painel-sem-backend.md) | Publicar uma demonstração do painel, sem backend, e manter o painel real privado | Aprovado |
+| [0008](0008-atendimento-humano-pelo-painel.md) | Permitir que uma pessoa assuma a conversa no painel e responda no lugar da IA | Aprovado |
+| [0009](0009-fotos-dos-passeios.md) | Fotos nos passeios, enviadas pela IA e pelo atendente | Aprovado |

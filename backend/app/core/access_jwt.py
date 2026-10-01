@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import time
+import unicodedata
+from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -29,11 +32,58 @@ class AccessUnavailableError(Exception):
     """As chaves públicas do Access não puderam ser buscadas (falha fechada, não é culpa do JWT)."""
 
 
+# Caixas de e-mail de equipe ou de sistema: o turista não deve ler "Contato" como nome de alguém.
+_GENERIC_MAILBOXES = frozenset(
+    {"contato", "contact", "admin", "info", "vendas", "sales", "suporte", "support", "atendimento"}
+    | {"comercial", "reservas", "financeiro", "hello", "ola", "noreply", "naoresponda"}
+)
+_NAME_SEPARATORS = re.compile(r"[\s._+\-]+")
+_MIN_FIRST_NAME = 2
+_MAX_FIRST_NAME = 30
+
+
 @dataclass(frozen=True, slots=True)
 class AccessIdentity:
-    """Quem fez a requisição: o `sub` do JWT, identificador opaco da pessoa no Access."""
+    """Quem fez a requisição: o `sub` do JWT (opaco) e o primeiro nome derivado das claims.
+
+    O e-mail nunca é guardado aqui: só o primeiro nome, que é o que o turista vê ao ser atendido.
+    """
 
     sub: str
+    first_name: str | None = None
+
+
+def _first_name(source: object, *, is_mailbox: bool = False) -> str | None:
+    """Primeira palavra só com letras (entre 2 e 30), com a inicial maiúscula; senão `None`."""
+    if not isinstance(source, str):
+        return None
+    # NFC: "José" decomposto (e + acento combinante) não passa em `isalpha()` e perderia o nome.
+    word = _NAME_SEPARATORS.split(unicodedata.normalize("NFC", source).strip())[0]
+    is_usable = word.isalpha() and _MIN_FIRST_NAME <= len(word) <= _MAX_FIRST_NAME
+    if not is_usable or (is_mailbox and word.lower() in _GENERIC_MAILBOXES):
+        return None
+    return word.capitalize()
+
+
+def first_name_from_claims(claims: Mapping[str, object]) -> str | None:
+    """Primeiro nome da pessoa, a partir das claims de um JWT já verificado.
+
+    Usa a claim `name` e, se ela não der um nome, a parte local do e-mail (`ana.souza@…` vira
+    `Ana`). Só letras, até 30 caracteres: números, símbolos, quebras de linha e caixas de equipe
+    (`contato@…`) não viram nome, e o aviso ao turista sai sem nome.
+
+    Args:
+        claims: Claims do JWT depois da validação de assinatura, emissor e audiência.
+
+    Returns:
+        O primeiro nome capitalizado, ou `None` se nada utilizável sobrar.
+    """
+    by_name = _first_name(claims.get("name"))
+    if by_name:
+        return by_name
+    email = claims.get("email")
+    local_part = email.partition("@")[0] if isinstance(email, str) and "@" in email else None
+    return _first_name(local_part, is_mailbox=True)
 
 
 _jwks_down_until: dict[str, float] = {}
@@ -82,7 +132,7 @@ def _verify(token: str, team_domain: str, audience: str) -> AccessIdentity:
     sub = claims.get("sub")
     if not isinstance(sub, str) or not sub:
         raise AccessAuthError
-    return AccessIdentity(sub=sub)
+    return AccessIdentity(sub=sub, first_name=first_name_from_claims(claims))
 
 
 async def verify_access_jwt(token: str, team_domain: str, audience: str) -> AccessIdentity:

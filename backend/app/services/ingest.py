@@ -31,6 +31,16 @@ class Exchange:
 
 
 @dataclass(frozen=True, slots=True)
+class Inbound:
+    """Mensagem do turista que o n8n só registra: há uma pessoa atendendo e a IA não responde."""
+
+    message_id: str
+    phone: str
+    text: str
+    language: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class RecordedExchange:
     """Resultado do registro: `created` é falso quando o `message_id` já estava gravado."""
 
@@ -113,6 +123,38 @@ async def record_exchange(db: AsyncSession, exchange: Exchange) -> RecordedExcha
     """
     try:
         return await _record(db, exchange)
+    except Exception:
+        await db.rollback()
+        raise
+
+
+async def _record_inbound(db: AsyncSession, inbound: Inbound) -> RecordedExchange:
+    if await message_handler.is_duplicate_delivery(db, inbound.message_id):
+        return RecordedExchange(False, await _conversation_of(db, inbound.message_id))
+    conversation = await message_handler.get_or_create_open_conversation(db, inbound.phone)
+    incoming = IncomingMessage(inbound.phone, "text", inbound.text, message_id=inbound.message_id)
+    if not await message_handler.store_incoming(
+        db, conversation, incoming, MessageType.TEXTO, inbound.text
+    ):
+        return RecordedExchange(False, await _conversation_of(db, inbound.message_id))
+    if inbound.language is not None:
+        conversation.idioma_detectado = inbound.language
+    await db.commit()
+    return RecordedExchange(True, conversation.id)
+
+
+async def record_inbound(db: AsyncSession, inbound: Inbound) -> RecordedExchange:
+    """Grava só a mensagem do turista (sem resposta); repetir o mesmo `message_id` não grava nada.
+
+    Args:
+        db: Sessão do banco.
+        inbound: Mensagem já validada nas fronteiras.
+
+    Returns:
+        O resultado, com a conversa onde a mensagem está gravada.
+    """
+    try:
+        return await _record_inbound(db, inbound)
     except Exception:
         await db.rollback()
         raise

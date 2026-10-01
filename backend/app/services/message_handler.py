@@ -10,10 +10,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.models.conversation import Conversation, ConversationStatus
+from app.models.conversation import Conversation, ConversationStatus, Handling
 from app.models.message import Message, MessageDirection, MessageType
 from app.models.tour import Tour
-from app.services import tour_matcher, whatsapp_client
+from app.services import handoff, tour_matcher, whatsapp_client
 from app.services.groq_client import (
     GroqReply,
     GroqUnavailableError,
@@ -44,13 +44,7 @@ AUDIO_TOO_LONG_NOTE = "[áudio muito longo — não transcrito]"
 
 
 async def get_or_create_open_conversation(db: AsyncSession, phone: str) -> Conversation:
-    result = await db.execute(
-        select(Conversation)
-        .where(Conversation.whatsapp_phone == phone)
-        .where(Conversation.status != ConversationStatus.RESOLVIDA)
-        .order_by(Conversation.created_at.desc())
-    )
-    conversation = result.scalars().first()
+    conversation = await handoff.find_open_conversation(db, phone)
     if conversation:
         return conversation
 
@@ -242,16 +236,23 @@ async def process_incoming_message(
     if await is_duplicate_delivery(db, incoming.message_id):
         return None
     conversation = await get_or_create_open_conversation(db, incoming.phone)
+    is_human = handoff.current_handling(conversation, settings) == Handling.HUMANO
 
     try:
         content, tipo = await resolve_incoming_text(
             settings, incoming.message_type, incoming.text_body, incoming.media_id
         )
     except whatsapp_client.MediaTooLargeError:
-        return await _refuse_oversized_audio(db, settings, conversation, incoming)
+        if not is_human:
+            return await _refuse_oversized_audio(db, settings, conversation, incoming)
+        content, tipo = AUDIO_TOO_LONG_NOTE, MessageType.TEXTO
 
     if not await store_incoming(db, conversation, incoming, tipo, content):
         return None
+    if is_human:
+        # Uma pessoa está atendendo: a mensagem fica registrada para ela ler e a IA não responde.
+        await db.commit()
+        return conversation
 
     reply = await _generate_reply(db, settings, content)
     _record_reply(db, conversation, reply)
