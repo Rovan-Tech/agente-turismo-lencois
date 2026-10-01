@@ -1,11 +1,19 @@
 # Atualizações automáticas de dependências. Cada PR passa pelo mesmo CI dos demais; os de
 # patch/minor vêm agrupados para não gerar uma enxurrada de PRs.
+#
+# Versão MAIOR (major) é migração: pode quebrar o app e exige ajuste de código e teste. Por isso
+# o robô não a propõe (ignore abaixo); ela entra por tarefa própria, com PR e revisão. Correção de
+# segurança não depende destas regras: o Dependabot security updates ignora o `ignore`.
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /backend
     schedule:
       interval: weekly
+    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
+    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore(deps)"
     labels: [dependencies]
@@ -13,12 +21,26 @@ updates:
     groups:
       python-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # SQLAlchemy 2.1 deixou de instalar o greenlet (o coverage do gate exige) e muda o ORM:
+      # migrar à mão, com testes. Os patches da 2.0.x continuam chegando.
+      - dependency-name: sqlalchemy
+        update-types: ["version-update:semver-minor"]
+      # Cada minor do ruff 0.x muda regras e o lint do gate reprova código novo: subir à mão.
+      - dependency-name: ruff
+        update-types: ["version-update:semver-minor"]
 
   # Ferramentas só do CI (zizmor, schemathesis, mutmut): fora da imagem e do ambiente de dev.
   - package-ecosystem: pip
     directory: /scripts/ci
     schedule:
       interval: weekly
+    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
+    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore(deps)"
     labels: [dependencies]
@@ -31,6 +53,10 @@ updates:
     directory: /frontend
     schedule:
       interval: weekly
+    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
+    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore(deps)"
     labels: [dependencies]
@@ -38,11 +64,20 @@ updates:
     groups:
       npm-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # React, TypeScript, jsdom e as ferramentas de build quebram o painel em major (React 19,
+      # TypeScript 7, jsdom 30 reprovaram o CI) e react/react-dom só funcionam juntos.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
+    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "ci(deps)"
     labels: [dependencies]
@@ -54,6 +89,16 @@ updates:
     directory: /backend
     schedule:
       interval: weekly
+    # Espera 7 dias antes de propor uma versão recém-publicada: se ela for retirada ou se revelar
+    # maliciosa, o PR nem chega a existir. Correção de segurança não espera.
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: "chore(deps)"
     labels: [dependencies]
+    ignore:
+      # Trocar a versão do Python (3.11 -> 3.14) é decisão de projeto: faster-whisper, ctranslate2
+      # e onnxruntime precisam ter pacote para a versão nova. O Python 3.11 segue recebendo patch
+      # pela própria tag `3.11-slim`.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]

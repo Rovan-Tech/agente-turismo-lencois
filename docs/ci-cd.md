@@ -95,6 +95,12 @@ job vermelho, inclusive instabilidade de rede (banco do Trivy, pull de imagem). 
 
 ## Mantendo o pipeline
 
+- **O que o Dependabot propõe.** Só patch e minor, agrupados, com **7 dias de espera** (`cooldown`)
+  antes de propor uma versão recém-publicada. **Versão maior (major) não vem por robô**: é migração
+  (React 19, TypeScript 7 e Python 3.14 reprovaram o CI) e entra por tarefa própria. SQLAlchemy e ruff
+  só sobem à mão em minor (o 2.1 deixou de instalar o `greenlet`; cada minor do ruff muda regras).
+  Correção de segurança não segue essas regras. Para aceitar uma migração, tire o item do `ignore`
+  em `.github/dependabot.yml` no mesmo PR que ajusta o código.
 - **Ações** estão fixadas por SHA de commit (com a versão no comentário) e **imagens Docker por
   digest**. O Dependabot (`.github/dependabot.yml`, semanal e agrupado) propõe as atualizações de
   ações, pip, npm e do Dockerfile. Os digests de `ci.yml` e `nightly.yml` (gitleaks, actionlint,
