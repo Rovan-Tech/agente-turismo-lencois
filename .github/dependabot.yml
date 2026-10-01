@@ -1,0 +1,59 @@
+# Atualizações automáticas de dependências. Cada PR passa pelo mesmo CI dos demais; os de
+# patch/minor vêm agrupados para não gerar uma enxurrada de PRs.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+
+  # Ferramentas só do CI (zizmor, schemathesis, mutmut): fora da imagem e do ambiente de dev.
+  - package-ecosystem: pip
+    directory: /scripts/ci
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]
+    open-pull-requests-limit: 3
+    groups:
+      ci-tools:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci(deps)"
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]

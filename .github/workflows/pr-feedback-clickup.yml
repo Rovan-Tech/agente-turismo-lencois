@@ -1,7 +1,8 @@
 name: PR Feedback ClickUp
 # Quando um check de PR reprova: muda a tarefa do ClickUp para "PR reprovado", comenta
 # nela o que falhou (link/ID no PR), comenta no PR e fecha o PR. So fecha depois de o aviso no ClickUp ter sido
-# enviado com sucesso. Sem link do ClickUp no PR: so comenta no PR e NAO fecha.
+# enviado com sucesso. Sem link do ClickUp no PR: so comenta no PR e NAO fecha. Se so o `pr-title` falhou
+# (titulo fora do padrao), so comenta: corrigir o titulo basta e o CI roda de novo.
 on:
   workflow_run:
     workflows: ["CI", "Semgrep"]
@@ -52,11 +53,22 @@ jobs:
             echo "PR de bot ($AUTHOR); nao fecha automaticamente."; exit 0
           fi
 
+          # `ci-ok` é só o agregador: fica vermelho junto com qualquer job que falhe, então não conta
+          # como causa (senão "só o pr-title falhou" nunca seria verdade).
           FAILED=$(gh run view "$RUN_ID" --repo "$REPO" --json jobs \
-            --jq '[.jobs[] | select(.conclusion == "failure") | .name] | join(", ")')
+            --jq '[.jobs[] | select(.conclusion == "failure" and .name != "ci-ok") | .name] | join(", ")')
           DETAILS=$(gh run view "$RUN_ID" --repo "$REPO" --json jobs \
-            --jq '[.jobs[] | select(.conclusion == "failure") | "- " + .name + ": " + ([.steps[] | select(.conclusion == "failure") | .name] | join(", "))] | join("\n")' || true)
+            --jq '[.jobs[] | select(.conclusion == "failure" and .name != "ci-ok") | "- " + .name + ": " + ([.steps[] | select(.conclusion == "failure") | .name] | join(", "))] | join("\n")' || true)
           LOG_TAIL=$(gh run view "$RUN_ID" --repo "$REPO" --log-failed 2>/dev/null | tail -n 25 | cut -c1-300 | tail -c 1800 || true)
+
+          # Título fora do padrão se corrige editando o PR (o CI revalida no evento `edited`): só
+          # avisa no PR; não muda a tarefa do ClickUp nem fecha.
+          if [ "$FAILED" = "pr-title" ]; then
+            gh pr comment "$PR" --repo "$REPO" --body "O título do PR não segue o padrão Conventional Commits (\`tipo(escopo): descrição\`, ex.: \`feat: add booking calendar\`): $RUN_URL
+
+          Edite o título; o CI roda de novo sozinho. **O PR continua aberto.**"
+            exit 0
+          fi
 
           # ID da tarefa a partir do link app.clickup.com/t/<id> no corpo do PR
           TASK_ID=$(printf '%s\n%s' "$TITLE" "$BODY" \

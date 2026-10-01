@@ -1,0 +1,2 @@
+# Só o job de mutação noturno (instalado junto com backend/requirements-dev.txt).
+mutmut==3.8.0

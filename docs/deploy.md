@@ -30,5 +30,8 @@ não tem nenhum configurado):
 Depois do primeiro deploy: configurar o webhook no painel da Meta
 (`https://<url-do-cloud-run>/webhook/whatsapp`, com o mesmo `WHATSAPP_VERIFY_TOKEN`), proteger
 `agente-turismo-lencois.pages.dev` com **Cloudflare Access** (barreira real de acesso ao
-painel — ver Segurança acima), e checar branch protection da `main` exigindo os dois jobs do
-`CI`.
+painel — ver Segurança acima), e checar branch protection da `main` exigindo o check `ci-ok`
+(detalhes em `docs/ci-cd.md`).
+
+O deploy confere a revisão nova com um teste de fumaça e **volta sozinho para a anterior** se ela
+não responder saudável (`scripts/ci/verify_deploy.sh`); ver `docs/ci-cd.md`.

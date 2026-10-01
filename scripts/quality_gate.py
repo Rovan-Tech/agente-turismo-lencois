@@ -165,7 +165,7 @@ def security_backend() -> list[StepResult]:
         ("segurança estática (bandit)", [py, "-m", "bandit", "-r", "app", "-q"]),
         (
             "auditoria de dependências Python (pip-audit)",
-            [py, "-m", "pip_audit", "-r", "requirements.txt"],
+            [py, "-m", "pip_audit", "-r", "requirements-dev.txt"],
         ),
     ]
     outcomes = [(name, run(cmd, cwd=BACKEND)) for name, cmd in checks]
