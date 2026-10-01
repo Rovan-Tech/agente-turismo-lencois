@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import time
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -11,6 +13,10 @@ from jwt.exceptions import PyJWKClientConnectionError, PyJWTError
 
 JWKS_CACHE_SECONDS = 300
 JWKS_TIMEOUT_SECONDS = 5
+# Depois de uma falha ao buscar as chaves, as próximas requisições recebem 503 na hora em vez de
+# esperar, cada uma, o timeout do fetch (a busca é serializada pelo cliente do PyJWT).
+JWKS_DOWN_SECONDS = 15
+JWKS_USER_AGENT = "agente-turismo-lencois/1.0 (validacao do JWT do Access)"
 CLOCK_SKEW_SECONDS = 30
 REQUIRED_CLAIMS = ["exp", "iat", "iss", "aud", "sub"]
 
@@ -30,6 +36,9 @@ class AccessIdentity:
     sub: str
 
 
+_jwks_down_until: dict[str, float] = {}
+
+
 @lru_cache(maxsize=4)
 def _jwks_client(team_domain: str) -> jwt.PyJWKClient:
     """Um cliente por equipe: guarda o JWKS por 5 minutos em vez de buscá-lo a cada requisição."""
@@ -38,25 +47,36 @@ def _jwks_client(team_domain: str) -> jwt.PyJWKClient:
         cache_jwk_set=True,
         lifespan=JWKS_CACHE_SECONDS,
         timeout=JWKS_TIMEOUT_SECONDS,
+        headers={"User-Agent": JWKS_USER_AGENT},
     )
 
 
-def _verify(token: str, team_domain: str, audience: str) -> AccessIdentity:
+def _signing_key(token: str, team_domain: str) -> jwt.PyJWK:
+    """Chave pública que assinou o token; busca falha vira indisponibilidade, não 401."""
+    if time.monotonic() < _jwks_down_until.get(team_domain, 0.0):
+        raise AccessUnavailableError
     try:
-        signing_key = _jwks_client(team_domain).get_signing_key_from_jwt(token)
+        return _jwks_client(team_domain).get_signing_key_from_jwt(token)
+    except (PyJWKClientConnectionError, OSError, json.JSONDecodeError) as error:
+        _jwks_down_until[team_domain] = time.monotonic() + JWKS_DOWN_SECONDS
+        raise AccessUnavailableError from error
+    except PyJWTError as error:
+        raise AccessAuthError from error
+
+
+def _verify(token: str, team_domain: str, audience: str) -> AccessIdentity:
+    signing_key = _signing_key(token, team_domain)
+    try:
+        # O algoritmo vem do código, nunca do token: barra `alg: none` e HS256 com a chave pública.
         claims = jwt.decode(
             token,
             signing_key.key,
-            algorithms=[
-                "RS256"
-            ],  # nunca vem do token: barra `alg: none` e HS256 com a chave pública
+            algorithms=["RS256"],
             audience=audience,
             issuer=team_domain,
             leeway=CLOCK_SKEW_SECONDS,
             options={"require": REQUIRED_CLAIMS},
         )
-    except PyJWKClientConnectionError as error:
-        raise AccessUnavailableError from error
     except PyJWTError as error:
         raise AccessAuthError from error
     sub = claims.get("sub")

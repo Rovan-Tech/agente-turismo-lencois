@@ -29,11 +29,13 @@ async def _identity_from_access_jwt(token: str, settings: Settings) -> AccessIde
         return await verify_access_jwt(token, settings.access_team_domain, settings.access_aud)
     except AccessAuthError:
         raise HTTPException(status_code=401, detail="não autorizado") from None
-    except AccessUnavailableError:
+    except AccessUnavailableError as error:
+        cause = type(error.__cause__).__name__ if error.__cause__ else "em espera"
         logger.exception(
-            "chaves do Cloudflare Access indisponíveis",
+            "chaves do Cloudflare Access indisponíveis (%s)",
+            cause,
             exc_info=False,
-            extra={"event": "access_jwks"},
+            extra={"event": "access_jwks", "cause": cause},
         )
         raise HTTPException(status_code=503, detail="autenticação indisponível") from None
 
@@ -73,11 +75,13 @@ async def require_dashboard_auth(
     identity = await _identity_from_access_jwt(cf_access_jwt_assertion, settings)
     _require_panel_header(request, x_panel_request)
     if request.method not in SAFE_METHODS:
-        # Só o `sub` (opaco): nem o e-mail nem o JWT entram no log.
+        # Só o `sub` (opaco): nem o e-mail nem o JWT entram no log. Vai o molde da rota
+        # (`/api/tours/{tour_id}`), não o caminho cru, que o cliente controla.
+        route_path = getattr(request.scope.get("route"), "path", "?")
         logger.info(
             "mutação no painel: %s %s por %s",
             request.method,
-            request.url.path,
+            route_path,
             identity.sub,
             extra={"event": "panel_mutation", "actor": identity.sub},
         )
