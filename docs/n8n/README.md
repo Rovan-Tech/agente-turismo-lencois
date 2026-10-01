@@ -17,7 +17,9 @@ serviços de terceiros**. Dois marcadores precisam ser trocados depois de import
 ```
 WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Buscar catálogo]
         → [Preparar entrada] → [Gerar resposta (Gemini 2.5 Flash, Vertex AI)] → [Enviar resposta]
+                                                                  → [Registrar atendimento no painel]
                  falha no catálogo ou no modelo → [Enviar aviso de contingência]
+                                                → [Registrar atendimento (contingência)]
 ```
 
 - O gatilho valida a assinatura `X-Hub-Signature-256` com o App Secret e descarta o que não confere.
@@ -26,6 +28,15 @@ WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Busca
 - A saída do Gemini é validada por esquema JSON (`idioma` ∈ `pt|en|es`, `passeio_sugerido_id`
   texto ou nulo). Resposta enviada tem no máximo 4000 caracteres.
 - O catálogo vem de `GET /api/tours` e é tentado até 3 vezes (o Neon fecha conexões ociosas).
+- **Registro no painel (ADR-0005):** depois de responder, o nó "Registrar atendimento" chama
+  `POST /api/ingest/atendimentos` com o id da mensagem da Meta, o telefone, o texto original do
+  turista (até 4096), a resposta enviada, `idioma`, `passeio_sugerido_id` e
+  `precisa_atencao_humana`. São 3 tentativas com 10 s de limite; repetir é seguro (o backend
+  deduplica pelo id). Se falhar, **não** dispara a contingência (o turista já foi respondido) e o
+  atendimento fica só na execução do n8n. O backend só aceita passeio ativo do catálogo.
+- **"Precisa de atenção"** (decisão do Patrick): `precisa_atencao_humana` é `true` só quando o
+  modelo não sabe responder ou está em dúvida, ou o turista pede uma pessoa, e na contingência. O
+  backend só escala o status; a marca sai quando uma pessoa resolve a conversa no painel.
 - O raciocínio do modelo está desligado (`thinkingBudget: 0`); ligado, ele consome o teto de
   tokens e a resposta vem vazia.
 
@@ -38,6 +49,7 @@ Crie cada uma em **Credentials** e ligue ao nó correspondente depois de importa
 | WhatsApp OAuth account | WhatsApp OAuth API | Receber WhatsApp | ID do app Meta e App Secret |
 | WhatsApp account | WhatsApp API | Enviar resposta, Enviar aviso | Token do usuário do sistema da Meta e ID da conta WhatsApp Business |
 | Simplified Custom Auth account | Simplified Custom Auth | Buscar catálogo | Modelo `{"headers":{"Authorization":"Bearer {{api_key}}"}}` e o `DASHBOARD_API_TOKEN` |
+| Ingest API Token account | Simplified Custom Auth | Registrar atendimento (2 nós) | O mesmo modelo, com o `INGEST_API_TOKEN` (**diferente** do `DASHBOARD_API_TOKEN`) |
 | Google Service Account account | Google Service Account API | Gemini 2.5 Flash | E-mail e chave privada de uma service account com **só** `roles/aiplatform.user` |
 
 **Nenhum segredo vai para o repositório.** Gere o token do WhatsApp como usuário do sistema, com
