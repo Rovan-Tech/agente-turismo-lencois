@@ -1,18 +1,25 @@
 import type { z } from "zod";
 
 import type {
+  Booking,
+  BookingCreateInput,
+  BookingCreated,
   ConversationDetail,
   ConversationHeader,
   ConversationStatus,
   ConversationSummary,
+  DayOccupancy,
   Tour,
   TourCreateInput,
   TourUpdateInput,
 } from "../types";
 import {
+  BookingCreatedSchema,
+  BookingListSchema,
   ConversationDetailSchema,
   ConversationHeaderSchema,
   ConversationListSchema,
+  DayOccupancyListSchema,
 } from "./schemas";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -128,4 +135,35 @@ export function updateTour(id: string, payload: TourUpdateInput): Promise<ApiRes
 
 export function deleteTour(id: string): Promise<ApiResult<Tour>> {
   return sendJson<Tour>(`/api/tours/${encodeURIComponent(id)}`, "DELETE");
+}
+
+/** Ocupação dia a dia de um passeio num mês (`mes` no formato `YYYY-MM`). */
+export function getTourAgenda(tourId: string, mes: string): Promise<DayOccupancy[] | null> {
+  const query = `?mes=${encodeURIComponent(mes)}`;
+  return fetchJson(
+    `/api/tours/${encodeURIComponent(tourId)}/agenda${query}`,
+    DayOccupancyListSchema
+  );
+}
+
+/** Agendamentos pagos de um passeio num dia (`data` no formato `YYYY-MM-DD`). */
+export function getDayBookings(tourId: string, data: string): Promise<Booking[] | null> {
+  const query = `?data=${encodeURIComponent(data)}`;
+  return fetchJson(
+    `/api/tours/${encodeURIComponent(tourId)}/agendamentos${query}`,
+    BookingListSchema
+  );
+}
+
+/** Cria um agendamento — sempre entra como pago (simula "pagamento aprovado"). */
+export function createBooking(
+  tourId: string,
+  payload: BookingCreateInput
+): Promise<ApiResult<BookingCreated>> {
+  return sendJson(
+    `/api/tours/${encodeURIComponent(tourId)}/agendamentos`,
+    "POST",
+    payload,
+    BookingCreatedSchema
+  );
 }

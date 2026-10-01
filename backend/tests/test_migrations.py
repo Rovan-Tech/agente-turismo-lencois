@@ -29,6 +29,22 @@ def _conversation_columns(sync_url: str) -> set[str]:
         engine.dispose()
 
 
+def _tour_columns(sync_url: str) -> set[str]:
+    engine = create_engine(sync_url)
+    try:
+        return {column["name"] for column in inspect(engine).get_columns("tours")}
+    finally:
+        engine.dispose()
+
+
+def _table_names(sync_url: str) -> set[str]:
+    engine = create_engine(sync_url)
+    try:
+        return set(inspect(engine).get_table_names())
+    finally:
+        engine.dispose()
+
+
 def test_suggested_tour_migration_goes_up_down_and_up_again(alembic_config):
     config, sync_url = alembic_config
 
@@ -40,6 +56,22 @@ def test_suggested_tour_migration_goes_up_down_and_up_again(alembic_config):
 
     command.upgrade(config, "head")
     assert "passeio_sugerido_id" in _conversation_columns(sync_url)
+
+
+def test_booking_migration_goes_up_down_and_up_again(alembic_config):
+    config, sync_url = alembic_config
+
+    command.upgrade(config, "head")
+    assert "capacidade_diaria" in _tour_columns(sync_url)
+    assert "bookings" in _table_names(sync_url)
+
+    command.downgrade(config, "0003")
+    assert "capacidade_diaria" not in _tour_columns(sync_url)
+    assert "bookings" not in _table_names(sync_url)
+
+    command.upgrade(config, "head")
+    assert "capacidade_diaria" in _tour_columns(sync_url)
+    assert "bookings" in _table_names(sync_url)
 
 
 def test_running_migrations_does_not_silence_the_app_loggers(alembic_config):

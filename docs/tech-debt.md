@@ -124,6 +124,7 @@ infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
 | TD-A4 | `SEC-5`, `INF-2` | SBOM CycloneDX (`cyclonedx-py`, `@cyclonedx/cyclonedx-npm`) não é gerado no CI | Média |
 | TD-A5 | `DATA-3` | sem tabela de auditoria append-only com hash chain; mutações (`status` da conversa, CRUD de passeios) não registram quem/quando/antes/depois | Alta |
 | TD-A6 | `FE-3` | painel autentica com token estático no bundle (`VITE_API_TOKEN`); migrar para sessão por cookie HttpOnly/Secure/SameSite=Strict atrás do Cloudflare Access | Média |
+| TD-A7 | `SEC-6` | sem rotina automática de expurgo do telefone (prazo já definido: 90 dias após `data`/`created_at`, ver threat model de agendamento); falta o job/automação em `bookings` e em `conversations` | Média |
 | TD-G1 | `GIT-1` | pre-commit sem `check-added-large-files` (500 KB) | Baixa |
 | TD-M5 | `PY-4` | sem handler global RFC 7807; erros saem como `{"detail": ...}` do FastAPI | Média |
 | TD-M6 | `PY-5` | sem biblioteca de retry/circuit breaker (`tenacity`); jitter e breaker não padronizados nas chamadas ao Groq e ao WhatsApp | Média |

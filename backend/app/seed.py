@@ -23,6 +23,7 @@ TOURS = [
         duracao_horas=4,
         faixa_etaria_recomendada="8 a 65 anos, sem limitação de mobilidade",
         preco_reais=150,
+        capacidade_diaria=40,
     ),
     Tour(
         id="vale-do-paraiso",
@@ -39,6 +40,7 @@ TOURS = [
         duracao_horas=3,
         faixa_etaria_recomendada="6 a 70 anos com mobilidade razoável",
         preco_reais=120,
+        capacidade_diaria=50,
     ),
     Tour(
         id="passeio-bugre-orla",
@@ -58,6 +60,7 @@ TOURS = [
             "todas as idades, incluindo idosos e pessoas com mobilidade reduzida"
         ),
         preco_reais=100,
+        capacidade_diaria=41,
     ),
     Tour(
         id="rio-preguicas-pequenos-lencois",
@@ -78,6 +81,7 @@ TOURS = [
             "embarque no barco"
         ),
         preco_reais=180,
+        capacidade_diaria=30,
     ),
     Tour(
         id="trilha-das-emendas",
@@ -95,6 +99,7 @@ TOURS = [
         duracao_horas=5,
         faixa_etaria_recomendada="12 a 55 anos, bom preparo físico",
         preco_reais=130,
+        capacidade_diaria=20,
     ),
 ]
 

@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { ConversationDetailPage } from "./pages/ConversationDetailPage";
 import { ConversationsPage } from "./pages/ConversationsPage";
+import { TourBookingPage } from "./pages/TourBookingPage";
 import { ToursPage } from "./pages/ToursPage";
 
 export function App() {
@@ -13,6 +14,7 @@ export function App() {
           <Route path="/" element={<ConversationsPage />} />
           <Route path="/conversas/:id" element={<ConversationDetailPage />} />
           <Route path="/passeios" element={<ToursPage />} />
+          <Route path="/passeios/:id" element={<TourBookingPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

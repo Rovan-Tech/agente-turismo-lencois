@@ -56,3 +56,4 @@ def test_seed_tour_has_valid_required_fields(tour):
     assert tour.duracao_horas > 0
     assert float(tour.preco_reais) >= 0
     assert tour.caminhada_areia_minutos >= 0
+    assert tour.capacidade_diaria > 0

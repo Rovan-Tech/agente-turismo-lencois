@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import conversations, tours, webhook
+from app.api import bookings, conversations, tours, webhook
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -25,6 +25,7 @@ app.add_middleware(
 
 app.include_router(webhook.router)
 app.include_router(tours.router)
+app.include_router(bookings.router)
 app.include_router(conversations.router)
 
 

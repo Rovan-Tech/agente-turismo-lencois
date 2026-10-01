@@ -1,13 +1,22 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import * as api from "../../src/lib/api";
 import { ToursPage } from "../../src/pages/ToursPage";
 import { fillTourFormRequiredFields, SAMPLE_TOUR as ACTIVE_TOUR } from "./fixtures";
 
+function renderPage() {
+  render(
+    <MemoryRouter>
+      <ToursPage />
+    </MemoryRouter>
+  );
+}
+
 async function renderWithSingleTour() {
   vi.spyOn(api, "listTours").mockResolvedValue([ACTIVE_TOUR]);
-  render(<ToursPage />);
+  renderPage();
   await screen.findByText("Passeio de bugre");
 }
 
@@ -17,7 +26,7 @@ describe("ToursPage", () => {
   it("shows an error when the catalog fails to load", async () => {
     vi.spyOn(api, "listTours").mockResolvedValue(null);
 
-    render(<ToursPage />);
+    renderPage();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível carregar os passeios."
@@ -27,7 +36,7 @@ describe("ToursPage", () => {
   it("shows an empty state when there are no tours", async () => {
     vi.spyOn(api, "listTours").mockResolvedValue([]);
 
-    render(<ToursPage />);
+    renderPage();
 
     expect(await screen.findByText("Nenhum passeio cadastrado.")).toBeInTheDocument();
   });
@@ -35,7 +44,7 @@ describe("ToursPage", () => {
   it("lists tours with their active status", async () => {
     vi.spyOn(api, "listTours").mockResolvedValue([ACTIVE_TOUR]);
 
-    render(<ToursPage />);
+    renderPage();
 
     expect(await screen.findByText("Passeio de bugre")).toBeInTheDocument();
     expect(screen.getByText("Ativo")).toBeInTheDocument();
@@ -45,7 +54,7 @@ describe("ToursPage", () => {
     vi.spyOn(api, "listTours").mockResolvedValueOnce([]).mockResolvedValueOnce([ACTIVE_TOUR]);
     vi.spyOn(api, "createTour").mockResolvedValue({ ok: true, data: ACTIVE_TOUR });
 
-    render(<ToursPage />);
+    renderPage();
     await screen.findByText("Nenhum passeio cadastrado.");
 
     fireEvent.click(screen.getByRole("button", { name: "Novo passeio" }));
@@ -59,7 +68,7 @@ describe("ToursPage", () => {
   it("shows the correct tour's data when switching which one is being edited", async () => {
     vi.spyOn(api, "listTours").mockResolvedValue([ACTIVE_TOUR, SECOND_TOUR]);
 
-    render(<ToursPage />);
+    renderPage();
     await screen.findByText("Passeio de bugre");
 
     const editButtons = screen.getAllByRole("button", { name: "Editar" });
@@ -96,7 +105,7 @@ describe("ToursPage", () => {
       .mockResolvedValueOnce([inactiveTour]);
     vi.spyOn(api, "deleteTour").mockResolvedValue({ ok: true, data: inactiveTour });
 
-    render(<ToursPage />);
+    renderPage();
     await screen.findByText("Passeio de bugre");
 
     fireEvent.click(screen.getByRole("button", { name: "Desativar" }));

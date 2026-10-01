@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import json
+import logging
 from collections.abc import Callable
 from typing import Any
 
@@ -10,6 +11,7 @@ import pytest
 from app.core.config import get_settings
 from app.core.security import is_valid_dashboard_token, is_valid_whatsapp_signature
 from app.services import message_handler, whatsapp_client
+from tests.conftest import persist
 
 
 def _sign(payload: bytes, secret: str) -> str:
@@ -270,3 +272,63 @@ async def test_prompt_injection_cannot_plant_a_tour_suggestion(
     [summary] = (await client.get("/api/conversations")).json()
     detail = (await client.get(f"/api/conversations/{summary['id']}")).json()
     assert detail["passeio_sugerido"] is None
+
+
+_BOOKING_PAYLOAD = {
+    "data": "2026-09-28",
+    "pessoas": 3,
+    "forma_pagamento": "pix",
+    "telefone": "5598999998888",
+}
+
+
+@pytest.mark.asyncio
+async def test_booking_endpoints_require_dashboard_token(client, db_session, sample_tours):
+    await persist(db_session, sample_tours[0])
+    no_auth = {"Authorization": ""}
+
+    get_agenda = await client.get(
+        "/api/tours/passeio-bugre-orla/agenda", params={"mes": "2026-09"}, headers=no_auth
+    )
+    list_bookings = await client.get(
+        "/api/tours/passeio-bugre-orla/agendamentos", params={"data": "2026-09-28"}, headers=no_auth
+    )
+    create_booking = await client.post(
+        "/api/tours/passeio-bugre-orla/agendamentos", json=_BOOKING_PAYLOAD, headers=no_auth
+    )
+
+    assert get_agenda.status_code == 401
+    assert list_bookings.status_code == 401
+    assert create_booking.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_booking_phone_never_appears_in_logs(client, db_session, sample_tours, caplog):
+    await persist(db_session, sample_tours[0])
+
+    with caplog.at_level(logging.INFO):
+        response = await client.post(
+            "/api/tours/passeio-bugre-orla/agendamentos", json=_BOOKING_PAYLOAD
+        )
+
+    assert response.status_code == 201
+    assert _BOOKING_PAYLOAD["telefone"] not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_booking_rejects_forged_payment_status(client, db_session, sample_tours):
+    """STRIDE (Tampering): o cliente tenta forjar `status_pagamento` pra entrar sem passar pela
+    simulação. O schema de entrada nem tem esse campo — `extra="forbid"` rejeita o payload
+    inteiro, nenhum agendamento chega a ser criado."""
+    await persist(db_session, sample_tours[0])
+
+    response = await client.post(
+        "/api/tours/passeio-bugre-orla/agendamentos",
+        json={**_BOOKING_PAYLOAD, "status_pagamento": "pago"},
+    )
+
+    assert response.status_code == 422
+    listed = await client.get(
+        "/api/tours/passeio-bugre-orla/agendamentos", params={"data": "2026-09-28"}
+    )
+    assert listed.json() == []

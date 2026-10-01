@@ -57,3 +57,38 @@ export const ConversationDetailSchema = ConversationHeaderSchema.extend({
 });
 
 export const ConversationListSchema = z.array(ConversationSummarySchema);
+
+/**
+ * Contratos do agendamento com pagamento simulado (nenhum gateway real é integrado).
+ * `data` chega em texto ISO 8601 (`YYYY-MM-DD`), sem hora: só a exibição formata.
+ */
+
+export const PaymentMethodSchema = z.enum(["pix", "boleto", "cartao"]);
+
+export const PaymentStatusSchema = z.enum(["pendente", "pago"]);
+
+export const DayOccupancySchema = z.object({
+  data: z.string(),
+  capacidade: z.number(),
+  ocupadas: z.number(),
+});
+
+export const DayOccupancyListSchema = z.array(DayOccupancySchema);
+
+export const BookingSchema = z.object({
+  id: z.string(),
+  tour_id: z.string(),
+  data: z.string(),
+  pessoas: z.number(),
+  forma_pagamento: PaymentMethodSchema,
+  status_pagamento: PaymentStatusSchema,
+  telefone: z.string().nullable(),
+  created_at: z.string(),
+});
+
+export const BookingListSchema = z.array(BookingSchema);
+
+export const BookingCreatedSchema = BookingSchema.extend({
+  capacidade: z.number(),
+  ocupadas: z.number(),
+});

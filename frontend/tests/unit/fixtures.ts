@@ -1,9 +1,11 @@
 import { fireEvent, screen } from "@testing-library/react";
 
 import type {
+  Booking,
   ConversationDetail,
   ConversationHeader,
   ConversationSummary,
+  DayOccupancy,
   SuggestedTour,
   Tour,
 } from "../../src/types";
@@ -74,3 +76,20 @@ export const SAMPLE_CONVERSATION: ConversationDetail = {
 export function summary(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return { ...SAMPLE_HEADER, ultima_mensagem: null, ...overrides };
 }
+
+export const SAMPLE_DAY_OCCUPANCY: DayOccupancy = {
+  data: "2026-09-28",
+  capacidade: 41,
+  ocupadas: 10,
+};
+
+export const SAMPLE_BOOKING: Booking = {
+  id: "booking-1",
+  tour_id: "passeio-bugre-orla",
+  data: "2026-09-28",
+  pessoas: 3,
+  forma_pagamento: "pix",
+  status_pagamento: "pago",
+  telefone: "5598999998888",
+  created_at: "2026-09-28T12:00:00Z",
+};

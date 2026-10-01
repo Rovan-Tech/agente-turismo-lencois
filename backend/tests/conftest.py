@@ -1,7 +1,7 @@
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
 from app.db.base import Base
@@ -65,6 +65,33 @@ def pipeline_spies(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[object]]:
         transcription_module, "transcribe_audio", lambda *args: calls["transcribed"].append(args)
     )
     return calls
+
+
+async def persist(db_session: AsyncSession, *objects: object) -> None:
+    """Adiciona e commita um ou mais objetos de uma vez, para preparar o estado de um teste."""
+    for obj in objects:
+        db_session.add(obj)
+    await db_session.commit()
+
+
+def default_tour_fields(**overrides: object) -> dict[str, object]:
+    """Campos válidos mínimos de um `Tour`, para montar variações em testes sem repetir tudo."""
+    fields: dict[str, object] = {
+        "id": "passeio-teste",
+        "nome": "Passeio de teste",
+        "descricao": "Descrição do passeio de teste.",
+        "dificuldade_fisica": DifficultyLevel.MEDIA,
+        "caminhada_areia_minutos": 10,
+        "acessivel_idosos": False,
+        "acessivel_cadeirantes": False,
+        "acessivel_criancas_pequenas": False,
+        "duracao_horas": 2.0,
+        "faixa_etaria_recomendada": "todas as idades",
+        "preco_reais": 90.0,
+        "ativo": True,
+    }
+    fields.update(overrides)
+    return fields
 
 
 @pytest.fixture

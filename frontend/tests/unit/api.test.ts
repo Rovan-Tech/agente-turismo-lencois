@@ -1,15 +1,25 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  createBooking,
   createTour,
   deleteTour,
   getConversation,
+  getDayBookings,
+  getTourAgenda,
   listConversations,
   listTours,
   updateConversationStatus,
   updateTour,
 } from "../../src/lib/api";
-import { SAMPLE_CONVERSATION, SAMPLE_SUGGESTED_TOUR, SAMPLE_TOUR, summary } from "./fixtures";
+import {
+  SAMPLE_BOOKING,
+  SAMPLE_CONVERSATION,
+  SAMPLE_DAY_OCCUPANCY,
+  SAMPLE_SUGGESTED_TOUR,
+  SAMPLE_TOUR,
+  summary,
+} from "./fixtures";
 
 function jsonResponse(status: number, body: unknown) {
   return {
@@ -202,6 +212,74 @@ describe("lib/api", () => {
       ok: false,
       status: 200,
       message: "resposta inesperada do servidor",
+    });
+  });
+
+  it("getTourAgenda requests the given month and returns the day-by-day occupancy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, [SAMPLE_DAY_OCCUPANCY]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getTourAgenda("passeio-bugre-orla", "2026-09");
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("/api/tours/passeio-bugre-orla/agenda?mes=2026-09");
+    expect(result).toEqual([SAMPLE_DAY_OCCUPANCY]);
+  });
+
+  it("getTourAgenda returns null for a malformed day", async () => {
+    respondWith([{ ...SAMPLE_DAY_OCCUPANCY, capacidade: "muitas" }]);
+
+    expect(await getTourAgenda("passeio-bugre-orla", "2026-09")).toBeNull();
+  });
+
+  it("getDayBookings requests the given date and returns that day's paid bookings", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, [SAMPLE_BOOKING]));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getDayBookings("passeio-bugre-orla", "2026-09-28");
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("/api/tours/passeio-bugre-orla/agendamentos?data=2026-09-28");
+    expect(result).toEqual([SAMPLE_BOOKING]);
+  });
+
+  it("getDayBookings returns null for a booking with an unknown payment method", async () => {
+    respondWith([{ ...SAMPLE_BOOKING, forma_pagamento: "dinheiro" }]);
+
+    expect(await getDayBookings("passeio-bugre-orla", "2026-09-28")).toBeNull();
+  });
+
+  it("createBooking sends a POST with the payload and returns the created booking", async () => {
+    const created = { ...SAMPLE_BOOKING, capacidade: 41, ocupadas: 13 };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, created));
+    vi.stubGlobal("fetch", fetchMock);
+    const payload = { data: "2026-09-28", pessoas: 3, forma_pagamento: "pix" as const };
+
+    const result = await createBooking("passeio-bugre-orla", payload);
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/api/tours/passeio-bugre-orla/agendamentos");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual(payload);
+    expect(result).toEqual({ ok: true, data: created });
+  });
+
+  it("createBooking surfaces the API error when there are not enough seats", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse(409, { detail: "não há vagas suficientes nesse dia" }))
+    );
+
+    const result = await createBooking("passeio-bugre-orla", {
+      data: "2026-09-28",
+      pessoas: 50,
+      forma_pagamento: "pix",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      status: 409,
+      message: "não há vagas suficientes nesse dia",
     });
   });
 });
