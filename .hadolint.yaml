@@ -1,0 +1,6 @@
+# Configuração do hadolint (lint do backend/Dockerfile).
+failure-threshold: warning
+ignored:
+  # DL3008: fixar a versão de cada pacote apt quebra o build quando o repositório do Debian troca
+  # a versão. A imagem base já é fixada pela tag e o Trivy varre a imagem pronta atrás de CVEs.
+  - DL3008

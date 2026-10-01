@@ -1,20 +1,144 @@
 name: CI
 
+# Portão de qualidade e segurança de todo PR. O que cada job faz está em docs/ci-cd.md.
+# Regras do arquivo: permissões mínimas por job, ações fixadas por SHA, imagens por digest,
+# nenhum `${{ }}` dentro de `run` (valores vão por `env`) e um único check obrigatório: `ci-ok`.
 on:
   push:
     branches: [main]
+  # `edited` relança o CI quando o título do PR muda (o `pr-title` precisa revalidar). O resto do
+  # pipeline roda de novo junto, e o `ci-ok` sempre reflete a última execução inteira.
   pull_request:
+    types: [opened, synchronize, reopened, edited]
+  merge_group:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # O que roda aqui é definido em scripts/quality_gate.py (fonte única, a mesma dos hooks e
-  # do pre-commit). Os nomes dos jobs continuam `backend` e `frontend` por causa da branch protection.
-  backend:
+  # Decide quais grupos de jobs valem a pena: PR só de documentação não sobe Postgres nem Docker.
+  # Fora de PR (push na main, merge queue) roda tudo.
+  changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      backend: ${{ steps.classify.outputs.backend }}
+      frontend: ${{ steps.classify.outputs.frontend }}
+      docker: ${{ steps.classify.outputs.docker }}
+      deps: ${{ steps.classify.outputs.deps }}
+      workflows: ${{ steps.classify.outputs.workflows }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+          persist-credentials: false
+      - id: classify
+        # `shell: bash` liga o pipefail: se o script falhar, o passo falha em vez de sair sem
+        # outputs (o que faria todos os jobs condicionais pularem com o `ci-ok` verde).
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            python3 scripts/ci/changes.py --base "origin/$BASE_REF" --head HEAD | tee -a "$GITHUB_OUTPUT"
+          else
+            python3 scripts/ci/changes.py | tee -a "$GITHUB_OUTPUT"
+          fi
+
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: python3 scripts/ci/pr_title.py "$TITLE"
+
+  # Segredo vazado no histórico (SEC-1). A config libera só exemplos de skills de terceiros.
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: |
+          docker run --rm -v "$PWD:/repo:ro" \
+            zricethezav/gitleaks@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f \
+            git /repo --config /repo/.gitleaks.toml --redact --no-banner --verbose
+
+  # Os próprios workflows são código: sintaxe (actionlint) e segurança (zizmor).
+  workflows:
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: actionlint
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" -w /repo \
+            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 \
+            -color
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: backend/.python-version
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m pip install --quiet -r scripts/ci/requirements-tools.txt
+          zizmor --config .github/zizmor.yml --min-severity medium .github/workflows
+
+  # O que roda aqui é definido em scripts/quality_gate.py (fonte única, a mesma dos hooks e do
+  # pre-commit). A suíte roda em PostgreSQL, o mesmo banco da produção, e não só em SQLite.
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/app_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: backend/.python-version
           cache: pip
@@ -22,18 +146,90 @@ jobs:
       - run: pip install -r backend/requirements-dev.txt
       - run: python scripts/quality_gate.py --full --scope backend
 
-  frontend:
+  # Alembic sobe, confere o modelo, desce e sobe de novo num Postgres vazio (DATA: migrations
+  # reversíveis).
+  migrations:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:17@sha256:d74eeac9a635390a49bc21bd49fccd973de707e2a53a76ac49b552b8712ec46f
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_migrations
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:5432/app_migrations
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r backend/requirements.txt
+      - run: scripts/ci/check_migrations.sh
+
+  # Fuzz do contrato OpenAPI: gera entradas inválidas e inesperadas e exige que a API nunca
+  # responda 5xx nem fora do contrato.
+  api-contract:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            scripts/ci/requirements-tools.txt
+      - run: pip install -r backend/requirements.txt -r scripts/ci/requirements-tools.txt
+      - run: scripts/ci/start_api.sh
+      - name: schemathesis
+        run: scripts/ci/fuzz_api.sh "$API_URL"
+      - if: always()
+        run: |
+          [ -f "$API_WORKDIR/api.pid" ] && kill "$(cat "$API_WORKDIR/api.pid")" || true
+          [ -f "$API_WORKDIR/api.log" ] && tail -50 "$API_WORKDIR/api.log" || true
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version-file: backend/.python-version
       # O escopo frontend só usa a stdlib e o diff-cover (cobertura das linhas alteradas).
       - run: pip install diff-cover==10.6.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: frontend/.nvmrc
           cache: npm
@@ -43,3 +239,113 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
       - run: python scripts/quality_gate.py --full --scope frontend
+      # Orçamento de peso do bundle (FE-5): o PR que estoura o limite falha.
+      - run: npm run size
+        working-directory: frontend
+      - if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-evidence
+          path: frontend/test-results
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # A imagem que vai para o Cloud Run: lint do Dockerfile, build, vulnerabilidades, segredos,
+  # configuração e um teste de fumaça com o container de verdade. Gera o SBOM (CycloneDX).
+  docker:
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      HADOLINT_IMAGE: hadolint/hadolint@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
+      TRIVY_IMAGE: aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: hadolint
+        run: |
+          docker run --rm -i -v "$PWD/.hadolint.yaml:/.config/hadolint.yaml:ro" \
+            "$HADOLINT_IMAGE" hadolint - < backend/Dockerfile
+      - name: Build
+        run: docker build --pull -t agente-backend:ci backend
+      - name: Trivy (vulnerabilidades e segredos da imagem)
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY_IMAGE" image \
+            --scanners vuln,secret --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 \
+            --no-progress agente-backend:ci
+      - name: Trivy (configuração do Dockerfile)
+        run: |
+          docker run --rm -v "$PWD/backend:/work:ro" "$TRIVY_IMAGE" config \
+            --severity HIGH,CRITICAL --exit-code 1 /work
+      - name: Teste de fumaça do container
+        run: |
+          docker run -d --name api -p 8080:8080 \
+            -e DATABASE_URL=sqlite+aiosqlite:////tmp/ci.db \
+            -e DASHBOARD_API_TOKEN=ci-dashboard-token \
+            -e FRONTEND_ORIGIN=http://localhost:4173 \
+            agente-backend:ci sh -c \
+            'python -m alembic upgrade head && python -m app.seed && exec uvicorn app.main:app --host 0.0.0.0 --port 8080'
+          scripts/ci/wait_for_url.sh http://127.0.0.1:8080/health 90 || { docker logs api; exit 1; }
+          scripts/ci/smoke.sh http://127.0.0.1:8080 ci-dashboard-token
+      - if: failure()
+        run: docker logs api || true
+      - name: SBOM (CycloneDX)
+        run: |
+          mkdir -p sbom
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/sbom:/out" \
+            "$TRIVY_IMAGE" image --format cyclonedx --output /out/sbom.cdx.json --no-progress \
+            agente-backend:ci
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom-backend
+          path: sbom/sbom.cdx.json
+          retention-days: 30
+
+  # Dependência nova com vulnerabilidade alta ou licença copyleft forte (AGPL, GPL-3.0, SSPL)
+  # barra o PR.
+  # (O pip-audit e o npm audit já rodam dentro do gate de cada pilar.)
+  deps:
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.deps == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only, GPL-3.0-or-later, SSPL-1.0
+          comment-summary-in-pr: never
+
+  # Único check obrigatório na branch protection: verde só se todo job necessário passou ou foi
+  # dispensado por não ter arquivo relevante no PR. Falha e cancelamento reprovam.
+  ci-ok:
+    if: always()
+    needs:
+      - changes
+      - pr-title
+      - secrets
+      - workflows
+      - backend
+      - migrations
+      - api-contract
+      - frontend
+      - docker
+      - deps
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "$RESULTS"
+          echo "$RESULTS" | jq -e 'all(. == "success" or . == "skipped")' >/dev/null

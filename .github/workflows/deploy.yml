@@ -11,6 +11,8 @@ on:
   # trocou só um secret). Usa o HEAD atual da main nesse caso.
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: deploy-production
   cancel-in-progress: false
@@ -19,17 +21,20 @@ jobs:
   deploy-backend:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       id-token: write
       contents: read
+      attestations: write
     outputs:
       backend_url: ${{ steps.deploy.outputs.url }}
       sha: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       # nosemgrep: yaml.github-actions.security.workflow-run-target-code-checkout.workflow-run-target-code-checkout
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
 
       - id: auth
         uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2
@@ -40,7 +45,9 @@ jobs:
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2
 
       - name: Autentica o Docker no Artifact Registry
-        run: gcloud auth configure-docker "${{ secrets.GCP_REGION }}-docker.pkg.dev" --quiet
+        env:
+          REGION: ${{ secrets.GCP_REGION }}
+        run: gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
       - name: Build da imagem
         env:
@@ -56,6 +63,22 @@ jobs:
         run: |
           docker push "$IMAGE:$SHA"
           docker push "$IMAGE:latest"
+
+      - id: digest
+        name: Digest da imagem publicada
+        env:
+          IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCP_ARTIFACT_REPO }}/agente-turismo-lencois-backend
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          ref=$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:$SHA")
+          echo "digest=${ref##*@}" >> "$GITHUB_OUTPUT"
+
+      # Proveniência SLSA: prova de qual commit e qual workflow geraram a imagem. O nome do sujeito
+      # não leva o caminho do registry: o atestado é público e esse caminho tem o ID do projeto GCP.
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: agente-turismo-lencois-backend
+          subject-digest: ${{ steps.digest.outputs.digest }}
 
       # Roda a migração ANTES de publicar a nova revisão — evita a app nova
       # bater num schema desatualizado no momento da troca de tráfego.
@@ -79,6 +102,15 @@ jobs:
           docker run --rm -e DATABASE_URL="$DATABASE_URL" --entrypoint python \
             "$IMAGE:$SHA" -m app.seed
 
+      # Revisão que atende o tráfego hoje: é para onde o rollback automático volta se a nova falhar.
+      - id: previous
+        name: Guarda a revisão atual (alvo do rollback)
+        env:
+          REGION: ${{ secrets.GCP_REGION }}
+        run: |
+          revision=$(scripts/ci/previous_revision.sh agente-turismo-lencois-backend "$REGION")
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+
       - id: deploy
         uses: google-github-actions/deploy-cloudrun@251330ba9a8a34bfbc1622895f42e1d53fd14522 # v2
         with:
@@ -96,19 +128,44 @@ jobs:
             DASHBOARD_API_TOKEN=${{ secrets.DASHBOARD_API_TOKEN }}
             FRONTEND_ORIGIN=https://agente-turismo-lencois.pages.dev
 
+      # Depois de um rollback o Cloud Run mantém o tráfego fixo na revisão antiga e deploys novos
+      # deixariam de recebê-lo sozinhos: `--to-latest` devolve o tráfego à revisão recém-publicada.
+      - name: Direciona o tráfego para a revisão nova
+        env:
+          REGION: ${{ secrets.GCP_REGION }}
+        run: |
+          gcloud run services update-traffic agente-turismo-lencois-backend \
+            --region "$REGION" --to-latest
+
+      # Se a revisão nova não responder saudável, o tráfego volta sozinho para a anterior e o job
+      # falha (o frontend, que depende dele, não é publicado).
+      - name: Teste de fumaça e rollback automático
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          REGION: ${{ secrets.GCP_REGION }}
+          PREVIOUS: ${{ steps.previous.outputs.revision }}
+          TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
+        run: |
+          scripts/ci/verify_deploy.sh "$URL" agente-turismo-lencois-backend "$REGION" "$PREVIOUS" "$TOKEN"
+
   deploy-frontend:
     needs: deploy-backend
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.deploy-backend.outputs.sha }}
+          persist-credentials: false
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      # Sem cache: este job publica em produção e um cache envenenado chegaria lá. A v7 faz cache
+      # sozinha se o input não for desligado (a v4, usada nos outros workflows, não faz).
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: frontend/.nvmrc
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          package-manager-cache: false
 
       - name: Instala dependências
         working-directory: frontend

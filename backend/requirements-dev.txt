@@ -2,6 +2,11 @@
 # (o Dockerfile instala só requirements.txt).
 -r requirements.txt
 
+pytest==9.1.1
+pytest-asyncio==1.4.0
+ruff==0.8.6
+bandit==1.9.4
+pip-audit==2.10.1
 mypy==2.3.1
 pytest-cov==7.1.0
 pytest-randomly==5.0.0

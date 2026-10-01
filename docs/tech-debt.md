@@ -118,10 +118,10 @@ infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
 
 | ID | Item do checklist | Lacuna | Prioridade |
 | --- | --- | --- | --- |
-| TD-A1 | `SEC-1` | gitleaks no CI e no pre-commit (hoje só o padrão do hook `post_edit_quality`) | Alta |
+| TD-A1 | `SEC-1` | gitleaks roda no CI (job `secrets`, histórico inteiro). Falta o pre-commit (hoje só o padrão do hook `post_edit_quality`) | Baixa |
 | TD-A2 | `FE-1` | `zod` instalado; as respostas de **conversas** (lista, detalhe e troca de status) já são validadas em `lib/api.ts`. Faltam os passeios (`listTours`, `createTour`, `updateTour`, `deleteTour`), que ainda usam o caminho sem schema | Média |
 | TD-A3 | `SEC-3` | sem limite de taxa no webhook e na API do painel (ex.: `slowapi`) | Alta |
-| TD-A4 | `SEC-5`, `INF-2` | SBOM CycloneDX (`cyclonedx-py`, `@cyclonedx/cyclonedx-npm`) não é gerado no CI | Média |
+| TD-A4 | `SEC-5`, `INF-2` | SBOM CycloneDX da imagem do backend sai no CI (job `docker`, artefato `sbom-backend`). Falta o SBOM do frontend (`@cyclonedx/cyclonedx-npm`) | Baixa |
 | TD-A5 | `DATA-3` | sem tabela de auditoria append-only com hash chain; mutações (`status` da conversa, CRUD de passeios) não registram quem/quando/antes/depois | Alta |
 | TD-A6 | `FE-3` | painel autentica com token estático no bundle (`VITE_API_TOKEN`); migrar para sessão por cookie HttpOnly/Secure/SameSite=Strict atrás do Cloudflare Access | Média |
 | TD-A7 | `SEC-6` | sem rotina automática de expurgo do telefone (prazo já definido: 90 dias após `data`/`created_at`, ver threat model de agendamento); falta o job/automação em `bookings` e em `conversations` | Média |
@@ -130,18 +130,22 @@ infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
 | TD-M6 | `PY-5` | sem biblioteca de retry/circuit breaker (`tenacity`); jitter e breaker não padronizados nas chamadas ao Groq e ao WhatsApp | Média |
 | TD-M7 | `FE-4` | não existe `frontend/public/_headers` com CSP; nonce dinâmico exigiria Worker/SSR | Média |
 | TD-M8 | `PY-3` | `StatusUpdate` (`api/conversations.py`) e `TourFields` (`api/tours.py`) sem `strict=True` nem `extra="forbid"` | Média |
-| TD-F1 | `FE-5` | `size-limit` (200 KB gzip/chunk) fora do gate; rotas sem `React.lazy`/`Suspense` | Média |
+| TD-F1 | `FE-5` | `size-limit` roda no CI (JS 110 kB e CSS 8 kB gzip, `npm run size`). Faltam `React.lazy`/`Suspense` nas rotas | Baixa |
 | TD-F2 | `FE-8` | Storybook não adotado (exige ADR) | Baixa |
 | TD-F3 | `FE-2` | painel em `pages/components/lib`; migração para `features/` só quando reescrito | Baixa |
 | TD-O1 | `OBS-1`, `OBS-2` | sem logs JSON com `correlation_id`/`trace_id`/`span_id`, sem filtro de PII, sem OpenTelemetry nem métricas RED/USE | Alta |
 | TD-O2 | `OBS-4` | SLO/SLA/SLI e plano de recuperação de desastres (RPO/RTO < 15 min) não documentados; definir em `docs/slo.md` e `docs/deploy.md` (PITR do Neon, rollback do Cloud Run) | Média |
 | TD-O3 | `OBS-3` | Chaos Engineering em staging inexistente (não há staging) | Baixa |
 | TD-I1 | `INF-1` | `backend/Dockerfile` single-stage em `python:3.11-slim` (usuário já é não-root) | Média |
-| TD-I2 | `INF-2` | sem Trivy/Grype nem assinatura Cosign no `deploy.yml` | Média |
-| TD-I3 | `INF-3` | Checkov ausente; `ci.yml` sem bloco `permissions:` | Média |
-| TD-I4 | `INF-5` | sem canary (divisão de tráfego do Cloud Run), flag de desligamento e rollback automático | Média |
-| TD-T1 | `TEST-2` | mutation testing (`mutmut`, `stryker`) fora do gate | Baixa |
-| TD-T2 | `TEST-3` | DAST com OWASP ZAP não roda (não há staging); `/security-check` cobre o pentest local | Baixa |
+| TD-I2 | `INF-2` | Trivy (imagem e Dockerfile) no CI e proveniência SLSA no `deploy.yml`. Falta a assinatura Cosign | Baixa |
+| TD-I3 | `INF-3` | workflows com `permissions` mínimas, ações por SHA, imagens por digest, actionlint e zizmor no CI. Checkov não se aplica (não há IaC no repositório) | Baixa |
+| TD-I4 | `INF-5` | o deploy tem teste de fumaça e rollback automático para a revisão anterior. Faltam canary (divisão de tráfego) e flag de desligamento | Média |
+| TD-I5 | `INF-1` | o Dependabot não propõe mais troca de versão do Python (ignora minor e major da imagem); o Python 3.11 sai de suporte de segurança em out/2027. Planejar a migração (faster-whisper, ctranslate2 e onnxruntime precisam ter pacote para a versão nova), junto com TD-I1 | Média |
+| TD-T1 | `TEST-2` | mutmut noturno no backend (`tour_matcher` e HMAC; 88%, piso 85%). Mutation do frontend pendente: o Stryker 10 não aplica as mutações com Vitest 5 e Vite 8 (placar falso de 13%, confirmado à mão) | Baixa |
+| TD-T2 | `TEST-3` | OWASP ZAP roda toda noite contra a API local do CI (sem staging). Falta rodar contra o ambiente publicado | Baixa |
+| TD-C1 | `PY-3`, `DOC-1` | o contrato OpenAPI não declara os status que a API devolve (400, 403, 404, 409, 422), o cabeçalho `Allow` no 405 nem `securitySchemes` (por isso o check `ignored_auth` não funciona e o fuzz sempre vai autenticado). `POST`/`PUT /api/tours` aceitam campo extra e rejeitam `min_length` e texto só com espaços de formas que o schema não descreve (ver TD-M8). Achados do fuzz completo noturno (`fuzz-full`, resumo no painel da execução) | Média |
+| TD-C2 | `SEC-3` | as respostas da API não trazem `X-Content-Type-Options: nosniff` nem `Cross-Origin-Resource-Policy`; achado do ZAP noturno | Média |
+| TD-C3 | `TEST-2` | 15 mutantes sobrevivem em `app/services/tour_matcher.py` (`extract_criteria`, `filter_tours`): os testes não exigem esses comportamentos (o 16º sobrevivente do mutmut, em `app/core/security.py`, é equivalente: `"utf-8"` vira `"UTF-8"`) | Média |
 
 **Fora da dívida (N/A por arquitetura, ADR-0001):** RLS (`DATA-4`, single-tenant), mTLS/service mesh
 (`INF-6`, serviço único), Transactional Outbox (`PY-6`, sem mensageria). **Substituições permanentes

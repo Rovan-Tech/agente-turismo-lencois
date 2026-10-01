@@ -1,0 +1,10 @@
+# Configuração do gitleaks (varredura de segredos no CI e no histórico).
+# Mantém as regras padrão e só abre uma exceção, a de baixo.
+title = "agente-turismo-lencois"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Skills de terceiros em .claude/skills: documentação e testes de exemplo com chaves falsas (API_KEY = \"...\", JWT de fixture). Não são segredos; o Semgrep também ignora esse diretório."
+paths = ['''^\.claude/skills/''']

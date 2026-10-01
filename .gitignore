@@ -44,3 +44,7 @@ frontend/test-results/
 # caches do Python
 __pycache__/
 *.pyc
+
+# artefatos de testes de CI (fuzz, mutação)
+.schemathesis/
+backend/mutants/

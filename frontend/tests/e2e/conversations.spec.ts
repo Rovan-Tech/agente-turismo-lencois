@@ -1,5 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
+import { SUGGESTED_TOUR } from "./fixtures";
+
 const CONVERSATION = {
   id: "e2e-conversa",
   whatsapp_phone: "5598977776666",
@@ -7,19 +9,7 @@ const CONVERSATION = {
   idioma_detectado: "en",
   created_at: "2026-09-20T09:00:00Z",
   updated_at: "2026-09-26T09:30:00Z",
-  passeio_sugerido: {
-    id: "lagoa-azul-barco",
-    nome: "Lagoa Azul de barco",
-    descricao: "Travessia de barco com parada para banho.",
-    dificuldade_fisica: "media",
-    caminhada_areia_minutos: 25,
-    acessivel_idosos: true,
-    acessivel_cadeirantes: false,
-    acessivel_criancas_pequenas: true,
-    duracao_horas: 2.5,
-    faixa_etaria_recomendada: "a partir de 4 anos",
-    preco_reais: 180.5,
-  },
+  passeio_sugerido: SUGGESTED_TOUR,
   messages: [
     {
       id: "e2e-m1",

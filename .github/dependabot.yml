@@ -1,0 +1,115 @@
+# Atualizações automáticas de dependências. Cada PR passa pelo mesmo CI dos demais; patch e minor
+# vêm agrupados para não gerar uma enxurrada de PRs.
+#
+# Versão MAIOR (major) é migração: pode quebrar o app e exige ajuste de código e teste.
+# - Sem major por robô: pip /backend, npm /frontend e a imagem `python` (`ignore` abaixo). Entram por
+#   tarefa própria, com PR e revisão. Mesma regra para as ações que só o `deploy.yml` executa
+#   (google-github-actions/*, cloudflare/wrangler-action e actions/attest-build-provenance): o deploy
+#   só roda na `main`, então o CI do PR não prova que o major funciona. Ao usar uma ação nova só no
+#   deploy, acrescente-a ao `ignore` de github-actions.
+# - Com major, de propósito: as demais ações (fixadas por SHA; o CI do PR as exercita) e as
+#   ferramentas só do CI em /scripts/ci.
+#
+# `update-types` vale só para atualização de versão e NÃO bloqueia correção de segurança. Um `ignore`
+# sem `update-types` (ou com `versions`) bloqueia também a de segurança: não o use em dependência
+# que tenha correção de segurança. O Dependabot security updates estava desligado em 2026-10-01
+# (Settings > Code security); enquanto estiver, alerta de segurança não vira PR.
+#
+# `cooldown`: espera 7 dias antes de propor uma versão recém-publicada, para que uma versão retirada
+# ou maliciosa nem chegue a virar PR. Não atrasa atualização de segurança.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+      # SQLAlchemy 2.1 deixou de instalar o greenlet (o coverage do gate exige) e muda o ORM:
+      # migrar à mão, com testes. Os patches da 2.0.x continuam chegando.
+      - dependency-name: sqlalchemy
+        update-types: ["version-update:semver-minor"]
+      # Cada minor do ruff 0.x muda regras e o lint do gate reprova código novo: subir à mão.
+      - dependency-name: ruff
+        update-types: ["version-update:semver-minor"]
+
+  # Ferramentas só do CI (zizmor, schemathesis, mutmut): fora da imagem e do ambiente de dev.
+  - package-ecosystem: pip
+    directory: /scripts/ci
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]
+    open-pull-requests-limit: 3
+    groups:
+      ci-tools:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # React, TypeScript, jsdom e as ferramentas de build quebram o painel em major (React 19,
+      # TypeScript 7, jsdom 30 reprovaram o CI) e react/react-dom só funcionam juntos.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "ci(deps)"
+    labels: [dependencies]
+    groups:
+      actions:
+        patterns: ["*"]
+    ignore:
+      # Só o deploy na `main` executa estas ações (confira com `grep uses: .github/workflows`).
+      - dependency-name: "google-github-actions/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "cloudflare/wrangler-action"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/attest-build-provenance"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "chore(deps)"
+    labels: [dependencies]
+    ignore:
+      # Trocar a versão do Python (3.11 -> 3.14) é decisão de projeto: faster-whisper, ctranslate2
+      # e onnxruntime precisam ter pacote para a versão nova. O Python 3.11 segue recebendo patch
+      # pela própria tag `3.11-slim`.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
