@@ -106,8 +106,10 @@ job vermelho, inclusive instabilidade de rede (banco do Trivy, pull de imagem). 
   migração, tire o item do `ignore` em `.github/dependabot.yml` no mesmo PR que ajusta o código.
 - **Segurança e Dependabot.** As regras com `update-types` não valem para correção de segurança, mas um
   `ignore` sem `update-types` (ou com `versions`) vale: não o use em dependência com correção de
-  segurança. O *Dependabot security updates* estava **desligado** em 2026-10-01: enquanto estiver, alerta
-  de segurança não vira PR (fica no alerta e no `pip-audit`/`npm audit`).
+  segurança. O *Dependabot security updates* está **ligado** desde 2026-10-01 e abre PR para alerta de
+  segurança. Única exceção: os arquivos de exemplo da skill `dependency-auditor` (vulneráveis de propósito),
+  silenciados por um `ignore` com `versions: [">= 0"]` nas duas últimas entradas do
+  `dependabot.yml` (alerta novo ali ainda aparece na aba Security, só não vira PR).
 - **Ações** estão fixadas por SHA de commit (com a versão no comentário) e **imagens Docker por
   digest**. O Dependabot (`.github/dependabot.yml`, semanal e agrupado) propõe as atualizações de
   ações, pip e npm (a base `python` do Dockerfile está no `ignore`; ver TD-I5). Os digests de `ci.yml` e `nightly.yml` (gitleaks, actionlint,
