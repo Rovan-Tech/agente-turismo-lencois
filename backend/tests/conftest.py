@@ -1,7 +1,10 @@
+import os
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 from app.db.base import Base
@@ -16,7 +19,15 @@ TEST_DASHBOARD_TOKEN = "test-dashboard-token"
 
 @pytest_asyncio.fixture
 async def db_session():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    """Sessão de teste: SQLite em memória; com `TEST_DATABASE_URL`, o mesmo banco da produção.
+
+    O CI roda a suíte também em PostgreSQL (job `backend`): SQLite perdoa coisas que o
+    Postgres recusa (tipos, datas com fuso, `FOR UPDATE`, constraints). Sem pool, cada teste abre e
+    fecha a própria conexão (o loop de eventos muda a cada teste).
+    """
+    url = os.environ.get("TEST_DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+    is_sqlite = url.startswith("sqlite")
+    engine = create_async_engine(url, poolclass=None if is_sqlite else NullPool)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     async with engine.begin() as conn:
@@ -25,6 +36,9 @@ async def db_session():
     async with session_factory() as session:
         yield session
 
+    if not is_sqlite:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
     await engine.dispose()
 
 
