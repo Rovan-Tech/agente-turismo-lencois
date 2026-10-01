@@ -45,10 +45,22 @@ async def _conversation_count(db: AsyncSession) -> int:
 # --- Spoofing: quem pode escrever -------------------------------------------------------------
 
 
+# A gravação do atendimento e a leitura do catálogo têm o mesmo portão: só o `INGEST_API_TOKEN`.
+ENDPOINTS = {
+    "record_exchange": ("POST", INGEST_URL),
+    "read_catalog": ("GET", "/api/ingest/catalogo"),
+}
+
+
 @pytest.mark.asyncio
+@pytest.mark.parametrize("endpoint", ENDPOINTS.values(), ids=ENDPOINTS.keys())
 @pytest.mark.parametrize("headers", INVALID_CREDENTIALS.values(), ids=INVALID_CREDENTIALS.keys())
-async def test_ingest_rejects_invalid_credentials_without_writing(client, db_session, headers):
-    response = await post_exchange(client, headers=headers)
+async def test_ingest_rejects_invalid_credentials_without_writing(
+    client, db_session, headers, endpoint
+):
+    method, url = endpoint
+
+    response = await client.request(method, url, headers=headers, json=valid_payload())
 
     assert response.status_code == 401
     assert await _conversation_count(db_session) == 0

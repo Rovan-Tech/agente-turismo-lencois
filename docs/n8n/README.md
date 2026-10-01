@@ -27,7 +27,9 @@ WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Busca
   e entra no prompt como **dado delimitado**. O telefone não vai ao modelo.
 - A saída do Gemini é validada por esquema JSON (`idioma` ∈ `pt|en|es`, `passeio_sugerido_id`
   texto ou nulo). Resposta enviada tem no máximo 4000 caracteres.
-- O catálogo vem de `GET /api/tours` e é tentado até 3 vezes (o Neon fecha conexões ociosas).
+- O catálogo vem de `GET /api/ingest/catalogo`, com o `INGEST_API_TOKEN` (o mesmo do registro de
+  atendimentos), e é tentado até 3 vezes (o Neon fecha conexões ociosas). O n8n **não** usa o token do
+  painel: com o painel atrás do Cloudflare Access (ADR-0006) esse token deixa de valer.
 - **Registro no painel (ADR-0005):** depois de responder, o nó "Registrar atendimento" chama
   `POST /api/ingest/atendimentos` com o id da mensagem da Meta, o telefone, o texto original do
   turista (até 4096), a resposta enviada, `idioma`, `passeio_sugerido_id` e
@@ -48,8 +50,7 @@ Crie cada uma em **Credentials** e ligue ao nó correspondente depois de importa
 |---|---|---|---|
 | WhatsApp OAuth account | WhatsApp OAuth API | Receber WhatsApp | ID do app Meta e App Secret |
 | WhatsApp account | WhatsApp API | Enviar resposta, Enviar aviso | Token do usuário do sistema da Meta e ID da conta WhatsApp Business |
-| Simplified Custom Auth account | Simplified Custom Auth | Buscar catálogo | Modelo `{"headers":{"Authorization":"Bearer {{api_key}}"}}` e o `DASHBOARD_API_TOKEN` |
-| Ingest API Token account | Simplified Custom Auth | Registrar atendimento (2 nós) | O mesmo modelo, com o `INGEST_API_TOKEN` (**diferente** do `DASHBOARD_API_TOKEN`) |
+| Ingest API Token account | Simplified Custom Auth | Buscar catálogo e Registrar atendimento (3 nós) | Modelo `{"headers":{"Authorization":"Bearer {{api_key}}"}}` e o `INGEST_API_TOKEN` |
 | Google Service Account account | Google Service Account API | Gemini 2.5 Flash | E-mail e chave privada de uma service account com **só** `roles/aiplatform.user` |
 
 **Nenhum segredo vai para o repositório.** Gere o token do WhatsApp como usuário do sistema, com

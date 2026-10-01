@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.conversation import Conversation, ConversationStatus
 from app.models.message import Message, MessageDirection
 from app.models.tour import Tour
-from tests.ingest_support import post_exchange
+from tests.ingest_support import ingest_headers, post_exchange
 
 pytestmark = pytest.mark.usefixtures("ingest_token")
 
@@ -219,3 +219,42 @@ async def test_ingest_stores_markup_verbatim_and_returns_it_as_json(client, db_s
     stored = await db_session.execute(select(func.count()).where(Message.conteudo == markup))
     assert stored.scalar_one() == 2
     assert set(response.json()) == {"status", "conversa_id"}
+
+
+CATALOG_URL = "/api/ingest/catalogo"
+CATALOG_FIELDS = {
+    "id",
+    "nome",
+    "descricao",
+    "dificuldade_fisica",
+    "caminhada_areia_minutos",
+    "acessivel_idosos",
+    "acessivel_cadeirantes",
+    "acessivel_criancas_pequenas",
+    "duracao_horas",
+    "faixa_etaria_recomendada",
+    "preco_reais",
+}
+
+
+@pytest.mark.asyncio
+async def test_ingest_catalog_lists_only_active_tours_with_the_catalog_fields(
+    client, db_session, sample_tours
+):
+    sample_tours[1].ativo = False
+    db_session.add_all(sample_tours)
+    await db_session.commit()
+
+    response = await client.get(CATALOG_URL, headers=ingest_headers())
+
+    assert response.status_code == 200
+    tours = response.json()
+    assert {t["id"] for t in tours} == {"passeio-bugre-orla", "rio-preguicas"}
+    assert all(set(t) == CATALOG_FIELDS for t in tours)
+
+
+@pytest.mark.asyncio
+async def test_ingest_catalog_is_empty_without_tours(client):
+    response = await client.get(CATALOG_URL, headers=ingest_headers())
+
+    assert response.json() == []

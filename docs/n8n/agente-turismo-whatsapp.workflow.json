@@ -38,7 +38,7 @@
       "position": [720, 300],
       "parameters": {
         "method": "GET",
-        "url": "<BACKEND_URL>/api/tours",
+        "url": "<BACKEND_URL>/api/ingest/catalogo",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpTemplatedCustomAuth"
       },
@@ -46,7 +46,7 @@
       "retryOnFail": true,
       "maxTries": 3,
       "waitBetweenTries": 2000,
-      "credentials": { "httpTemplatedCustomAuth": { "name": "Simplified Custom Auth account" } }
+      "credentials": { "httpTemplatedCustomAuth": { "name": "Ingest API Token account" } }
     },
     {
       "id": "98339b23-5669-4e69-9897-1bd702355cb0",
