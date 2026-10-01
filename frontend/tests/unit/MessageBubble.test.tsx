@@ -30,6 +30,15 @@ describe("MessageBubble", () => {
     expect(time).toHaveAttribute("datetime", "2026-09-28T09:14:00Z");
   });
 
+  it("shows markup in a message as plain text, never as elements", () => {
+    const markup = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
+
+    renderBubble({ conteudo: markup });
+
+    expect(screen.getByText(markup)).toBeInTheDocument();
+    expect(document.querySelector("img, script")).toBeNull();
+  });
+
   it("aligns the assistant's messages to the right with the action color", () => {
     renderBubble({ direction: "saida" });
 
