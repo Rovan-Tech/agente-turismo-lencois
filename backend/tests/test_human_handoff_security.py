@@ -4,9 +4,8 @@ import logging
 
 import httpx
 import pytest
-from sqlalchemy import event
+from sqlalchemy import Select, event, select
 from sqlalchemy.orm import ORMExecuteState
-from sqlalchemy import select
 
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -279,7 +278,8 @@ async def test_handoff_routes_lock_the_conversation_row_and_reread_it(
     locked: list[bool] = []
 
     def record(state: ORMExecuteState) -> None:
-        if state.is_select and state.statement._for_update_arg is not None:
+        statement = state.statement
+        if isinstance(statement, Select) and statement._for_update_arg is not None:
             locked.append(bool(state.execution_options.get("populate_existing")))
 
     event.listen(db_session.sync_session, "do_orm_execute", record)
