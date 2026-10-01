@@ -35,3 +35,22 @@ painel — ver Segurança acima), e checar branch protection da `main` exigindo 
 
 O deploy confere a revisão nova com um teste de fumaça e **volta sozinho para a anterior** se ela
 não responder saudável (`scripts/ci/verify_deploy.sh`); ver `docs/ci-cd.md`.
+
+## Fluxo do WhatsApp no n8n (ADR-0004, Proposto)
+
+O atendimento também pode rodar no n8n Cloud, fora do `deploy.yml`: o n8n recebe o webhook da
+Meta, lê o catálogo do backend (`GET /api/tours`, com o `DASHBOARD_API_TOKEN`), chama o Gemini no
+Vertex AI e responde pelo número +55. O workflow está exportado em `docs/n8n/` e **não é
+publicado por CI**: importe o JSON, troque `<BACKEND_URL>` e `<GCP_PROJECT_ID>`, crie as quatro
+credenciais descritas em `docs/n8n/README.md` e ative o workflow.
+
+- **Na Meta:** número +55 registrado (*Inscrito*), **Assinar webhooks** ligado na conta e o
+  callback do app apontando para a URL do gatilho do n8n (o n8n registra ao ativar).
+- **Efeito no backend:** com o callback no n8n, `/webhook/whatsapp` deixa de receber mensagens e o
+  painel não mostra as conversas novas (TD-N3).
+- **Segredos:** token do usuário do sistema da Meta, chave da service account do Vertex e o
+  `DASHBOARD_API_TOKEN` ficam **só nas credenciais do n8n**, nunca no repositório. Os valores
+  atuais de `WHATSAPP_*` no Cloud Run pertencem à conta de teste antiga.
+- **Reversão:** desative o workflow, aponte o callback do app para
+  `https://<backend>/webhook/whatsapp` com o `WHATSAPP_VERIFY_TOKEN` e atualize `WHATSAPP_TOKEN` e
+  `WHATSAPP_PHONE_NUMBER_ID` no Cloud Run para os da conta de produção.

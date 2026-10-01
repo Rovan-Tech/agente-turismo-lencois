@@ -10,6 +10,11 @@ Assistente de IA no WhatsApp para uma agência de turismo fictícia em Lençóis
 React mostra as conversas e sinaliza as que precisam de atendimento humano. Meta de **custo zero**
 de infra (Cloud Run, Cloudflare Pages, Neon, Groq) — ver `docs/decisoes-de-arquitetura.md`.
 
+> **Em revisão:** o `docs/adr/0004-n8n-orquestra-gemini-vertex-numero-de-producao.md` (**Proposto**)
+> descreve o fluxo que já roda em teste no n8n com Gemini (Vertex AI) e um número +55, o que sai do
+> custo zero. Enquanto o Patrick não o aprovar, as regras de custo zero abaixo continuam valendo
+> para código novo; o fluxo está em `docs/n8n/` e a análise de ameaças em `docs/threat-models/`.
+
 ## Mapa
 
 ```
@@ -21,7 +26,7 @@ frontend/  React 18 · TypeScript strict · Vite · Tailwind · React Router
   src/styles/tokens.css  design tokens (fonte única)   tests/unit  Vitest   tests/e2e  Playwright
 scripts/   quality_gate.py (gate único) · check_design_tokens.py · check_limits.py
 docs/      checklist-engenharia.md (padrão) · adr/ · threat-models/ · design-system.md · tech-debt.md
-           decisoes-de-arquitetura.md · deploy.md
+           decisoes-de-arquitetura.md · deploy.md · n8n/ (fluxo do WhatsApp exportado)
 .claude/   rules/ · agents/ · hooks/ · skills/ (comandos) · settings.json
 ```
 
