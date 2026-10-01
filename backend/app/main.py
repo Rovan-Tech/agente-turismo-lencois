@@ -1,5 +1,6 @@
 """Aplicação FastAPI: middlewares, rotas e handlers de erro globais."""
 
+import logging
 import math
 
 from fastapi import FastAPI, Request
@@ -8,10 +9,23 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import conversations, tours, webhook
+from app.api import conversations, ingest, tours, webhook
 from app.core.config import get_settings
 
 settings = get_settings()
+
+
+def _configure_app_logging() -> None:
+    """Faz os INFO do `app` saírem: o uvicorn só configura os próprios loggers."""
+    app_logger = logging.getLogger("app")
+    app_logger.setLevel(logging.INFO)
+    if not app_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+        app_logger.addHandler(handler)
+
+
+_configure_app_logging()
 
 app = FastAPI(title="Agente de Turismo Lençóis")
 
@@ -26,6 +40,7 @@ app.add_middleware(
 app.include_router(webhook.router)
 app.include_router(tours.router)
 app.include_router(conversations.router)
+app.include_router(ingest.router)
 
 
 def _sanitize_for_json(value: object) -> object:

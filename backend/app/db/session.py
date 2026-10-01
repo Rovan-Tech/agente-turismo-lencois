@@ -33,6 +33,9 @@ def get_pool_args() -> dict[str, bool | int]:
 engine = create_async_engine(
     settings.database_url,
     echo=False,
+    # O texto de uma exceção do banco inclui os parâmetros do SQL: sem isto, telefone e conversa do
+    # turista iriam parar no log de erro.
+    hide_parameters=True,
     connect_args=get_connect_args(settings.database_url),
     **get_pool_args(),
 )
