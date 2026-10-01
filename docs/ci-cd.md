@@ -95,9 +95,22 @@ job vermelho, inclusive instabilidade de rede (banco do Trivy, pull de imagem). 
 
 ## Mantendo o pipeline
 
+- **O que o Dependabot propõe.** Patch e minor, agrupados, com **7 dias de espera** (`cooldown`) antes
+  de propor uma versão recém-publicada. **Versão maior (major) não vem por robô** em pip `/backend`,
+  npm e na imagem `python`: é migração (React 19, TypeScript 7 e Python 3.14 reprovaram o CI) e entra
+  por tarefa própria. O mesmo vale para as ações que só o `deploy.yml` executa (`google-github-actions/*`,
+  `cloudflare/wrangler-action` e `actions/attest-build-provenance`): o deploy só roda na `main`, então o CI
+  do PR não prova que o major funciona. Ação nova usada só no deploy entra no `ignore` também. As demais ações e as
+  ferramentas de `/scripts/ci` **continuam recebendo major** de propósito. SQLAlchemy e ruff só sobem à
+  mão em minor (o 2.1 deixou de instalar o `greenlet`; cada minor do ruff muda regras). Para aceitar uma
+  migração, tire o item do `ignore` em `.github/dependabot.yml` no mesmo PR que ajusta o código.
+- **Segurança e Dependabot.** As regras com `update-types` não valem para correção de segurança, mas um
+  `ignore` sem `update-types` (ou com `versions`) vale: não o use em dependência com correção de
+  segurança. O *Dependabot security updates* estava **desligado** em 2026-10-01: enquanto estiver, alerta
+  de segurança não vira PR (fica no alerta e no `pip-audit`/`npm audit`).
 - **Ações** estão fixadas por SHA de commit (com a versão no comentário) e **imagens Docker por
   digest**. O Dependabot (`.github/dependabot.yml`, semanal e agrupado) propõe as atualizações de
-  ações, pip, npm e do Dockerfile. Os digests de `ci.yml` e `nightly.yml` (gitleaks, actionlint,
+  ações, pip e npm (a base `python` do Dockerfile está no `ignore`; ver TD-I5). Os digests de `ci.yml` e `nightly.yml` (gitleaks, actionlint,
   hadolint, Trivy, ZAP, k6, Postgres e o container do Semgrep) são atualizados à mão: `docker pull <imagem>` e copie o
   `RepoDigest`.
 - Nada de `${{ }}` dentro de `run:`; valores não confiáveis (título do PR, branch) vão por `env`.
