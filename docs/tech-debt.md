@@ -145,6 +145,14 @@ infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
 | TD-C1 | `PY-3`, `DOC-1` | o contrato OpenAPI não declara os status que a API devolve (400, 403, 404, 409, 422), o cabeçalho `Allow` no 405 nem `securitySchemes` (por isso o check `ignored_auth` não funciona e o fuzz sempre vai autenticado). `POST`/`PUT /api/tours` aceitam campo extra e rejeitam `min_length` e texto só com espaços de formas que o schema não descreve (ver TD-M8). Achados do fuzz completo noturno (`fuzz-full`, resumo no painel da execução) | Média |
 | TD-C2 | `SEC-3` | as respostas da API não trazem `X-Content-Type-Options: nosniff` nem `Cross-Origin-Resource-Policy`; achado do ZAP noturno | Média |
 | TD-C3 | `TEST-2` | 15 mutantes sobrevivem em `app/services/tour_matcher.py` (`extract_criteria`, `filter_tours`): os testes não exigem esses comportamentos (o 16º sobrevivente do mutmut, em `app/core/security.py`, é equivalente: `"utf-8"` vira `"UTF-8"`) | Média |
+| TD-N1 | `DATA-1` | o fluxo no n8n (ADR-0004) não deduplica pelo id da mensagem; a Meta reenvia o webhook e o turista pode receber a resposta duas vezes | Média |
+| TD-N2 | `SEC-3` | o gatilho de WhatsApp do n8n compara a assinatura `X-Hub-Signature-256` com `!==` (não é tempo constante). Dependência de terceiro; reavaliar se o fluxo voltar ao backend | Baixa |
+| TD-N3 | `DATA-3` | as conversas atendidas pelo n8n não chegam ao backend nem ao painel; falta o endpoint de entrada (etapa 2 do ADR-0004, com ADR e threat model próprios) | Alta |
+| TD-N4 | `AI-3` | o fluxo no n8n ignora áudio e envia o catálogo inteiro ao Gemini; o backend filtrava candidatos (`tour_matcher`) e transcrevia com faster-whisper | Média |
+| TD-N5 | `SEC-6` | telefone e texto do turista ficam nas execuções do n8n Cloud sem política de retenção definida | Alta |
+| TD-N6 | `SEC-7`, `TEST-1` | o workflow do n8n não tem teste automatizado; os testes de assinatura forjada e de injeção de prompt foram feitos à mão em 2026-10-01 (`docs/threat-models/2026-10-01-n8n-gemini-whatsapp.md`) | Média |
+| TD-N7 | `SEC-1` | chave JSON da service account do Vertex no n8n (política da organização relaxada para criá-la; reativar e rotacionar) e token do usuário do sistema da Meta sem expiração, gerado com as permissões padrão (reduzir a `whatsapp_business_messaging`) | Alta |
+| TD-N8 | `INF-4` | custo deixou de ser zero (plano do n8n Cloud e Gemini por token); falta alerta de orçamento no Google Cloud, assinar só o status `failed` no gatilho e revisar `INF-4`/`AI-3` e a regra de custo zero do `CLAUDE.md` depois da aprovação do ADR-0004 | Alta |
 
 **Fora da dívida (N/A por arquitetura, ADR-0001):** RLS (`DATA-4`, single-tenant), mTLS/service mesh
 (`INF-6`, serviço único), Transactional Outbox (`PY-6`, sem mensageria). **Substituições permanentes

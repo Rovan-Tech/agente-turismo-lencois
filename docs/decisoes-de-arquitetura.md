@@ -2,6 +2,13 @@
 
 Movido do `CLAUDE.md`. Não reabrir sem rodar o teste de qualidade documentado abaixo.
 
+> **Atualização de 2026-10-01:** o [ADR-0004](adr/0004-n8n-orquestra-gemini-vertex-numero-de-producao.md)
+> (Proposto) propõe orquestrar o atendimento no n8n e usar o Gemini no Vertex AI, o que **sai do
+> custo zero** e substitui o Groq no fluxo de produção. Enquanto ele não for aprovado pelo Patrick,
+> as decisões abaixo continuam sendo a regra do projeto. O teste de qualidade citado sobre o
+> Gemini mediu a *API de desenvolvedor* (crédito pré-pago); o Vertex AI cobra por uso no billing
+> do Google Cloud, que a Rovan já tem.
+
 Decisão de arquitetura deliberada: **custo zero de infraestrutura**. Todo o stack roda nos
 free tiers já usados em outros projetos Rovan (Cloud Run, Cloudflare Pages, Neon) mais o Groq
 para o LLM. Por isso:
