@@ -38,6 +38,11 @@ export function ConversationRow({
               </span>
             )}
           </p>
+          {conversation.atendimento === "humano" && (
+            <p className="text-xs font-semibold text-link">
+              Atendendo: {conversation.atendente_nome ?? "equipe"}
+            </p>
+          )}
           <p className="truncate text-sm text-muted">{last?.conteudo ?? "Sem mensagens"}</p>
         </div>
         <span className="hidden shrink-0 text-sm text-muted sm:block">

@@ -10,6 +10,7 @@ const MESSAGE: ConversationMessage = {
   tipo: "texto",
   conteudo: "Bom dia!",
   idioma: "pt",
+  autor: "turista",
   created_at: "2026-09-28T09:14:00Z",
 };
 
@@ -65,5 +66,20 @@ describe("MessageBubble", () => {
     renderBubble();
 
     expect(screen.queryByText("transcrito de áudio")).toBeNull();
+  });
+
+  it.each([
+    ["ia", "Assistente de IA"],
+    ["atendente", "Equipe"],
+  ] as const)("says who wrote a message from the %s", (autor, label) => {
+    renderBubble({ direction: "saida", autor });
+
+    expect(screen.getByText(new RegExp(`^${label} ·`))).toBeInTheDocument();
+  });
+
+  it("does not label the tourist's own messages", () => {
+    renderBubble({ autor: "turista" });
+
+    expect(screen.queryByText(/·/)).toBeNull();
   });
 });

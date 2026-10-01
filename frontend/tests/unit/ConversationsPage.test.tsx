@@ -131,4 +131,16 @@ describe("ConversationsPage", () => {
 
     expect(await screen.findByText("Sem mensagens")).toBeInTheDocument();
   });
+
+  it("marks the conversations a person is attending, with the name, and only those", async () => {
+    renderPage([
+      summary({ id: "a", atendimento: "humano", atendente_nome: "Ana", atendente_sub: "pessoa-1" }),
+      summary({ id: "b", atendimento: "humano", atendente_nome: null, atendente_sub: "pessoa-2" }),
+      summary({ id: "c" }),
+    ]);
+
+    expect(await screen.findByText("Atendendo: Ana")).toBeInTheDocument();
+    expect(screen.getByText("Atendendo: equipe")).toBeInTheDocument();
+    expect(screen.getAllByText(/^Atendendo:/)).toHaveLength(2);
+  });
 });

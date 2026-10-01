@@ -137,9 +137,12 @@ Decisões que dependem do Patrick estão em
 
 ## Plano de adoção e reversão
 
-> **Entrega em duas partes.** O PR 1 é só o backend (rotas, migração, ingest). O fluxo do n8n e o
-> painel (passos 4 e 5 abaixo) vêm no PR 2. **Até lá, assumir a conversa não silencia a IA** (o n8n
-> não consulta o estado) e não há botões no painel: a equipe não deve ser orientada a usar antes.
+> **Entrega em duas partes.** O PR 1 (#55) é o backend. O PR 2 traz o painel (botões, campo de
+> resposta, aviso da janela de 24 h, atualização a cada 15 s) e o fluxo do n8n **exportado**; o
+> fluxo em produção é publicado à mão no n8n (passo 5). **Até lá, assumir a conversa não silencia a
+> IA**: a equipe não deve ser orientada a usar antes. Desvio: a lateral global "Assistente de IA
+> respondendo agora" não mudou (vale para o sistema todo); o estado por conversa aparece no painel
+> lateral da conversa e na lista ("Atendendo: nome").
 
 1. Aprovação deste ADR e do threat model pelo Patrick (feita em 2026-10-01, com as opções
    recomendadas: o backend envia; só o primeiro nome no aviso; aviso curto ao devolver para a IA;

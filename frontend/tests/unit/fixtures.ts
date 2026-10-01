@@ -38,6 +38,9 @@ const SAMPLE_HEADER: ConversationHeader = {
   whatsapp_phone: "5598999998888",
   status: "aberta",
   idioma_detectado: "pt",
+  atendimento: "ia",
+  atendente_nome: null,
+  atendente_sub: null,
   created_at: "2026-09-25T12:00:00Z",
   updated_at: "2026-09-25T12:01:00Z",
 };
@@ -66,10 +69,21 @@ export const SAMPLE_CONVERSATION: ConversationDetail = {
       tipo: "texto",
       conteudo: "quero um passeio",
       idioma: "pt",
+      autor: "turista",
       created_at: "2026-09-25T12:00:00Z",
     },
   ],
 };
+
+/** Conversa com a pessoa `pessoa-123` atendendo (a mesma que `ME` devolve). */
+export const HANDLED_CONVERSATION: ConversationDetail = {
+  ...SAMPLE_CONVERSATION,
+  atendimento: "humano",
+  atendente_nome: "Ana",
+  atendente_sub: "pessoa-123",
+};
+
+export const ME = { sub: "pessoa-123", nome: "Ana" };
 
 export function summary(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return { ...SAMPLE_HEADER, ultima_mensagem: null, ...overrides };

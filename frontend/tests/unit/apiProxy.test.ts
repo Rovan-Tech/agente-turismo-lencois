@@ -105,6 +105,16 @@ describe("api proxy", () => {
     expect(init.redirect).toBe("manual");
   });
 
+  it.each(["/api/me/extra", "/api/me/", "/api/ME", "/api/meu"])(
+    "does not open paths that only look like /api/me (%s)",
+    async (path) => {
+      const { fetcher, response } = call(path);
+
+      expect((await response).status).toBe(404);
+      expect(fetcher).not.toHaveBeenCalled();
+    }
+  );
+
   it("forwards only the allowed headers, never the session cookie", async () => {
     const { fetcher, response } = call("/api/tours", {
       headers: {
@@ -172,6 +182,10 @@ describe("api proxy", () => {
     "/api/tours/passeio-bugre-orla",
     "/api/conversations",
     "/api/conversations/3f2a9c1e-77b0-4d1e-9a52-0c6d5b1f8e21/status",
+    "/api/conversations/3f2a9c1e-77b0-4d1e-9a52-0c6d5b1f8e21/assumir",
+    "/api/conversations/3f2a9c1e-77b0-4d1e-9a52-0c6d5b1f8e21/devolver",
+    "/api/conversations/3f2a9c1e-77b0-4d1e-9a52-0c6d5b1f8e21/mensagens",
+    "/api/me",
   ])("forwards the panel path %s", async (path) => {
     const { fetcher, response } = call(path);
 

@@ -28,7 +28,8 @@ export function ConversationSidePanel({
       <h2 className={HEADING}>Status da conversa</h2>
       <StatusControl status={status} busy={updating} onChange={onChange} />
       <p className="text-xs text-muted">
-        O assistente também atualiza o status quando o turista escreve de novo.
+        O assistente pode marcar “Precisa de atenção” quando o turista escreve de novo; quem resolve
+        é a equipe.
       </p>
       {children}
       {status !== "resolvida" && (

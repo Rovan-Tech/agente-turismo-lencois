@@ -1,12 +1,13 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { SUGGESTED_TOUR } from "./fixtures";
+import { HANDLING_BY_AI, SUGGESTED_TOUR } from "./fixtures";
 
 const CONVERSATION = {
   id: "e2e-conversa",
   whatsapp_phone: "5598977776666",
   status: "precisa_atencao",
   idioma_detectado: "en",
+  ...HANDLING_BY_AI,
   created_at: "2026-09-20T09:00:00Z",
   updated_at: "2026-09-26T09:30:00Z",
   passeio_sugerido: SUGGESTED_TOUR,
@@ -17,6 +18,7 @@ const CONVERSATION = {
       tipo: "texto",
       conteudo: "quero falar com um atendente",
       idioma: "en",
+      autor: "turista",
       created_at: "2026-09-26T09:29:00Z",
     },
   ],
@@ -73,6 +75,7 @@ const INBOX = [
   whatsapp_phone: phone,
   status,
   idioma_detectado: idioma,
+  ...HANDLING_BY_AI,
   created_at: "2026-09-20T12:00:00Z",
   updated_at: "2026-09-28T12:00:00Z",
   ultima_mensagem: {
