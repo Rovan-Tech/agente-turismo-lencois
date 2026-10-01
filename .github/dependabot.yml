@@ -13,7 +13,7 @@
 # `update-types` vale só para atualização de versão e NÃO bloqueia correção de segurança. Um `ignore`
 # sem `update-types` (ou com `versions`) bloqueia também a de segurança: não o use em dependência
 # que tenha correção de segurança. Única exceção, de propósito: os arquivos de EXEMPLO da skill de
-# terceiros dependency-auditor (última entrada), vulneráveis por construção e fora do produto. O
+# terceiros dependency-auditor (as duas últimas entradas), vulneráveis por construção e fora do produto. O
 # Dependabot security updates foi ligado em 2026-10-01 (Settings > Code security).
 #
 # `cooldown`: espera 7 dias antes de propor uma versão recém-publicada, para que uma versão retirada
@@ -116,14 +116,24 @@ updates:
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   # Arquivos de EXEMPLO da skill de terceiros dependency-auditor: dependências vulneráveis de
-  # propósito, usadas só em teste e fora do produto. O `ignore` sem `update-types` bloqueia também os
-  # PRs de segurança (é o que se quer aqui, e só aqui); o limite 0 desliga os de versão.
+  # propósito, usadas só em teste e fora do produto. Para silenciar também os PRs de SEGURANÇA, o
+  # `ignore` precisa de `versions: [">= 0"]` (sem ele, a documentação diz que bloqueia, mas o código do
+  # Dependabot só honra o `ignore` de segurança com `versions`); o limite 0 desliga os de versão.
+  # Um alerta novo ali ainda aparece na aba Security, só não vira PR.
   - package-ecosystem: npm
     directory: /.claude/skills/engineering/dependency-auditor/test-project
     schedule:
       interval: weekly
-    cooldown:
-      default-days: 7
     open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
+        versions: [">= 0"]
+
+  - package-ecosystem: pip
+    directory: /.claude/skills/engineering/dependency-auditor/assets
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: "*"
+        versions: [">= 0"]
