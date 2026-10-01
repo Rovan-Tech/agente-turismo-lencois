@@ -27,7 +27,9 @@ Turista ──WhatsApp──▶ Meta (Cloud API) ──webhook──▶ n8n ─�
 > [ADR-0004](docs/adr/0004-n8n-orquestra-gemini-vertex-numero-de-producao.md), ainda **Proposto**
 > (aguarda aprovação). Enquanto isso, o backend mantém o fluxo original (webhook com HMAC,
 > Groq, faster-whisper e gravação das conversas), que é a alternativa de reversão. As conversas
-> atendidas pelo n8n **ainda não aparecem no painel** (dívida TD-N3).
+> de **texto** atendidas pelo n8n chegam ao painel por `POST /api/ingest/atendimentos`
+> ([ADR-0005](docs/adr/0005-endpoint-de-entrada-para-o-n8n-registrar-atendimentos.md)); o áudio
+> segue ignorado pelo n8n (TD-N4). Conversas sem atividade há 90 dias são apagadas (LGPD).
 
 ## Pastas
 
@@ -59,11 +61,11 @@ Para receber mensagens reais do WhatsApp localmente é preciso expor a porta 800
 
 Só os nomes; os valores nunca vão para o repositório (`backend/.env.example` tem os modelos).
 
-`DATABASE_URL`, `DASHBOARD_API_TOKEN`, `FRONTEND_ORIGIN`, `AGENCY_NAME`, `WHATSAPP_TOKEN`,
+`DATABASE_URL`, `DASHBOARD_API_TOKEN`, `INGEST_API_TOKEN`, `CONVERSATION_RETENTION_DAYS`, `FRONTEND_ORIGIN`, `AGENCY_NAME`, `WHATSAPP_TOKEN`,
 `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`, `GROQ_API_KEY`,
 `GROQ_MODEL`, `WHISPER_MODEL_SIZE`, `MAX_AUDIO_BYTES`.
 
-O fluxo do n8n tem as próprias credenciais (WhatsApp, Google e o token do catálogo); ver
+O fluxo do n8n tem as próprias credenciais (WhatsApp, Google, o token do catálogo e o do registro de atendimentos); ver
 [`docs/n8n/README.md`](docs/n8n/README.md).
 
 ## Qualidade

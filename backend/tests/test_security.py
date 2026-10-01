@@ -8,7 +8,11 @@ import httpx
 import pytest
 
 from app.core.config import get_settings
-from app.core.security import is_valid_dashboard_token, is_valid_whatsapp_signature
+from app.core.security import (
+    is_valid_bearer_token,
+    is_valid_dashboard_token,
+    is_valid_whatsapp_signature,
+)
 from app.services import message_handler, whatsapp_client
 
 
@@ -270,3 +274,9 @@ async def test_prompt_injection_cannot_plant_a_tour_suggestion(
     [summary] = (await client.get("/api/conversations")).json()
     detail = (await client.get(f"/api/conversations/{summary['id']}")).json()
     assert detail["passeio_sugerido"] is None
+
+
+@pytest.mark.parametrize("header", ["Bearer é", "Bearer \u202e", "Bearer 令牌"])
+def test_bearer_token_with_non_ascii_characters_is_rejected_without_raising(header):
+    assert is_valid_bearer_token(header, "esperado") is False
+    assert is_valid_bearer_token(header, "esp\u00e9rado") is False

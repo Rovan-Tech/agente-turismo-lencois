@@ -25,7 +25,9 @@ não tem nenhum configurado):
 - Novos deste projeto: `DATABASE_URL` (Neon — banco novo, não reaproveitar o do OCR),
   `GROQ_API_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`,
   `WHATSAPP_APP_SECRET`, `DASHBOARD_API_TOKEN` (qualquer string aleatória forte, só precisa
-  bater entre backend e frontend).
+  bater entre backend e frontend) e `INGEST_API_TOKEN` (aleatório e forte, **diferente** do
+  `DASHBOARD_API_TOKEN`: vai só ao backend e à credencial do n8n, nunca ao frontend; o backend
+  se recusa a subir se os dois forem iguais). Sem ele, a rota de entrada do n8n responde 401.
 
 Depois do primeiro deploy: configurar o webhook no painel da Meta
 (`https://<url-do-cloud-run>/webhook/whatsapp`, com o mesmo `WHATSAPP_VERIFY_TOKEN`), proteger
@@ -36,21 +38,34 @@ painel — ver Segurança acima), e checar branch protection da `main` exigindo 
 O deploy confere a revisão nova com um teste de fumaça e **volta sozinho para a anterior** se ela
 não responder saudável (`scripts/ci/verify_deploy.sh`); ver `docs/ci-cd.md`.
 
-## Fluxo do WhatsApp no n8n (ADR-0004, Proposto)
+## Expurgo de conversas (LGPD, ADR-0005)
+
+O workflow `.github/workflows/retention.yml` roda todo dia (04:43 UTC) e sob demanda: apaga as
+conversas sem atividade há mais de 90 dias **com as mensagens**, usando o secret `DATABASE_URL`. O
+prazo é o padrão da aplicação (`CONVERSATION_RETENTION_DAYS`, mínimo 1): para mudá-lo, defina a
+variável no `env` do workflow. O log traz só a quantidade apagada. Pelo prazo, o histórico do
+painel tem 90 dias. Para rodar à mão: `cd backend && python -m app.purge_conversations`.
+
+## Fluxo do WhatsApp no n8n (ADR-0004 e ADR-0005)
 
 O atendimento também pode rodar no n8n Cloud, fora do `deploy.yml`: o n8n recebe o webhook da
 Meta, lê o catálogo do backend (`GET /api/tours`, com o `DASHBOARD_API_TOKEN`), chama o Gemini no
-Vertex AI e responde pelo número +55. O workflow está exportado em `docs/n8n/` e **não é
-publicado por CI**: importe o JSON, troque `<BACKEND_URL>` e `<GCP_PROJECT_ID>`, crie as quatro
-credenciais descritas em `docs/n8n/README.md` e ative o workflow.
+Vertex AI e responde pelo número +55. Depois de responder, registra o atendimento no backend
+(`POST /api/ingest/atendimentos`, com o `INGEST_API_TOKEN`) para o painel mostrar a conversa. O
+workflow está exportado em `docs/n8n/` e **não é publicado por CI**: importe o JSON, troque
+`<BACKEND_URL>` e `<GCP_PROJECT_ID>`, crie as cinco credenciais descritas em `docs/n8n/README.md` e
+ative o workflow. **Ordem:** primeiro o secret `INGEST_API_TOKEN` e o deploy do backend, depois a
+credencial e o workflow novo no n8n.
 
 - **Na Meta:** número +55 registrado (*Inscrito*), **Assinar webhooks** ligado na conta e o
   callback do app apontando para a URL do gatilho do n8n (o n8n registra ao ativar).
-- **Efeito no backend:** com o callback no n8n, `/webhook/whatsapp` deixa de receber mensagens e o
-  painel não mostra as conversas novas (TD-N3).
+- **Efeito no backend:** com o callback no n8n, `/webhook/whatsapp` deixa de receber mensagens; as
+  conversas chegam ao painel pelo `POST /api/ingest/atendimentos`, só as de **texto** (o áudio
+  segue ignorado pelo n8n, TD-N4).
 - **Segredos:** token do usuário do sistema da Meta, chave da service account do Vertex e o
-  `DASHBOARD_API_TOKEN` ficam **só nas credenciais do n8n**, nunca no repositório. Os valores
+  `DASHBOARD_API_TOKEN` e `INGEST_API_TOKEN` ficam **só nas credenciais do n8n**, nunca no repositório. Os valores
   atuais de `WHATSAPP_*` no Cloud Run pertencem à conta de teste antiga.
 - **Reversão:** desative o workflow, aponte o callback do app para
   `https://<backend>/webhook/whatsapp` com o `WHATSAPP_VERIFY_TOKEN` e atualize `WHATSAPP_TOKEN` e
-  `WHATSAPP_PHONE_NUMBER_ID` no Cloud Run para os da conta de produção.
+  `WHATSAPP_PHONE_NUMBER_ID` no Cloud Run para os da conta de produção. Para só parar de gravar no
+  painel, remova o nó HTTP do fluxo ou apague o `INGEST_API_TOKEN` (a rota passa a responder 401).

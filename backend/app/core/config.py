@@ -1,7 +1,7 @@
 from functools import lru_cache
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from pydantic import field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Parâmetros de query que só drivers baseados em libpq (psycopg2) entendem quando embutidos numa
@@ -14,7 +14,10 @@ _ASYNCPG_UNSUPPORTED_QUERY_PARAMS = {"channel_binding", "sslmode"}
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # hide_input_in_errors: o erro de validação não imprime os valores lidos (poderiam ser tokens).
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", hide_input_in_errors=True
+    )
 
     database_url: str = "sqlite+aiosqlite:///./local.db"
 
@@ -47,6 +50,21 @@ class Settings(BaseSettings):
     agency_name: str = "Agência de Turismo em Lençóis"
     frontend_origin: str = "http://localhost:5173"
     dashboard_api_token: str = ""
+    # Token do n8n para registrar atendimentos (ADR-0005). Próprio e distinto do token do painel:
+    # este vai no bundle público e só pode proteger leitura. Vazio = rota fechada (401 sempre).
+    ingest_api_token: str = ""
+    # Conversa sem atividade há mais que isso é apagada com as mensagens (LGPD, ADR-0005).
+    # Mínimo de 1: com 0 ou negativo o corte cairia no futuro e o expurgo apagaria tudo.
+    conversation_retention_days: int = Field(default=90, ge=1)
+
+    @model_validator(mode="after")
+    def _ingest_token_must_differ_from_dashboard_token(self) -> "Settings":
+        if self.ingest_api_token and self.ingest_api_token == self.dashboard_api_token:
+            msg = (
+                "INGEST_API_TOKEN deve ser diferente de DASHBOARD_API_TOKEN (o do painel é público)"
+            )
+            raise ValueError(msg)
+        return self
 
 
 @lru_cache

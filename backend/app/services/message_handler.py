@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import tempfile
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -93,7 +94,7 @@ class IncomingMessage:
     message_id: str | None = None
 
 
-async def _is_duplicate(db: AsyncSession, whatsapp_message_id: str | None) -> bool:
+async def is_duplicate_delivery(db: AsyncSession, whatsapp_message_id: str | None) -> bool:
     """Diz se a Meta já entregou (e nós já registramos) uma mensagem com este id."""
     if not whatsapp_message_id:
         return False
@@ -103,7 +104,7 @@ async def _is_duplicate(db: AsyncSession, whatsapp_message_id: str | None) -> bo
     return result.first() is not None
 
 
-async def _store_incoming(
+async def store_incoming(
     db: AsyncSession,
     conversation: Conversation,
     incoming: IncomingMessage,
@@ -115,6 +116,9 @@ async def _store_incoming(
     Returns:
         `False` se outra entrega do mesmo `message_id` chegou antes (a transação é desfeita).
     """
+    # Atividade marcada à mão: sem outra mudança de coluna o ORM não gera o UPDATE, e a conversa
+    # ativa pareceria inativa para o expurgo de retenção (LGPD).
+    conversation.updated_at = datetime.now(UTC)
     db.add(
         Message(
             conversation_id=conversation.id,
@@ -149,9 +153,7 @@ async def _refuse_oversized_audio(
     db: AsyncSession, settings: Settings, conversation: Conversation, incoming: IncomingMessage
 ) -> Conversation | None:
     """Registra o áudio recusado e avisa o turista, sem transcrever nem chamar o Groq."""
-    if not await _store_incoming(
-        db, conversation, incoming, MessageType.TEXTO, AUDIO_TOO_LONG_NOTE
-    ):
+    if not await store_incoming(db, conversation, incoming, MessageType.TEXTO, AUDIO_TOO_LONG_NOTE):
         return None
     db.add(
         Message(
@@ -237,7 +239,7 @@ async def process_incoming_message(
     Returns:
         A conversa atualizada, ou `None` se a mensagem era uma entrega repetida.
     """
-    if await _is_duplicate(db, incoming.message_id):
+    if await is_duplicate_delivery(db, incoming.message_id):
         return None
     conversation = await get_or_create_open_conversation(db, incoming.phone)
 
@@ -248,7 +250,7 @@ async def process_incoming_message(
     except whatsapp_client.MediaTooLargeError:
         return await _refuse_oversized_audio(db, settings, conversation, incoming)
 
-    if not await _store_incoming(db, conversation, incoming, tipo, content):
+    if not await store_incoming(db, conversation, incoming, tipo, content):
         return None
 
     reply = await _generate_reply(db, settings, content)

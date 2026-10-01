@@ -1,0 +1,41 @@
+name: Retention
+
+# Expurgo de LGPD: apaga as conversas sem atividade há mais de 90 dias (padrão de
+# CONVERSATION_RETENTION_DAYS, que se muda no env deste job) com as mensagens (ADR-0005). Diário, e sob demanda (Actions > Retention > Run workflow). Falha aqui
+# avisa o dono do repositório por e-mail; o log traz só a quantidade apagada, nunca dado pessoal.
+on:
+  schedule:
+    - cron: "43 4 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: retention
+  cancel-in-progress: false
+
+jobs:
+  purge-conversations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: backend/.python-version
+      # Só o que o expurgo importa (banco e configuração), nas versões do requirements.txt: a
+      # instalação completa traz o faster-whisper, que este job não usa.
+      - name: Instala as dependências do expurgo
+        working-directory: backend
+        run: |
+          grep -E '^(sqlalchemy|asyncpg|pydantic|pydantic-settings)==' requirements.txt > /tmp/purge-requirements.txt
+          pip install -r /tmp/purge-requirements.txt
+      - name: Expurga as conversas inativas
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python -m app.purge_conversations
