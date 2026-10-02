@@ -122,8 +122,9 @@ Meta. Para isso o backend precisa dos dados do número **de produção**:
 
 > **Ainda não publicada.** O projeto do Pages será criado no primeiro deploy depois do merge; o
 > endereço `agente-turismo-lencois-demo.pages.dev` é o esperado, mas os nomes `pages.dev` são
-> globais: confira o endereço real na saída do job `deploy-demo`. `DEMO_WHATSAPP` ainda não está
-> definida, então o botão de contato não aparece. A demonstração simula o "assumir conversa"; o
+> globais: confira o endereço real na saída do job `deploy-demo`. `DEMO_CONTACT_URL` ainda não está
+> definida, então o botão "Falar com a Rovantech" não aparece (o texto da faixa já diz para entrar em
+> contato com a Rovantech e pedir uma demonstração). A demonstração simula o "assumir conversa"; o
 > fluxo do n8n que silencia a IA no produto real é publicado à mão (ADR-0008).
 
 Uma versão do painel que **qualquer pessoa abre e usa** (abrir conversas, mudar status, assumir,
@@ -141,9 +142,12 @@ fora do Cloudflare Access, que continua só no painel real.
   apaga `functions/` e `wrangler.toml` do painel real antes de publicar e cria o projeto do Pages na
   primeira vez. Se o token do Cloudflare não puder criar projetos, crie `agente-turismo-lencois-demo`
   uma vez no painel do Cloudflare e rode o deploy de novo.
-- **Botão de contato:** a variável do repositório `DEMO_WHATSAPP` (DDI+DDD+número, só dígitos)
-  liga "Conversar com o assistente de verdade" (`wa.me`). **Sem ela o botão some.** Não a defina
-  antes de ter alerta de orçamento e limite de uso no n8n e no Gemini (ADR-0007, TD-N8, TD-A3).
+- **Faixa e contato:** a faixa diz que os dados são fictícios, que as respostas do assistente são
+  exemplos fixos (não há IA ao vivo na demonstração) e que, para ver os dados reais e o assistente
+  respondendo de verdade, é preciso **entrar em contato com a Rovantech e solicitar uma
+  demonstração**. A variável do repositório `DEMO_CONTACT_URL` (`https://…` ou `mailto:…`, nada
+  mais é aceito) liga o botão "Falar com a Rovantech"; **sem ela o botão não aparece**, e o texto
+  continua.
 - **Dados:** telefones do DDD `00` (inexistente); um teste falha se um número real entrar. O
   pacote é conferido por teste (`demoBundle.test.ts`): sem `run.app`, `/api/` nem token.
 - **Conferir depois do deploy:** abra o endereço da demonstração sem login e confirme a faixa

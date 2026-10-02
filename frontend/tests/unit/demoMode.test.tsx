@@ -22,28 +22,37 @@ afterEach(() => {
 });
 
 describe("demonstration mode", () => {
-  it("shows the fictional data notice and links to the real WhatsApp when a number is configured", async () => {
+  it("says the data is fictional, that the assistant is scripted, and to ask Rovantech for a real demo", async () => {
+    const { DemoBanner } = await load({ VITE_DEMO: "true" });
+
+    render(<DemoBanner />);
+
+    const note = screen.getByRole("note");
+    expect(note).toHaveTextContent("Demonstração com dados fictícios. Nada é salvo.");
+    expect(note).toHaveTextContent("exemplos fixos, não uma IA ao vivo");
+    expect(note).toHaveTextContent("entre em contato com a Rovantech e solicite uma demonstração");
+  });
+
+  it("links to the Rovantech contact when one is configured", async () => {
     const { DemoBanner } = await load({
       VITE_DEMO: "true",
-      VITE_DEMO_WHATSAPP: "+55 11 90000-0000",
+      VITE_DEMO_CONTACT_URL: "mailto:contato@exemplo.com",
     });
 
     render(<DemoBanner />);
 
-    expect(screen.getByRole("note")).toHaveTextContent(
-      "Demonstração com dados fictícios. Nada é salvo."
-    );
-    const link = screen.getByRole("link", { name: "Conversar com o assistente de verdade" });
-    expect(link).toHaveAttribute("href", "https://wa.me/5511900000000");
+    const link = screen.getByRole("link", { name: "Falar com a Rovantech" });
+    expect(link).toHaveAttribute("href", "mailto:contato@exemplo.com");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("offers no contact button when no WhatsApp number is configured", async () => {
+  it("offers no contact button when none is configured, and keeps the text", async () => {
     const { DemoBanner } = await load({ VITE_DEMO: "true" });
 
     render(<DemoBanner />);
 
     expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByRole("note")).toHaveTextContent("solicite uma demonstração");
   });
 
   it("puts the banner above the panel only in the demonstration", async () => {
@@ -92,5 +101,24 @@ describe("demonstration mode", () => {
     theme.saveTheme("dark");
 
     expect(theme.getStoredTheme()).toBe("dark");
+  });
+});
+
+describe("safeContactUrl", () => {
+  it.each([
+    ["https://rovantech.com/contato", "https://rovantech.com/contato"],
+    ["  mailto:contato@exemplo.com ", "mailto:contato@exemplo.com"],
+    ["HTTPS://ROVANTECH.COM", "HTTPS://ROVANTECH.COM"],
+    ["javascript:alert(1)", ""],
+    ["http://sem-tls.example", ""],
+    ["https://", ""],
+    ["https://a b.example", ""],
+    ["//rovantech.com", ""],
+    ["", ""],
+    [undefined, ""],
+  ])("turns %j into %j", async (value, expected) => {
+    const { safeContactUrl } = await import("../../src/lib/demo");
+
+    expect(safeContactUrl(value)).toBe(expected);
   });
 });

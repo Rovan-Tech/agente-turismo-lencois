@@ -229,12 +229,12 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      # `DEMO_WHATSAPP` (variável do repositório, opcional) liga o botão "Conversar com o assistente
-      # de verdade". Antes de divulgar o número, veja o alerta de orçamento e o limite de uso (ADR-0007).
+      # `DEMO_CONTACT_URL` (variável do repositório, opcional: site, formulário ou `mailto:` da Rovantech)
+      # liga o botão "Falar com a Rovantech" na faixa da demonstração (ADR-0007).
       - name: Build da demonstração
         working-directory: frontend
         env:
-          VITE_DEMO_WHATSAPP: ${{ vars.DEMO_WHATSAPP }}
+          VITE_DEMO_CONTACT_URL: ${{ vars.DEMO_CONTACT_URL }}
         run: npm run build:demo
 
       # O pacote publicado é só `dist-demo`. A pasta `functions` (proxy da API) e o `wrangler.toml` do
