@@ -1,0 +1,55 @@
+name: SonarQube
+
+# Análise contínua no SonarQube da Rovantech (https://sonar.rovantech.com): roda os testes com
+# cobertura e envia o resultado. Só em push na `main`: a edição Community não separa branch e PR,
+# então uma análise de PR sobrescreveria a da `main`. O endereço e o token são secrets da
+# organização (SONAR_HOST_URL e SONAR_TOKEN); a configuração está em `sonar-project.properties`.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: sonarqube
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version-file: backend/.python-version
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r backend/requirements-dev.txt
+      - name: Testes do backend com cobertura
+        working-directory: backend
+        run: python -m pytest -q --cov --cov-report=xml:coverage.xml
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - name: Testes do frontend com cobertura
+        working-directory: frontend
+        run: npm run test:unit -- --coverage
+
+      - name: Análise no SonarQube
+        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
