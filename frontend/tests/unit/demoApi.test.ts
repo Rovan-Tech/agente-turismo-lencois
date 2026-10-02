@@ -323,11 +323,12 @@ describe("demoApi bookings", () => {
   it("keeps bookings and seats isolated per tour: booking one tour never touches another", async () => {
     const other = DEMO_TOURS[1].id;
 
-    await done(demo.createBooking(TOUR, { ...payload, pessoas: 30 }));
+    const filled = await done(demo.createBooking(TOUR, { ...payload, pessoas: 30 }));
     const otherAgenda = await done(demo.getTourAgenda(other, "2026-10"));
     const otherDayBookings = await done(demo.getDayBookings(other, "2026-10-05"));
     const otherStillBookable = await done(demo.createBooking(other, { ...payload, pessoas: 30 }));
 
+    expect(filled).toMatchObject({ ok: true, data: { ocupadas: 30 } });
     expect(otherAgenda?.find((day) => day.data === "2026-10-05")?.ocupadas).toBe(0);
     expect(otherDayBookings).toEqual([]);
     expect(otherStillBookable).toMatchObject({ ok: true, data: { ocupadas: 30 } });

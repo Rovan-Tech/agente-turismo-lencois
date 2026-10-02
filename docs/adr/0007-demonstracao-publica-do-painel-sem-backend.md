@@ -69,7 +69,7 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
   inclui `VITE_API_BASE_URL` nem token.
 - **Isolamento verificável:** um `_headers` emitido pelo build de demonstração (plugin em
   `frontend/demo/vitePlugin.ts`, com o hash do script inline do tema) com CSP `default-src
-'self'` e `connect-src 'none'` (o navegador recusa qualquer chamada de rede), e um teste no CI
+  'self'` e `connect-src 'none'` (o navegador recusa qualquer chamada de rede), e um teste no CI
   que procura no pacote publicado o endereço do Cloud Run, `run.app` e padrões de token.
 - **Funções futuras na demonstração:** só entram quando existirem de verdade no produto; uma
   prévia de algo ainda não pronto precisa vir marcada como "em breve".
