@@ -2,6 +2,8 @@
 import { build, type Rollup } from "vite";
 import { beforeAll, describe, expect, it } from "vitest";
 
+import { inlineScripts } from "../../demo/vitePlugin.ts";
+
 /**
  * O pacote da demonstração (ADR-0007) nasce de um build real em modo `demo`: nele não pode haver
  * endereço de backend, token nem chamada à API, e o navegador precisa recusar qualquer rede.
@@ -43,7 +45,7 @@ describe("demonstration bundle", () => {
   it("tells the browser to refuse fetch and forms, and to run only the known inline script", async () => {
     const headers = files.find((f) => f.name === "_headers")?.text ?? "";
     const html = files.find((f) => f.name === "index.html")?.text ?? "";
-    const inline = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
+    const [inline = ""] = inlineScripts(html);
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(inline));
     const hash = `'sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}'`;
 
@@ -53,5 +55,16 @@ describe("demonstration bundle", () => {
     expect(headers).toContain("frame-ancestors 'none'");
     expect(headers).toContain(`script-src 'self' ${hash}`);
     expect(inline).not.toBe("");
+  });
+});
+
+describe("inline script detection", () => {
+  it.each([
+    ["lower case", "<script>a()</script>", ["a()"]],
+    ["upper case and attributes", '<SCRIPT type="text/javascript">b()</SCRIPT >', ["b()"]],
+    ["with a source, which needs no hash", '<script type="module" src="/a.js"></script>', []],
+    ["two scripts", "<script>um()</script><p></p><script>dois()</script>", ["um()", "dois()"]],
+  ])("finds the inline scripts in %s", (_case, html, expected) => {
+    expect(inlineScripts(html)).toEqual(expected);
   });
 });

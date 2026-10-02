@@ -2,7 +2,13 @@ import type { Plugin } from "vite";
 
 const REAL_API = decodeURIComponent(new URL("../src/lib/api.ts", import.meta.url).pathname);
 const DEMO_API = decodeURIComponent(new URL("../src/demo/demoApi.ts", import.meta.url).pathname);
-const INLINE_SCRIPT = /<script>([\s\S]*?)<\/script>/g;
+// Scripts inline (sem `src`), em qualquer caixa de letras e com atributos: cada um precisa do seu hash.
+const INLINE_SCRIPT = /<script\b(?![^>]*\bsrc\s*=)[^>]*>([\s\S]*?)<\/script\s*>/gi;
+
+/** Texto de cada script inline de uma página HTML. */
+export function inlineScripts(html: string): string[] {
+  return [...html.matchAll(INLINE_SCRIPT)].map((match) => match[1]);
+}
 
 /** Hash do CSP para um script inline: `'sha256-<base64 do SHA-256 do texto>'`. */
 async function cspHash(script: string): Promise<string> {
