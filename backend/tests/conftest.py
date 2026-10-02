@@ -1,7 +1,12 @@
+import json
 import os
+import uuid
 
+import jwt
 import pytest
 import pytest_asyncio
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -10,9 +15,13 @@ from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.models.conversation import Conversation
 from app.models.tour import DifficultyLevel, Tour
 from app.services import message_handler, whatsapp_client
 from app.services.groq_client import GroqReply
+from tests.access_support import AUDIENCE, KID, AccessEnv
+from tests.handoff_support import Outbox, holding, make_conversation
+from tests.ingest_support import INGEST_BEARER
 
 TEST_DASHBOARD_TOKEN = "test-dashboard-token"
 
@@ -57,6 +66,23 @@ async def client(db_session, monkeypatch):
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def ingest_token(monkeypatch):
+    """Configura o `INGEST_API_TOKEN` do n8n, distinto do token do painel."""
+    monkeypatch.setattr(get_settings(), "ingest_api_token", INGEST_BEARER)
+    return INGEST_BEARER
+
+
+@pytest.fixture
+def blind_duplicate_check(monkeypatch):
+    """Faz a checagem inicial não ver a duplicata, como num reenvio simultâneo em outra conexão."""
+
+    async def never_duplicate(db, whatsapp_message_id):
+        return False
+
+    monkeypatch.setattr(message_handler, "is_duplicate_delivery", never_duplicate)
 
 
 @pytest.fixture
@@ -161,3 +187,65 @@ def sample_tours() -> list[Tour]:
             ativo=True,
         ),
     ]
+
+
+@pytest.fixture(scope="module")
+def rsa_keys() -> tuple[RSAPrivateKey, RSAPrivateKey]:
+    return (
+        rsa.generate_private_key(public_exponent=65537, key_size=2048),
+        rsa.generate_private_key(public_exponent=65537, key_size=2048),
+    )
+
+
+def _configure(monkeypatch: pytest.MonkeyPatch, mode: str, issuer: str, audience: str) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "panel_auth_mode", mode)
+    monkeypatch.setattr(settings, "access_team_domain", issuer)
+    monkeypatch.setattr(settings, "access_aud", audience)
+
+
+@pytest.fixture
+def access(
+    monkeypatch: pytest.MonkeyPatch, rsa_keys: tuple[RSAPrivateKey, RSAPrivateKey]
+) -> AccessEnv:
+    """Modo `access` com um JWKS de teste (sem rede). Cada teste usa uma equipe nova: o cache é
+    por endereço, então um teste não enxerga o JWKS do outro."""
+    private_key, other_key = rsa_keys
+    issuer = f"https://t{uuid.uuid4().hex[:10]}.cloudflareaccess.com"
+    jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(private_key.public_key()))
+    jwk |= {"kid": KID, "use": "sig", "alg": "RS256"}
+    fetches: list[int] = []
+
+    def fake_fetch(self: object) -> dict[str, object]:
+        fetches.append(1)
+        return {"keys": [jwk]}
+
+    monkeypatch.setattr(jwt.PyJWKClient, "fetch_data", fake_fetch)
+    _configure(monkeypatch, "access", issuer, AUDIENCE)
+    return AccessEnv(issuer, private_key, other_key, fetches)
+
+
+@pytest.fixture
+def outbox(monkeypatch: pytest.MonkeyPatch) -> Outbox:
+    """Troca o envio ao WhatsApp por um registro do que seria enviado (e por falhas sob demanda)."""
+    box = Outbox()
+
+    async def fake_send(settings: object, to: str, body: str) -> None:
+        if box.failure is not None:
+            raise box.failure
+        box.sent.append((to, body))
+
+    monkeypatch.setattr(whatsapp_client, "send_text_message", fake_send)
+    return box
+
+
+@pytest_asyncio.fixture
+async def conversation(db_session: AsyncSession) -> Conversation:
+    """Conversa com a IA, com uma mensagem do turista de 5 minutos atrás."""
+    return await make_conversation(db_session)
+
+
+@pytest_asyncio.fixture
+async def held(db_session: AsyncSession) -> Conversation:
+    """Conversa que a pessoa `pessoa-123` assumiu há pouco."""
+    return await holding(db_session)

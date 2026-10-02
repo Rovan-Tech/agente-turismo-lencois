@@ -1,7 +1,11 @@
+"""Configuração da aplicação, lida de variáveis de ambiente (pydantic-settings)."""
+
+import re
 from functools import lru_cache
+from typing import Literal
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from pydantic import field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Parâmetros de query que só drivers baseados em libpq (psycopg2) entendem quando embutidos numa
@@ -14,7 +18,10 @@ _ASYNCPG_UNSUPPORTED_QUERY_PARAMS = {"channel_binding", "sslmode"}
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # hide_input_in_errors: o erro de validação não imprime os valores lidos (poderiam ser tokens).
+    model_config = SettingsConfigDict(
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", hide_input_in_errors=True
+    )
 
     database_url: str = "sqlite+aiosqlite:///./local.db"
 
@@ -47,6 +54,50 @@ class Settings(BaseSettings):
     agency_name: str = "Agência de Turismo em Lençóis"
     frontend_origin: str = "http://localhost:5173"
     dashboard_api_token: str = ""
+    # Token do n8n para registrar atendimentos (ADR-0005). Próprio e distinto do token do painel:
+    # este vai no bundle público e só pode proteger leitura. Vazio = rota fechada (401 sempre).
+    ingest_api_token: str = ""
+    # Conversa sem atividade há mais que isso é apagada com as mensagens (LGPD, ADR-0005).
+    # Mínimo de 1: com 0 ou negativo o corte cairia no futuro e o expurgo apagaria tudo.
+    conversation_retention_days: int = Field(default=90, ge=1)
+
+    # Atendimento humano (ADR-0008): sem mensagem do atendente por tanto tempo, a conversa volta
+    # para a IA; e o teto de mensagens de atendente por conversa por hora limita o dano de um erro
+    # ou de um login comprometido.
+    human_handoff_idle_hours: int = Field(default=2, ge=1)
+    human_send_cap_per_hour: int = Field(default=60, ge=1)
+
+    # Login do painel (ADR-0006). `token`: só o token fixo (como hoje). `both`: token fixo ou JWT do
+    # Cloudflare Access, para testar. `access`: só o JWT. Sem `ACCESS_*`, o JWT é sempre recusado.
+    panel_auth_mode: Literal["token", "both", "access"] = "token"
+    access_team_domain: str = ""  # https://<equipe>.cloudflareaccess.com
+    access_aud: str = ""  # "Application Audience (AUD) tag" do aplicativo no Access
+
+    @field_validator("access_team_domain")
+    @classmethod
+    def _access_team_domain_must_be_a_cloudflare_team_url(cls, value: str) -> str:
+        if value and not re.fullmatch(r"https://[a-z0-9-]+\.cloudflareaccess\.com", value):
+            msg = "ACCESS_TEAM_DOMAIN deve ser https://<equipe>.cloudflareaccess.com"
+            raise ValueError(msg)
+        return value
+
+    @property
+    def browser_origins(self) -> list[str]:
+        """Origens de navegador aceitas no CORS.
+
+        Nenhuma no modo `access`: o painel fala com a API pela própria origem (proxy do Pages) e
+        nunca direto com o Cloud Run.
+        """
+        return [] if self.panel_auth_mode == "access" else [self.frontend_origin]
+
+    @model_validator(mode="after")
+    def _ingest_token_must_differ_from_dashboard_token(self) -> "Settings":
+        if self.ingest_api_token and self.ingest_api_token == self.dashboard_api_token:
+            msg = (
+                "INGEST_API_TOKEN deve ser diferente de DASHBOARD_API_TOKEN (o do painel é público)"
+            )
+            raise ValueError(msg)
+        return self
 
 
 @lru_cache

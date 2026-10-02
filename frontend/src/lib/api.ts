@@ -7,8 +7,10 @@ import type {
   ConversationDetail,
   ConversationHeader,
   ConversationStatus,
+  ConversationMessage,
   ConversationSummary,
   DayOccupancy,
+  Me,
   Tour,
   TourCreateInput,
   TourUpdateInput,
@@ -19,11 +21,18 @@ import {
   ConversationDetailSchema,
   ConversationHeaderSchema,
   ConversationListSchema,
+  ConversationMessageSchema,
   DayOccupancyListSchema,
+  MeSchema,
 } from "./schemas";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const API_TOKEN = import.meta.env.VITE_API_TOKEN;
+
+// Atrás do Cloudflare Access a sessão é um cookie que o navegador envia sozinho. Em toda mudança
+// o painel manda este cabeçalho, que uma página de terceiro não consegue enviar (CSRF); o proxy e
+// o backend o exigem.
+const PANEL_HEADER = { "X-Panel-Request": "1" };
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; message: string };
 
@@ -79,6 +88,7 @@ async function sendJson<T>(
       method,
       headers: {
         "Content-Type": "application/json",
+        ...PANEL_HEADER,
         ...(API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -117,6 +127,42 @@ export function updateConversationStatus(
     "PATCH",
     { status },
     ConversationHeaderSchema
+  );
+}
+
+/** Quem está logado (o painel mostra ao atendente o nome que o turista vai ver). */
+export function getMe(): Promise<Me | null> {
+  return fetchJson("/api/me", MeSchema);
+}
+
+function conversationAction(id: string, action: string): string {
+  return `/api/conversations/${encodeURIComponent(id)}/${action}`;
+}
+
+/** A pessoa logada assume a conversa; o servidor avisa o turista antes de mudar o estado. */
+export function takeOverConversation(id: string): Promise<ApiResult<ConversationHeader>> {
+  return sendJson(conversationAction(id, "assumir"), "POST", undefined, ConversationHeaderSchema);
+}
+
+/** Devolve a conversa para a IA. */
+export function giveBackConversation(id: string): Promise<ApiResult<ConversationHeader>> {
+  return sendJson(conversationAction(id, "devolver"), "POST", undefined, ConversationHeaderSchema);
+}
+
+/**
+ * Envia a resposta do atendente ao turista. O `clientMessageId` torna o envio idempotente: repetir
+ * o mesmo id (clique duplo, nova tentativa) não manda a mensagem duas vezes.
+ */
+export function sendConversationReply(
+  id: string,
+  text: string,
+  clientMessageId: string
+): Promise<ApiResult<ConversationMessage>> {
+  return sendJson(
+    conversationAction(id, "mensagens"),
+    "POST",
+    { texto: text, client_message_id: clientMessageId },
+    ConversationMessageSchema
   );
 }
 

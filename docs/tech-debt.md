@@ -123,8 +123,8 @@ infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
 | TD-A3 | `SEC-3` | sem limite de taxa no webhook e na API do painel (ex.: `slowapi`) | Alta |
 | TD-A4 | `SEC-5`, `INF-2` | SBOM CycloneDX da imagem do backend sai no CI (job `docker`, artefato `sbom-backend`). Falta o SBOM do frontend (`@cyclonedx/cyclonedx-npm`) | Baixa |
 | TD-A5 | `DATA-3` | sem tabela de auditoria append-only com hash chain; mutações (`status` da conversa, CRUD de passeios) não registram quem/quando/antes/depois | Alta |
-| TD-A6 | `FE-3` | painel autentica com token estático no bundle (`VITE_API_TOKEN`); migrar para sessão por cookie HttpOnly/Secure/SameSite=Strict atrás do Cloudflare Access | Média |
-| TD-A7 | `SEC-6` | sem rotina automática de expurgo do telefone (prazo já definido: 90 dias após `data`/`created_at`, ver threat model de agendamento); falta o job/automação em `bookings` e em `conversations` | Média |
+| TD-A6 | `FE-3` | o painel está atrás do Cloudflare Access (feito em 2026-10-01) e o backend valida o JWT do Access (ADR-0006), mas o deploy ainda roda em `PANEL_AUTH_MODE=token`: o bundle segue com o token fixo (`VITE_API_TOKEN`) até a variável passar para `both` e `access` (ver `docs/deploy.md`). Falta também cobrir os previews (`*.agente-turismo-lencois.pages.dev`) no Access. Ao chegar em `access`, remover `DASHBOARD_API_TOKEN` do deploy e fechar esta dívida | Média |
+| TD-A7 | `SEC-6` | sem rotina automática de expurgo do telefone dos agendamentos (prazo já definido: 90 dias após `data`/`created_at`, ver threat model de agendamento); falta um job em `bookings` nos moldes de `app/purge_conversations.py`, que já cobre as conversas (ADR-0005) | Média |
 | TD-G1 | `GIT-1` | pre-commit sem `check-added-large-files` (500 KB) | Baixa |
 | TD-M5 | `PY-4` | sem handler global RFC 7807; erros saem como `{"detail": ...}` do FastAPI | Média |
 | TD-M6 | `PY-5` | sem biblioteca de retry/circuit breaker (`tenacity`); jitter e breaker não padronizados nas chamadas ao Groq e ao WhatsApp | Média |
@@ -146,6 +146,14 @@ infraestrutura que ainda faltam. Ao tocar uma área, resolva os itens dela.
 | TD-C1 | `PY-3`, `DOC-1` | o contrato OpenAPI não declara os status que a API devolve (400, 403, 404, 409, 422), o cabeçalho `Allow` no 405 nem `securitySchemes` (por isso o check `ignored_auth` não funciona e o fuzz sempre vai autenticado). `POST`/`PUT /api/tours` aceitam campo extra e rejeitam `min_length` e texto só com espaços de formas que o schema não descreve (ver TD-M8). Achados do fuzz completo noturno (`fuzz-full`, resumo no painel da execução) | Média |
 | TD-C2 | `SEC-3` | as respostas da API não trazem `X-Content-Type-Options: nosniff` nem `Cross-Origin-Resource-Policy`; achado do ZAP noturno | Média |
 | TD-C3 | `TEST-2` | 15 mutantes sobrevivem em `app/services/tour_matcher.py` (`extract_criteria`, `filter_tours`): os testes não exigem esses comportamentos (o 16º sobrevivente do mutmut, em `app/core/security.py`, é equivalente: `"utf-8"` vira `"UTF-8"`) | Média |
+| TD-N1 | `DATA-1` | o fluxo no n8n (ADR-0004) não deduplica pelo id da mensagem; a Meta reenvia o webhook e o turista pode receber a resposta duas vezes | Média |
+| TD-N2 | `SEC-3` | o gatilho de WhatsApp do n8n compara a assinatura `X-Hub-Signature-256` com `!==` (não é tempo constante). Dependência de terceiro; reavaliar se o fluxo voltar ao backend | Baixa |
+| TD-N4 | `AI-3` | o fluxo no n8n ignora áudio e envia o catálogo inteiro ao Gemini; o backend filtrava candidatos (`tour_matcher`) e transcrevia com faster-whisper | Média |
+| TD-N5 | `SEC-6` | telefone e texto do turista ficam nas execuções do n8n Cloud sem política de retenção definida | Alta |
+| TD-N6 | `SEC-7`, `TEST-1` | o workflow do n8n não tem teste automatizado; os testes de assinatura forjada e de injeção de prompt foram feitos à mão em 2026-10-01 (`docs/threat-models/2026-10-01-n8n-gemini-whatsapp.md`) | Média |
+| TD-N7 | `SEC-1` | chave JSON da service account do Vertex no n8n (política da organização relaxada para criá-la; reativar e rotacionar) e token do usuário do sistema da Meta sem expiração, gerado com as permissões padrão (reduzir a `whatsapp_business_messaging`) | Alta |
+| TD-N8 | `INF-4` | custo deixou de ser zero (plano do n8n Cloud e Gemini por token); falta alerta de orçamento no Google Cloud, assinar só o status `failed` no gatilho e revisar `INF-4`/`AI-3` e a regra de custo zero do `CLAUDE.md` depois da aprovação do ADR-0004 | Alta |
+| TD-N9 | `DATA-1` | `get_or_create_open_conversation` faz SELECT e depois INSERT sem trava nem índice único parcial: duas primeiras mensagens do mesmo telefone quase simultâneas criam duas conversas abertas (medido: 5 conversas em 10 chamadas paralelas no Postgres). Vale para o webhook antigo e para o `POST /api/ingest/atendimentos`; sem perda de dado | Baixa |
 
 **Fora da dívida (N/A por arquitetura, ADR-0001):** RLS (`DATA-4`, single-tenant), mTLS/service mesh
 (`INF-6`, serviço único), Transactional Outbox (`PY-6`, sem mensageria). **Substituições permanentes
@@ -154,6 +162,10 @@ Guard → delimitação + limite + filtro + teste adversário (`AI-1`).
 
 ## Resolvido (era alta prioridade)
 
+- ~~TD-N3: as conversas atendidas pelo n8n não chegavam ao painel~~: o ADR-0005 criou
+  `POST /api/ingest/atendimentos` (token próprio, idempotente) e o expurgo de 90 dias das conversas.
+  Vale para mensagens de **texto**; o áudio e o filtro de candidatos do catálogo seguem em TD-N4
+  (etapas 2b e 2c, com ADR próprio cada uma).
 - ~~Cobertura baixa em código crítico~~: `seed.py` (dados do catálogo validados, 0%→43% — falta só
   a função `seed()` em si, que grava no banco de verdade e não vale o esforço de mockar pra um
   script de uso único), `transcription.py` 0%→83% (a única lacuna real é `_get_model`, que

@@ -1,5 +1,6 @@
 """Aplicação FastAPI: middlewares, rotas e handlers de erro globais."""
 
+import logging
 import math
 
 from fastapi import FastAPI, Request
@@ -8,25 +9,23 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import bookings, conversations, tours, webhook
-from app.core.config import get_settings
+from app.api import bookings, conversations, ingest, me, tours, webhook
+from app.core.config import Settings, get_settings
 
 settings = get_settings()
 
-app = FastAPI(title="Agente de Turismo Lençóis")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[settings.frontend_origin],
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["*"],
-)
+def _configure_app_logging() -> None:
+    """Faz os INFO do `app` saírem: o uvicorn só configura os próprios loggers."""
+    app_logger = logging.getLogger("app")
+    app_logger.setLevel(logging.INFO)
+    if not app_logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:%(name)s:%(message)s"))
+        app_logger.addHandler(handler)
 
-app.include_router(webhook.router)
-app.include_router(tours.router)
-app.include_router(bookings.router)
-app.include_router(conversations.router)
+
+_configure_app_logging()
 
 
 def _sanitize_for_json(value: object) -> object:
@@ -40,7 +39,6 @@ def _sanitize_for_json(value: object) -> object:
     return value
 
 
-@app.exception_handler(RequestValidationError)
 async def _handle_validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
     """Devolve 422 mesmo quando o payload rejeitado tinha `inf`/`nan` (senão o encoder quebra).
 
@@ -52,6 +50,29 @@ async def _handle_validation_error(_request: Request, exc: RequestValidationErro
     return JSONResponse(status_code=422, content={"detail": content})
 
 
-@app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}
+
+
+def create_app(settings: Settings) -> FastAPI:
+    """Monta a aplicação; recebe a configuração para o CORS poder ser testado em cada modo."""
+    application = FastAPI(title="Agente de Turismo Lençóis")
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.browser_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+        allow_headers=["*"],
+    )
+    application.include_router(webhook.router)
+    application.include_router(tours.router)
+    application.include_router(bookings.router)
+    application.include_router(conversations.router)
+    application.include_router(ingest.router)
+    application.include_router(me.router)
+    application.exception_handler(RequestValidationError)(_handle_validation_error)
+    application.add_api_route("/health", health, methods=["GET"])
+    return application
+
+
+app = create_app(settings)

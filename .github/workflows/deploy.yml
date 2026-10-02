@@ -126,6 +126,10 @@ jobs:
             WHATSAPP_VERIFY_TOKEN=${{ secrets.WHATSAPP_VERIFY_TOKEN }}
             WHATSAPP_APP_SECRET=${{ secrets.WHATSAPP_APP_SECRET }}
             DASHBOARD_API_TOKEN=${{ secrets.DASHBOARD_API_TOKEN }}
+            INGEST_API_TOKEN=${{ secrets.INGEST_API_TOKEN }}
+            PANEL_AUTH_MODE=${{ vars.PANEL_AUTH_MODE || 'token' }}
+            ACCESS_TEAM_DOMAIN=${{ vars.ACCESS_TEAM_DOMAIN }}
+            ACCESS_AUD=${{ vars.ACCESS_AUD }}
             FRONTEND_ORIGIN=https://agente-turismo-lencois.pages.dev
 
       # Depois de um rollback o Cloud Run mantém o tráfego fixo na revisão antiga e deploys novos
@@ -144,7 +148,9 @@ jobs:
           URL: ${{ steps.deploy.outputs.url }}
           REGION: ${{ secrets.GCP_REGION }}
           PREVIOUS: ${{ steps.previous.outputs.revision }}
-          TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
+          # No modo `access` o token fixo deixa de valer: o teste confere só o que é público e que a
+          # API fecha sem credencial.
+          TOKEN: ${{ vars.PANEL_AUTH_MODE != 'access' && secrets.DASHBOARD_API_TOKEN || '' }}
         run: |
           scripts/ci/verify_deploy.sh "$URL" agente-turismo-lencois-backend "$REGION" "$PREVIOUS" "$TOKEN"
 
@@ -171,12 +177,22 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Build (aponta pro backend recém-publicado)
+      # `token` (hoje): o painel fala direto com o Cloud Run, com o token fixo no bundle. Nos outros
+      # modos (ADR-0006) o painel chama `/api/*` na própria origem, pelo proxy do Pages atrás do
+      # Cloudflare Access, e o bundle não leva token nenhum.
+      - name: Build
         working-directory: frontend
         env:
-          VITE_API_BASE_URL: ${{ needs.deploy-backend.outputs.backend_url }}
-          VITE_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
-        run: npm run build
+          PANEL_AUTH_MODE: ${{ vars.PANEL_AUTH_MODE || 'token' }}
+          BACKEND_URL: ${{ needs.deploy-backend.outputs.backend_url }}
+          DASHBOARD_API_TOKEN: ${{ secrets.DASHBOARD_API_TOKEN }}
+        run: |
+          if [ "$PANEL_AUTH_MODE" = "token" ]; then
+            export VITE_API_BASE_URL="$BACKEND_URL" VITE_API_TOKEN="$DASHBOARD_API_TOKEN"
+          else
+            export VITE_API_BASE_URL=""
+          fi
+          npm run build
 
       - name: Deploy no Cloudflare Pages
         uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4

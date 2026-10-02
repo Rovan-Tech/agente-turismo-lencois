@@ -12,3 +12,6 @@ requests==2.34.2
 numpy==2.4.6
 python-multipart==0.0.32
 aiosqlite==0.22.1
+# Validação do JWT do Cloudflare Access (ADR-0006); `cryptography` fixado como o numpy.
+PyJWT[crypto]==2.15.1
+cryptography==50.0.2

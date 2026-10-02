@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "../../src/components/AppShell";
+import * as api from "../../src/lib/api";
 
 function renderShellAt(path: string) {
   render(
@@ -94,5 +95,46 @@ describe("AppShell", () => {
     const links = sidebarNav().getAllByRole("link");
     const marked = links.filter((link) => link.getAttribute("aria-current") === "page");
     expect(marked.map((link) => link.textContent)).toEqual([current]);
+  });
+
+  describe("who is logged in", () => {
+    const SIGN_OUT = { name: "Sair" };
+
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("shows the person's first name and a link that ends the Access session", async () => {
+      vi.spyOn(api, "getMe").mockResolvedValue({ sub: "pessoa-1", nome: "Ana" });
+
+      renderShellAt("/");
+
+      expect(await screen.findByText("Ana")).toBeInTheDocument();
+      expect(screen.queryByText("Equipe")).toBeNull();
+      const links = screen.getAllByRole("link", SIGN_OUT);
+      expect(links.map((link) => link.getAttribute("href"))).toEqual([
+        "/cdn-cgi/access/logout",
+        "/cdn-cgi/access/logout",
+      ]);
+    });
+
+    it("keeps the generic name, with the sign out link, when the login has no usable first name", async () => {
+      vi.spyOn(api, "getMe").mockResolvedValue({ sub: "pessoa-1", nome: null });
+
+      renderShellAt("/");
+
+      await waitFor(() => expect(screen.getAllByRole("link", SIGN_OUT).length).toBeGreaterThan(0));
+      expect(screen.getByText("Equipe")).toBeInTheDocument();
+    });
+
+    it("offers no sign out outside the login, where that address does not exist", async () => {
+      const getMe = vi.spyOn(api, "getMe").mockResolvedValue(null);
+
+      renderShellAt("/");
+
+      await waitFor(() => expect(getMe).toHaveBeenCalled());
+      expect(screen.getByText("Equipe")).toBeInTheDocument();
+      expect(screen.queryByRole("link", SIGN_OUT)).toBeNull();
+    });
   });
 });

@@ -10,6 +10,7 @@ const MESSAGE: ConversationMessage = {
   tipo: "texto",
   conteudo: "Bom dia!",
   idioma: "pt",
+  autor: "turista",
   created_at: "2026-09-28T09:14:00Z",
 };
 
@@ -28,6 +29,15 @@ describe("MessageBubble", () => {
     expect(screen.getByText("Bom dia!")).toBeInTheDocument();
     const time = screen.getByText(/^\d{2}:\d{2}$/);
     expect(time).toHaveAttribute("datetime", "2026-09-28T09:14:00Z");
+  });
+
+  it("shows markup in a message as plain text, never as elements", () => {
+    const markup = '<img src=x onerror="alert(1)"><script>alert(2)</script>';
+
+    renderBubble({ conteudo: markup });
+
+    expect(screen.getByText(markup)).toBeInTheDocument();
+    expect(document.querySelector("img, script")).toBeNull();
   });
 
   it("aligns the assistant's messages to the right with the action color", () => {
@@ -56,5 +66,20 @@ describe("MessageBubble", () => {
     renderBubble();
 
     expect(screen.queryByText("transcrito de áudio")).toBeNull();
+  });
+
+  it.each([
+    ["ia", "Assistente de IA"],
+    ["atendente", "Equipe"],
+  ] as const)("says who wrote a message from the %s", (autor, label) => {
+    renderBubble({ direction: "saida", autor });
+
+    expect(screen.getByText(new RegExp(`^${label} ·`))).toBeInTheDocument();
+  });
+
+  it("does not label the tourist's own messages", () => {
+    renderBubble({ autor: "turista" });
+
+    expect(screen.queryByText(/·/)).toBeNull();
   });
 });

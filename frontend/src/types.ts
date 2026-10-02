@@ -9,7 +9,9 @@ import type {
   ConversationStatusSchema,
   ConversationSummarySchema,
   DayOccupancySchema,
+  HandlingSchema,
   LastMessageSchema,
+  MeSchema,
   PaymentMethodSchema,
   SuggestedTourSchema,
 } from "./lib/schemas";
@@ -23,6 +25,9 @@ export type ConversationHeader = z.infer<typeof ConversationHeaderSchema>;
 export type LastMessage = z.infer<typeof LastMessageSchema>;
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 export type ConversationDetail = z.infer<typeof ConversationDetailSchema>;
+export type Handling = z.infer<typeof HandlingSchema>;
+/** A pessoa logada no painel (Cloudflare Access). */
+export type Me = z.infer<typeof MeSchema>;
 /** Passeio do catálogo que o assistente recomendou nesta conversa. */
 export type SuggestedTour = z.infer<typeof SuggestedTourSchema>;
 

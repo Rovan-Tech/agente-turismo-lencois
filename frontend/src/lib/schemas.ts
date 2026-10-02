@@ -8,6 +8,10 @@ import { z } from "zod";
 
 export const ConversationStatusSchema = z.enum(["aberta", "precisa_atencao", "resolvida"]);
 
+export const HandlingSchema = z.enum(["ia", "humano"]);
+
+export const MessageAuthorSchema = z.enum(["turista", "ia", "atendente"]);
+
 export const SuggestedTourSchema = z.object({
   id: z.string(),
   nome: z.string(),
@@ -28,6 +32,7 @@ export const ConversationMessageSchema = z.object({
   tipo: z.enum(["texto", "audio_transcrito"]),
   conteudo: z.string(),
   idioma: z.string().nullable(),
+  autor: MessageAuthorSchema,
   created_at: z.string(),
 });
 
@@ -36,6 +41,10 @@ export const ConversationHeaderSchema = z.object({
   whatsapp_phone: z.string(),
   status: ConversationStatusSchema,
   idioma_detectado: z.string().nullable(),
+  // Quem responde agora; o nome e o `sub` só vêm preenchidos quando é uma pessoa (`humano`).
+  atendimento: HandlingSchema,
+  atendente_nome: z.string().nullable(),
+  atendente_sub: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -92,3 +101,6 @@ export const BookingCreatedSchema = BookingSchema.extend({
   capacidade: z.number(),
   ocupadas: z.number(),
 });
+
+/** Quem está logado: o `sub` identifica a pessoa e `nome` é o primeiro nome que o turista verá. */
+export const MeSchema = z.object({ sub: z.string(), nome: z.string().nullable() });

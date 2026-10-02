@@ -9,7 +9,11 @@ import httpx
 import pytest
 
 from app.core.config import get_settings
-from app.core.security import is_valid_dashboard_token, is_valid_whatsapp_signature
+from app.core.security import (
+    is_valid_bearer_token,
+    is_valid_dashboard_token,
+    is_valid_whatsapp_signature,
+)
 from app.services import message_handler, whatsapp_client
 from tests.conftest import persist
 
@@ -332,3 +336,9 @@ async def test_booking_rejects_forged_payment_status(client, db_session, sample_
         "/api/tours/passeio-bugre-orla/agendamentos", params={"data": "2026-09-28"}
     )
     assert listed.json() == []
+
+
+@pytest.mark.parametrize("header", ["Bearer é", "Bearer \u202e", "Bearer 令牌"])
+def test_bearer_token_with_non_ascii_characters_is_rejected_without_raising(header):
+    assert is_valid_bearer_token(header, "esperado") is False
+    assert is_valid_bearer_token(header, "esp\u00e9rado") is False
