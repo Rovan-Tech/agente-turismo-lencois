@@ -10,9 +10,10 @@ test("says it is a demonstration with fictional data and never calls an API", as
 
   await page.goto("/");
 
-  await expect(page.getByRole("note")).toHaveText(
-    /Demonstração com dados fictícios. Nada é salvo./
-  );
+  const note = page.getByRole("note");
+  await expect(note).toContainText("Demonstração com dados fictícios. Nada é salvo.");
+  await expect(note).toContainText("não uma IA ao vivo");
+  await expect(note).toContainText("entre em contato com a Rovantech e solicite uma demonstração");
   await expect(page.getByText("+55 00 90000-0001")).toBeVisible();
   const own = new URL(page.url()).origin;
   const external = requests

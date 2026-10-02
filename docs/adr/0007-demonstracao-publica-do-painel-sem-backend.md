@@ -55,9 +55,12 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
   por exemplo `+55 00 90000-0001`). Um teste falha se alguma fixture tiver telefone fora desse
   padrão, para nenhum número real entrar na demonstração.
 - **Identificação clara:** uma faixa fixa no topo, "Demonstração com dados fictícios. Nada é
-  salvo.", com o botão **"Conversar com o assistente de verdade"**, que abre o WhatsApp do número
-  da agência (`wa.me`). É o caminho para a pessoa entrar em contato; o painel real é mostrado pela
-  Rovan numa conversa.
+  salvo.", avisando que **as respostas do assistente são exemplos fixos, não uma IA ao vivo**, e que,
+  para ver os dados reais e o assistente respondendo de verdade, a pessoa deve **entrar em contato
+  com a Rovantech e solicitar uma demonstração** (Patrick, 2026-10-02). Um botão "Falar com a
+  Rovantech" aparece se a variável `DEMO_CONTACT_URL` (`https:` ou `mailto:`) existir. A ideia
+  anterior de abrir o WhatsApp da agência (`wa.me`) fica de fora: a IA real só é mostrada pela
+  Rovantech.
 - **Publicação separada:** um segundo projeto do Cloudflare Pages (nome sugerido
   `agente-turismo-lencois-demo`), com um job próprio no `deploy.yml` que **não recebe** `DATABASE_URL`
   nem token algum, só as credenciais de publicação do Cloudflare. O build da demonstração não
@@ -104,7 +107,7 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
    fluxo (abrir conversa, mudar status, ver passeios).
 3. Implementar o modo demonstração, o script de build, o segundo projeto no Pages e o job de
    deploy. **Estado (2026-10-01):** modo, build e job implementados; o projeto do Pages será criado
-   no primeiro deploy depois do merge e `DEMO_WHATSAPP` segue sem definir.
+   no primeiro deploy depois do merge e `DEMO_CONTACT_URL` segue sem definir.
 4. Atualizar `README.md`, `docs/deploy.md` e `docs/design-system.md` (faixa de demonstração).
 5. PR no repositório `rovan-tech` com a página do projeto.
 6. **Reversão:** desativar o job e apagar o projeto do Pages. A demonstração não toca no produto
