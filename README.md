@@ -35,6 +35,10 @@ Turista ──WhatsApp──▶ Meta (Cloud API) ──webhook──▶ n8n ─�
 > nome dela. O fluxo do n8n exportado já consulta o estado, mas ele é publicado à mão: até lá a IA
 > continua respondendo (ver `docs/deploy.md`).
 
+> **Demonstração pública (ainda não publicada, sai no primeiro deploy depois do merge):** o painel terá uma versão que qualquer pessoa abre e usa, com
+> dados fictícios e tudo em memória, sem backend ([ADR-0007](docs/adr/0007-demonstracao-publica-do-painel-sem-backend.md),
+> `docs/deploy.md`). `npm run build:demo` gera o pacote; o painel real continua privado.
+
 ## Pastas
 
 ```

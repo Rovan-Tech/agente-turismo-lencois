@@ -118,6 +118,37 @@ Meta. Para isso o backend precisa dos dados do número **de produção**:
 - **Migração `0004`:** colunas novas em `conversations` e `messages`; `alembic downgrade 0003`
   desfaz (as mensagens de atendente continuam no histórico; só se perde a informação de quem escreveu). A migração do agendamento passa a `0005`.
 
+## Demonstração pública do painel (ADR-0007)
+
+> **Ainda não publicada.** O projeto do Pages será criado no primeiro deploy depois do merge; o
+> endereço `agente-turismo-lencois-demo.pages.dev` é o esperado, mas os nomes `pages.dev` são
+> globais: confira o endereço real na saída do job `deploy-demo`. `DEMO_WHATSAPP` ainda não está
+> definida, então o botão de contato não aparece. A demonstração simula o "assumir conversa"; o
+> fluxo do n8n que silencia a IA no produto real é publicado à mão (ADR-0008).
+
+Uma versão do painel que **qualquer pessoa abre e usa** (abrir conversas, mudar status, assumir,
+responder, devolver à IA, editar passeios), com **dados fictícios e 100% em memória**: não há
+backend, banco, token nem `localStorage`; recarregar a página volta ao começo. É outro projeto do
+Cloudflare Pages, `agente-turismo-lencois-demo` (endereço `agente-turismo-lencois-demo.pages.dev`),
+fora do Cloudflare Access, que continua só no painel real.
+
+- **Build:** `npm run build:demo` (`vite build --mode demo`) gera `frontend/dist-demo`. O modo troca
+  `src/lib/api.ts` por `src/demo/demoApi.ts` (o arquivo real, com os endereços da API, nem entra no
+  pacote) e emite um `_headers` com CSP `connect-src 'none'`: o navegador recusa `fetch`, XHR e WebSocket (as
+  fontes do Google, carregadas por CSS, são a única rede externa que sobra).
+- **Publicação:** o job `deploy-demo` do `deploy.yml` roda a cada deploy da `main`, **não recebe
+  nenhum segredo do produto** (só `CLOUDFLARE_API_TOKEN` e `CLOUDFLARE_ACCOUNT_ID`, para publicar),
+  apaga `functions/` e `wrangler.toml` do painel real antes de publicar e cria o projeto do Pages na
+  primeira vez. Se o token do Cloudflare não puder criar projetos, crie `agente-turismo-lencois-demo`
+  uma vez no painel do Cloudflare e rode o deploy de novo.
+- **Botão de contato:** a variável do repositório `DEMO_WHATSAPP` (DDI+DDD+número, só dígitos)
+  liga "Conversar com o assistente de verdade" (`wa.me`). **Sem ela o botão some.** Não a defina
+  antes de ter alerta de orçamento e limite de uso no n8n e no Gemini (ADR-0007, TD-N8, TD-A3).
+- **Dados:** telefones do DDD `00` (inexistente); um teste falha se um número real entrar. O
+  pacote é conferido por teste (`demoBundle.test.ts`): sem `run.app`, `/api/` nem token.
+- **Conferir depois do deploy:** abra o endereço da demonstração sem login e confirme a faixa
+  "Demonstração com dados fictícios".
+
 ## Fluxo do WhatsApp no n8n (ADR-0004 e ADR-0005)
 
 O atendimento também pode rodar no n8n Cloud, fora do `deploy.yml`: o n8n recebe o webhook da
