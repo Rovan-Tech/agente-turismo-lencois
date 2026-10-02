@@ -1,16 +1,4 @@
 {
-  "enabledPlugins": {
-    "rovan-community-skills@rovan-claude-kit": true,
-    "rovan-project-kit@rovan-claude-kit": true
-  },
-  "extraKnownMarketplaces": {
-    "rovan-claude-kit": {
-      "source": {
-        "source": "github",
-        "repo": "Rovan-Tech/rovan-claude-kit"
-      }
-    }
-  },
   "permissions": {
     "allow": [
       "Bash(python scripts/quality_gate.py *)",
