@@ -84,7 +84,7 @@ async def get_tour_agenda(
 
     Raises:
         HTTPException: 422 se ``mes`` não estiver no formato ``YYYY-MM``, 404 se o passeio não
-            existir.
+            existir ou estiver desativado.
     """
     try:
         year, month = _parse_year_month(mes)
@@ -119,7 +119,7 @@ async def list_day_bookings(
     """Agendamentos pagos de um passeio num dia específico.
 
     Raises:
-        HTTPException: 404 se o passeio não existir.
+        HTTPException: 404 se o passeio não existir ou estiver desativado.
     """
     try:
         bookings = await booking_service.get_day_bookings(db, tour_id, data)
