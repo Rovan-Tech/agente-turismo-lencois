@@ -257,3 +257,52 @@ describe("demoApi tours", () => {
     expect(deactivated).toMatchObject({ ok: true, data: { ativo: false } });
   });
 });
+
+describe("demoApi bookings", () => {
+  const TOUR = DEMO_TOURS[0].id;
+  const payload = { data: "2026-10-05", pessoas: 3, forma_pagamento: "pix" as const };
+
+  it("lists every day of the month with the daily capacity and nothing booked yet", async () => {
+    const agenda = await done(demo.getTourAgenda(TOUR, "2026-02"));
+
+    expect(agenda).toHaveLength(28);
+    expect(agenda?.[0]).toEqual({ data: "2026-02-01", capacidade: 30, ocupadas: 0 });
+  });
+
+  it("returns null for an unknown tour or a malformed month, like the real API", async () => {
+    expect(await done(demo.getTourAgenda("nao-existe", "2026-10"))).toBeNull();
+    expect(await done(demo.getTourAgenda(TOUR, "2026-13"))).toBeNull();
+    expect(await done(demo.getDayBookings("nao-existe", "2026-10-05"))).toBeNull();
+  });
+
+  it("books as paid, takes the seats off the day and lists the booking for that day only", async () => {
+    const created = await done(demo.createBooking(TOUR, { ...payload, telefone: "5500900000001" }));
+    const agenda = await done(demo.getTourAgenda(TOUR, "2026-10"));
+    const thatDay = await done(demo.getDayBookings(TOUR, "2026-10-05"));
+    const otherDay = await done(demo.getDayBookings(TOUR, "2026-10-06"));
+
+    expect(created).toMatchObject({
+      ok: true,
+      data: { status_pagamento: "pago", capacidade: 30, ocupadas: 3, telefone: "5500900000001" },
+    });
+    expect(agenda?.find((day) => day.data === "2026-10-05")?.ocupadas).toBe(3);
+    expect(thatDay).toHaveLength(1);
+    expect(otherDay).toEqual([]);
+  });
+
+  it("refuses with 404 for an unknown tour and with 409 when the day would overflow", async () => {
+    const unknown = await done(demo.createBooking("nao-existe", payload));
+    const overflow = await done(demo.createBooking(TOUR, { ...payload, pessoas: 31 }));
+
+    expect(unknown).toMatchObject({ ok: false, status: 404 });
+    expect(overflow).toMatchObject({ ok: false, status: 409 });
+  });
+
+  it("forgets the bookings when the demo is reset", async () => {
+    await done(demo.createBooking(TOUR, payload));
+
+    demo.resetDemo();
+
+    expect(await done(demo.getDayBookings(TOUR, "2026-10-05"))).toEqual([]);
+  });
+});
