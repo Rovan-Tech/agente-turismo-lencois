@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
         provider: "v8",
         include: ["src/**"],
         exclude: ["src/main.tsx", "src/vite-env.d.ts", "src/types.ts"],
-        reporter: ["text-summary", "json-summary", "cobertura"],
+        reporter: ["text-summary", "json-summary", "cobertura", "lcov"],
         reportsDirectory: "coverage",
       },
     },

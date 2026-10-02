@@ -60,6 +60,23 @@ Também sob demanda em Actions > Nightly > Run workflow. Falha avisa o dono do r
 | `fuzz-full` | schemathesis com todos os checks | nunca (informativo; ver TD-C1) |
 | `mutation` | mutmut em `tour_matcher` e na verificação HMAC | pontuação < 85% (hoje 88%) |
 
+## SonarQube (`sonarqube.yml`)
+
+A cada push na `main` (e sob demanda), o workflow roda os testes do backend e do frontend **com
+cobertura** e envia o resultado ao SonarQube da Rovantech (`https://sonar.rovantech.com`). A
+configuração está em `sonar-project.properties` (código, testes, exclusões e relatórios de
+cobertura); o endereço e o token são os secrets da organização `SONAR_HOST_URL` e `SONAR_TOKEN`.
+
+- **Só na `main`:** a edição Community não separa branch e PR, e uma análise de PR sobrescreveria a
+  da `main`. Por isso o workflow não faz parte do `ci-ok` e não bloqueia merge.
+- **Cobertura do projeto** = a do app (`backend/app` e `frontend/src`), como no gate. Os scripts de
+  CI e a função do Pages são analisados (bugs, duplicação) mas ficam fora da cobertura
+  (`sonar.coverage.exclusions`). A meta da empresa é **95%**; o quality gate "Rovantech" do
+  SonarQube reprova abaixo disso e acima de 3% de duplicação.
+- **Demandas:** uma análise diária (na VM do SonarQube, não aqui) abre e atualiza demandas no
+  ClickUp para o Leandro a partir dos achados, da duplicação e da cobertura.
+- O formato `lcov` foi acrescentado aos relatórios do vitest: o SonarQube só lê esse para JS e TS.
+
 ## Deploy (`deploy.yml`)
 
 Só dispara depois do CI verde num push na `main` (ou manualmente). Ordem: build, push, atestado de
