@@ -1,10 +1,9 @@
-import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+import { expectNoViolations, switchTheme } from "./axe";
 import { HANDLING_BY_AI, SUGGESTED_TOUR as TOUR } from "./fixtures";
 
 /** Acessibilidade (WCAG 2.2 AA) das telas do painel, nos dois temas, com dados simulados. */
-const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
 const MESSAGE = {
   id: "a11y-m1",
@@ -37,17 +36,6 @@ async function mockApi(page: Page) {
   await page.route("**/api/conversations", (route) =>
     route.fulfill({ json: [{ ...HEADER, ultima_mensagem: MESSAGE }] })
   );
-}
-
-async function expectNoViolations(page: Page) {
-  const { violations } = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
-  const summary = violations.map((violation) => ({
-    rule: violation.id,
-    impact: violation.impact,
-    help: violation.help,
-    targets: violation.nodes.map((node) => node.target.join(" ")),
-  }));
-  expect(summary).toEqual([]);
 }
 
 const SCREENS: { name: string; open: (page: Page) => Promise<void> }[] = [
@@ -108,10 +96,7 @@ for (const theme of ["light", "dark"] as const) {
     test(`${screen.name} has no WCAG 2.2 AA violations in ${theme} mode`, async ({ page }) => {
       await mockApi(page);
       await screen.open(page);
-      if (theme === "dark") {
-        await page.getByRole("button", { name: "Usar modo escuro" }).click();
-        await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-      }
+      await switchTheme(page, theme);
 
       await expectNoViolations(page);
     });

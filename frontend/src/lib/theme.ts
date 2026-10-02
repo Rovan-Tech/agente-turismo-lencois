@@ -1,3 +1,5 @@
+import { IS_DEMO } from "./demo";
+
 export type Theme = "light" | "dark";
 
 const STORAGE_KEY = "painel-tema";
@@ -7,6 +9,8 @@ const STORAGE_KEY = "painel-tema";
  * sistema. O armazenamento pode estar bloqueado (aba privada), então falhar não pode quebrar.
  */
 export function getStoredTheme(): Theme {
+  // A demonstração não grava nada no navegador (ADR-0007): o tema vale só nesta aba.
+  if (IS_DEMO) return "light";
   try {
     return window.localStorage.getItem(STORAGE_KEY) === "dark" ? "dark" : "light";
   } catch {
@@ -15,6 +19,7 @@ export function getStoredTheme(): Theme {
 }
 
 export function saveTheme(theme: Theme): void {
+  if (IS_DEMO) return;
   try {
     window.localStorage.setItem(STORAGE_KEY, theme);
   } catch {

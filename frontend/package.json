@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:demo": "vite build --mode demo",
     "preview": "vite preview --port 4173",
+    "preview:demo": "vite preview --mode demo --outDir dist-demo --port 4174",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "tsc --noEmit",
