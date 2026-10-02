@@ -188,6 +188,14 @@ async def test_get_day_bookings_rejects_unknown_tour(db_session):
 
 
 @pytest.mark.asyncio
+async def test_get_day_bookings_rejects_inactive_tour(db_session):
+    await persist(db_session, _tour(ativo=False))
+
+    with pytest.raises(tour_catalog.TourNotFoundError):
+        await booking_service.get_day_bookings(db_session, "passeio-teste", date(2026, 9, 28))
+
+
+@pytest.mark.asyncio
 async def test_get_monthly_occupancy_covers_every_day_with_zero_by_default(db_session):
     await persist(db_session, _tour(capacidade_diaria=10))
     await _create(db_session, data=date(2026, 9, 5), pessoas=4)
@@ -232,3 +240,11 @@ async def test_get_monthly_occupancy_only_fetches_the_requested_month(db_session
 async def test_get_monthly_occupancy_rejects_unknown_tour(db_session):
     with pytest.raises(tour_catalog.TourNotFoundError):
         await booking_service.get_monthly_occupancy(db_session, "nao-existe", 2026, 9)
+
+
+@pytest.mark.asyncio
+async def test_get_monthly_occupancy_rejects_inactive_tour(db_session):
+    await persist(db_session, _tour(ativo=False))
+
+    with pytest.raises(tour_catalog.TourNotFoundError):
+        await booking_service.get_monthly_occupancy(db_session, "passeio-teste", 2026, 9)

@@ -89,7 +89,19 @@ async def get_tour_agenda(
     try:
         year, month = _parse_year_month(mes)
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail="mes deve estar no formato YYYY-MM") from exc
+        # Mesmo formato de `HTTPValidationError` que o FastAPI usa nos 422 próprios (`ingest.py`
+        # segue o mesmo padrão): o schemathesis valida todo 422 da rota contra esse shape, e um
+        # `detail` string quebraria o contrato documentado no OpenAPI.
+        raise HTTPException(
+            status_code=422,
+            detail=[
+                {
+                    "type": "value_error",
+                    "loc": ["query", "mes"],
+                    "msg": "mes deve estar no formato YYYY-MM",
+                }
+            ],
+        ) from exc
     try:
         days = await booking_service.get_monthly_occupancy(db, tour_id, year, month)
     except tour_catalog.TourNotFoundError as exc:

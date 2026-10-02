@@ -269,9 +269,11 @@ function occupiedOn(tourId: string, data: string): number {
     .reduce((total, booking) => total + booking.pessoas, 0);
 }
 
-/** Ocupação dia a dia do mês; passeio ou mês inválido vira `null`, como a API real. */
+/** Ocupação dia a dia do mês; passeio inativo, inexistente ou mês inválido vira `null`, como a API. */
 export function getTourAgenda(tourId: string, mes: string): Promise<DayOccupancy[] | null> {
-  if (!tours.some((tour) => tour.id === tourId) || !MONTH_PATTERN.test(mes)) return respond(null);
+  if (!tours.some((tour) => tour.id === tourId && tour.ativo) || !MONTH_PATTERN.test(mes)) {
+    return respond(null);
+  }
   const [year, month] = mes.split("-").map(Number);
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return respond(
@@ -282,9 +284,9 @@ export function getTourAgenda(tourId: string, mes: string): Promise<DayOccupancy
   );
 }
 
-/** Lista os agendamentos pagos daquele passeio e dia; passeio inativo continua listado, como a API real. */
+/** Lista os agendamentos pagos daquele passeio e dia; passeio inativo ou inexistente vira `null`. */
 export function getDayBookings(tourId: string, data: string): Promise<Booking[] | null> {
-  if (!tours.some((tour) => tour.id === tourId)) return respond(null);
+  if (!tours.some((tour) => tour.id === tourId && tour.ativo)) return respond(null);
   return respond(bookings.filter((booking) => booking.tour_id === tourId && booking.data === data));
 }
 

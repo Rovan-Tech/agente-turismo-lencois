@@ -27,9 +27,11 @@ export function TourList({ tours, onEdit, onToggleActive }: TourListProps) {
           </div>
           <div className="flex items-center gap-3">
             <ActiveBadge ativo={tour.ativo} />
-            <Link to={`/passeios/${tour.id}`} className="text-sm text-link hover:underline">
-              Agendamentos
-            </Link>
+            {tour.ativo && (
+              <Link to={`/passeios/${tour.id}`} className="text-sm text-link hover:underline">
+                Agendamentos
+              </Link>
+            )}
             <button
               type="button"
               onClick={() => onEdit(tour)}

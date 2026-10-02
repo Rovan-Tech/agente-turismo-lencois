@@ -68,6 +68,20 @@ class BookingResult:
     capacidade: int
 
 
+async def _get_active_tour(db: AsyncSession, tour_id: str) -> Tour:
+    """Busca o passeio e recusa o desativado: fora do catálogo, fora do agendamento.
+
+    Raises:
+        tour_catalog.TourNotFoundError: se não existir passeio com esse id, ou se existir mas
+            estiver desativado (mesmo tratamento de `create_booking`: para quem agenda, um
+            passeio fora do catálogo é como se não existisse).
+    """
+    tour = await tour_catalog.get_tour(db, tour_id)
+    if not tour.ativo:
+        raise tour_catalog.TourNotFoundError(tour_id)
+    return tour
+
+
 async def get_monthly_occupancy(
     db: AsyncSession, tour_id: str, year: int, month: int
 ) -> list[DayOccupancy]:
@@ -83,9 +97,9 @@ async def get_monthly_occupancy(
         Um `DayOccupancy` por dia do mês, na ordem do calendário.
 
     Raises:
-        tour_catalog.TourNotFoundError: se o passeio não existir.
+        tour_catalog.TourNotFoundError: se o passeio não existir ou estiver desativado.
     """
-    tour = await tour_catalog.get_tour(db, tour_id)
+    tour = await _get_active_tour(db, tour_id)
     _, days_in_month = calendar.monthrange(year, month)
     start = date(year, month, 1)
     end = date(year, month, days_in_month)
@@ -111,12 +125,11 @@ async def get_day_bookings(db: AsyncSession, tour_id: str, day: date) -> list[Bo
     """Agendamentos pagos de um passeio num dia específico, do mais antigo ao mais novo.
 
     Raises:
-        tour_catalog.TourNotFoundError: se não existir passeio com esse id (mesmo contrato de
-            `get_monthly_occupancy`, pra não devolver lista vazia disfarçando um `tour_id`
-            inválido). Passeio desativado não levanta — mesmo comportamento de leitura que
-            `get_monthly_occupancy`, só `create_booking` recusa passeio inativo.
+        tour_catalog.TourNotFoundError: se não existir passeio com esse id, ou se estiver
+            desativado (mesmo contrato de `get_monthly_occupancy`, pra não devolver lista vazia
+            disfarçando um `tour_id` inválido ou fora do catálogo).
     """
-    await tour_catalog.get_tour(db, tour_id)
+    await _get_active_tour(db, tour_id)
     result = await db.execute(
         select(Booking)
         .where(Booking.tour_id == tour_id)

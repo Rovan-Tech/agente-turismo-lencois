@@ -42,6 +42,12 @@ describe("TourList", () => {
     expect(onToggleActive).toHaveBeenCalledWith(inactiveTour);
   });
 
+  it("hides the booking link for an inactive tour: the API refuses to schedule it", () => {
+    renderList({ tours: [{ ...SAMPLE_TOUR, ativo: false }] });
+
+    expect(screen.queryByRole("link", { name: "Agendamentos" })).not.toBeInTheDocument();
+  });
+
   it("calls onEdit with the clicked tour", () => {
     const onEdit = vi.fn();
     renderList({ onEdit });

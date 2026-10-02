@@ -20,6 +20,17 @@ async def _paid_booking_on_sample_tour(client, db_session, sample_tours):
     await client.post("/api/tours/passeio-bugre-orla/agendamentos", json=_booking_payload())
 
 
+async def _persist_inactive_sample_tour(db_session, sample_tours):
+    """Persiste `sample_tours[0]` (id `passeio-bugre-orla`) já desativado."""
+    inactive = sample_tours[0]
+    inactive.ativo = False
+    await persist(db_session, inactive)
+
+
+async def _get_day_bookings(client, data="2026-09-28"):
+    return await client.get("/api/tours/passeio-bugre-orla/agendamentos", params={"data": data})
+
+
 @pytest.mark.asyncio
 async def test_get_agenda_returns_occupancy_for_every_day_of_month(
     client, db_session, sample_tours
@@ -40,6 +51,14 @@ async def test_get_agenda_unknown_tour_returns_404(client):
     assert response.status_code == 404
 
 
+@pytest.mark.asyncio
+async def test_get_agenda_inactive_tour_returns_404(client, db_session, sample_tours):
+    await _persist_inactive_sample_tour(db_session, sample_tours)
+
+    response = await client.get("/api/tours/passeio-bugre-orla/agenda", params={"mes": "2026-09"})
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize(
     "mes", ["2026-9", "2026/09", "setembro-2026", "2026-13", "2026-00", "0000-09", ""]
 )
@@ -48,16 +67,20 @@ async def test_get_agenda_invalid_mes_returns_422(client, db_session, sample_tou
     await persist(db_session, sample_tours[0])
 
     response = await client.get("/api/tours/passeio-bugre-orla/agenda", params={"mes": mes})
+
     assert response.status_code == 422
+    # Mesmo shape do 422 nativo do FastAPI (`detail` é lista de `ValidationError`, não string) —
+    # é o que o OpenAPI documenta pra esse status em toda rota, e o schemathesis prova no CI.
+    detail = response.json()["detail"]
+    assert isinstance(detail, list)
+    assert detail[0]["loc"] == ["query", "mes"]
 
 
 @pytest.mark.asyncio
 async def test_list_day_bookings_returns_only_paid(client, db_session, sample_tours):
     await _paid_booking_on_sample_tour(client, db_session, sample_tours)
 
-    response = await client.get(
-        "/api/tours/passeio-bugre-orla/agendamentos", params={"data": "2026-09-28"}
-    )
+    response = await _get_day_bookings(client)
 
     assert response.status_code == 200
     [booking] = response.json()
@@ -78,6 +101,14 @@ async def test_list_day_bookings_invalid_data_returns_422(client, db_session, sa
 @pytest.mark.asyncio
 async def test_list_day_bookings_unknown_tour_returns_404(client):
     response = await client.get("/api/tours/nao-existe/agendamentos", params={"data": "2026-09-28"})
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_day_bookings_inactive_tour_returns_404(client, db_session, sample_tours):
+    await _persist_inactive_sample_tour(db_session, sample_tours)
+
+    response = await _get_day_bookings(client)
     assert response.status_code == 404
 
 

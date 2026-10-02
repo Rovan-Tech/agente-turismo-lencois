@@ -310,14 +310,16 @@ describe("demoApi bookings", () => {
     expect(agenda?.find((day) => day.data === "2026-10-06")?.ocupadas).toBe(0);
   });
 
-  it("refuses to book a deactivated tour with 404, like the server, while still listing its days", async () => {
+  it("treats a deactivated tour as gone for booking, like the server: 404 to book, read or list", async () => {
     await done(demo.deleteTour(TOUR));
 
     const booking = await done(demo.createBooking(TOUR, payload));
     const agenda = await done(demo.getTourAgenda(TOUR, "2026-10"));
+    const dayBookings = await done(demo.getDayBookings(TOUR, "2026-10-05"));
 
     expect(booking).toMatchObject({ ok: false, status: 404 });
-    expect(agenda).toHaveLength(31);
+    expect(agenda).toBeNull();
+    expect(dayBookings).toBeNull();
   });
 
   it("keeps bookings and seats isolated per tour: booking one tour never touches another", async () => {
