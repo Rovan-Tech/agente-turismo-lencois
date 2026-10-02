@@ -1,7 +1,9 @@
 import { Outlet } from "react-router-dom";
 
 import { useMe } from "../features/handoff/useMe";
+import { IS_DEMO } from "../lib/demo";
 import { useTheme } from "../lib/useTheme";
+import { DemoBanner } from "./DemoBanner";
 import { MobileHeader } from "./MobileHeader";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -11,12 +13,15 @@ export function AppShell() {
   const [theme, toggleTheme] = useTheme();
   const me = useMe();
   return (
-    <div className="min-h-screen bg-page md:flex">
-      <Sidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <MobileHeader me={me} theme={theme} onToggleTheme={toggleTheme} />
-        <Topbar now={new Date()} me={me} theme={theme} onToggleTheme={toggleTheme} />
-        <Outlet />
+    <div className="min-h-screen bg-page">
+      {IS_DEMO && <DemoBanner />}
+      <div className="md:flex md:min-h-screen">
+        <Sidebar />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <MobileHeader me={me} theme={theme} onToggleTheme={toggleTheme} />
+          <Topbar now={new Date()} me={me} theme={theme} onToggleTheme={toggleTheme} />
+          <Outlet />
+        </div>
       </div>
     </div>
   );

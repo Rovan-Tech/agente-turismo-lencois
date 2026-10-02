@@ -1,3 +1,4 @@
+import { IS_DEMO } from "../lib/demo";
 import type { Me } from "../types";
 import { UserIcon } from "./icons";
 
@@ -20,7 +21,7 @@ export function UserMenu({ me }: { me: Me | null }) {
         </span>
         {me?.nome ?? "Equipe"}
       </span>
-      {me && (
+      {me && !IS_DEMO && (
         <a href={LOGOUT_URL} className={LINK}>
           Sair
         </a>
@@ -31,7 +32,7 @@ export function UserMenu({ me }: { me: Me | null }) {
 
 /** Versão do celular: só o "Sair" (o nome e o avatar não cabem ao lado da marca). */
 export function MobileSignOut({ me }: { me: Me | null }) {
-  return me ? (
+  return me && !IS_DEMO ? (
     <a href={LOGOUT_URL} className={`text-sm ${LINK}`}>
       Sair
     </a>
