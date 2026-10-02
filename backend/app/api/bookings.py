@@ -125,7 +125,7 @@ async def create_booking(
     Args:
         tour_id: id do passeio.
         payload: dados do agendamento, já validados.
-        http_request: requisição crua, só pra extrair IP/user-agent da trilha de auditoria.
+        http_request: requisição crua: ator (Access), IP e user-agent da trilha de auditoria.
         db: sessão assíncrona injetada pelo FastAPI.
 
     Returns:
