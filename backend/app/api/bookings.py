@@ -144,7 +144,8 @@ async def create_booking(
         O agendamento criado, mais ``capacidade`` e ``ocupadas`` do dia já atualizados.
 
     Raises:
-        HTTPException: 404 se o passeio não existir, 409 se não houver vagas suficientes.
+        HTTPException: 404 se o passeio não existir ou estiver desativado, 409 se não houver
+            vagas suficientes.
     """
     request = booking_service.NewBookingRequest(
         data=payload.data,
