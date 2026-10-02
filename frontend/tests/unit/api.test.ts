@@ -265,6 +265,7 @@ describe("lib/api", () => {
     expect(url).toContain("/api/tours/passeio-bugre-orla/agendamentos");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual(payload);
+    expect(init.headers["X-Panel-Request"]).toBe("1");
     expect(result).toEqual({ ok: true, data: created });
   });
 

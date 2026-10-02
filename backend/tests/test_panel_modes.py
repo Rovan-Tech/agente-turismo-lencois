@@ -14,7 +14,7 @@ from tests.access_support import (
     get_panel,
     jwt_header,
 )
-from tests.conftest import TEST_DASHBOARD_TOKEN
+from tests.conftest import TEST_DASHBOARD_TOKEN, persist
 from tests.ingest_support import INGEST_URL, app_log_text, valid_payload
 
 # --- Modos de transição: token -> both -> access ---------------------------------------------
@@ -94,6 +94,7 @@ PANEL_MUTATIONS = {
     "post_tour": ("POST", "/api/tours"),
     "put_tour": ("PUT", "/api/tours/x"),
     "delete_tour": ("DELETE", "/api/tours/x"),
+    "post_booking": ("POST", "/api/tours/x/agendamentos"),
 }
 
 
@@ -150,6 +151,43 @@ async def test_panel_auth_mutation_logs_the_actor_sub_without_email_or_jwt(clien
     assert "pessoa-123" in logged
     assert "pessoa@exemplo.com" not in logged
     assert token not in logged
+
+
+BOOKING_PAYLOAD = {"data": "2026-09-28", "pessoas": 2, "forma_pagamento": "pix"}
+
+
+def _booking_audit_actor(caplog: pytest.LogCaptureFixture) -> object:
+    (record,) = [r for r in caplog.records if getattr(r, "event", None) == "booking_created"]
+    return getattr(record, "ator", None)
+
+
+@pytest.mark.asyncio
+async def test_booking_audit_log_records_the_person_from_the_access_jwt(
+    client, db_session, sample_tours, access, caplog
+):
+    await persist(db_session, sample_tours[0])
+    caplog.set_level(logging.INFO, logger="app")
+    headers = jwt_header(access.token()) | {"X-Panel-Request": "1"}
+
+    response = await client.post(
+        "/api/tours/passeio-bugre-orla/agendamentos", json=BOOKING_PAYLOAD, headers=headers
+    )
+
+    assert response.status_code == 201
+    assert _booking_audit_actor(caplog) == "pessoa-123"
+
+
+@pytest.mark.asyncio
+async def test_booking_audit_log_falls_back_to_dashboard_with_the_static_token(
+    client, db_session, sample_tours, caplog
+):
+    await persist(db_session, sample_tours[0])
+    caplog.set_level(logging.INFO, logger="app")
+
+    response = await client.post("/api/tours/passeio-bugre-orla/agendamentos", json=BOOKING_PAYLOAD)
+
+    assert response.status_code == 201
+    assert _booking_audit_actor(caplog) == "dashboard"
 
 
 @pytest.mark.asyncio

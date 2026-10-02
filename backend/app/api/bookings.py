@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_dashboard_auth
+from app.core.access_jwt import AccessIdentity
 from app.db.session import get_db
 from app.models.booking import Booking, PaymentMethod
 from app.services import booking_service, tour_catalog
@@ -139,10 +140,11 @@ async def create_booking(
         forma_pagamento=payload.forma_pagamento,
         telefone=payload.telefone,
     )
-    # Ator fixo "dashboard": o painel não tem login individual (token único da agência, SEC-3
-    # pré-existente) — não há como saber qual atendente especificamente, por ora.
+    # Com o JWT do Access o `sub` identifica a pessoa; só o token fixo (sem ninguém por trás) cai
+    # em "dashboard".
+    identity = getattr(http_request.state, "identity", None)
     context = booking_service.RequestContext(
-        actor="dashboard",
+        actor=identity.sub if isinstance(identity, AccessIdentity) else "dashboard",
         ip=http_request.client.host if http_request.client else None,
         user_agent=http_request.headers.get("user-agent"),
     )

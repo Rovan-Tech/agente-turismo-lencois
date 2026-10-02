@@ -65,9 +65,10 @@ def test_booking_migration_goes_up_down_and_up_again(alembic_config):
     assert "capacidade_diaria" in _tour_columns(sync_url)
     assert "bookings" in _table_names(sync_url)
 
-    command.downgrade(config, "0003")
+    command.downgrade(config, "0004")
     assert "capacidade_diaria" not in _tour_columns(sync_url)
     assert "bookings" not in _table_names(sync_url)
+    assert "humano_sub" in _conversation_columns(sync_url)
 
     command.upgrade(config, "head")
     assert "capacidade_diaria" in _tour_columns(sync_url)
