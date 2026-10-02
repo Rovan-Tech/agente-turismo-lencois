@@ -82,9 +82,16 @@ def pipeline_spies(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[object]]:
 
 
 async def persist(db_session: AsyncSession, *objects: object) -> None:
-    """Adiciona e commita um ou mais objetos de uma vez, para preparar o estado de um teste."""
+    """Adiciona um ou mais objetos, na ordem dada, e commita — para preparar o estado de um teste.
+
+    Dá `flush()` depois de cada `add()`: sem `relationship()` entre os modelos, o SQLAlchemy não
+    tem como ordenar os INSERTs por dependência de FK sozinho. SQLite não aplica a constraint e
+    deixava passar calado; o Postgres recusa se um `Booking` for inserido antes do `Tour` que ele
+    referencia. Passar o `Tour` antes do `Booking` nos argumentos garante a ordem certa.
+    """
     for obj in objects:
         db_session.add(obj)
+        await db_session.flush()
     await db_session.commit()
 
 
