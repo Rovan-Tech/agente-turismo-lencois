@@ -13,9 +13,9 @@ export function AppShell() {
   const [theme, toggleTheme] = useTheme();
   const me = useMe();
   return (
-    <div className="min-h-screen bg-page">
+    <div className="flex min-h-screen flex-col bg-page">
       {IS_DEMO && <DemoBanner />}
-      <div className="md:flex md:min-h-screen">
+      <div className="md:flex md:flex-1">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">
           <MobileHeader me={me} theme={theme} onToggleTheme={toggleTheme} />

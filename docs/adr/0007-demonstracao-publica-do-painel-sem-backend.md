@@ -62,7 +62,8 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
   `agente-turismo-lencois-demo`), com um job próprio no `deploy.yml` que **não recebe** `DATABASE_URL`
   nem token algum, só as credenciais de publicação do Cloudflare. O build da demonstração não
   inclui `VITE_API_BASE_URL` nem token.
-- **Isolamento verificável:** `frontend/public/_headers` da demonstração com CSP `default-src
+- **Isolamento verificável:** um `_headers` emitido pelo build de demonstração (plugin em
+  `frontend/demo/vitePlugin.ts`, com o hash do script inline do tema) com CSP `default-src
   'self'` e `connect-src 'none'` (o navegador recusa qualquer chamada de rede), e um teste no CI
   que procura no pacote publicado o endereço do Cloud Run, `run.app` e padrões de token.
 - **Funções futuras na demonstração:** só entram quando existirem de verdade no produto; uma
@@ -102,7 +103,8 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
    real, pacote publicado sem endereço de backend nem token, faixa de demonstração visível, E2E do
    fluxo (abrir conversa, mudar status, ver passeios).
 3. Implementar o modo demonstração, o script de build, o segundo projeto no Pages e o job de
-   deploy.
+   deploy. **Estado (2026-10-01):** modo, build e job implementados; o projeto do Pages será criado
+   no primeiro deploy depois do merge e `DEMO_WHATSAPP` segue sem definir.
 4. Atualizar `README.md`, `docs/deploy.md` e `docs/design-system.md` (faixa de demonstração).
 5. PR no repositório `rovan-tech` com a página do projeto.
 6. **Reversão:** desativar o job e apagar o projeto do Pages. A demonstração não toca no produto

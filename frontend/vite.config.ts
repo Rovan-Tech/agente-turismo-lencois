@@ -1,7 +1,7 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
-import { demoPlugins } from "./demo/vitePlugin";
+import { demoPlugins } from "./demo/vitePlugin.ts";
 
 // `--mode demo` gera a demonstração pública (ADR-0007): dados em memória, sem rede nem backend.
 export default defineConfig(({ mode }) => {

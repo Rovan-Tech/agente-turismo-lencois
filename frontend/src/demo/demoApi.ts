@@ -30,6 +30,7 @@ let conversations: ConversationDetail[] = buildDemoConversations();
 let tours: Tour[] = DEMO_TOURS.map((tour) => ({ ...tour }));
 let nextId = 1;
 const answeredByTourist = new Set<string>();
+const followUpTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /** Volta tudo ao estado inicial (usado pelos testes; na tela basta recarregar a página). */
 export function resetDemo(): void {
@@ -37,6 +38,15 @@ export function resetDemo(): void {
   tours = DEMO_TOURS.map((tour) => ({ ...tour }));
   nextId = 1;
   answeredByTourist.clear();
+  followUpTimers.forEach((timer) => clearTimeout(timer));
+  followUpTimers.clear();
+}
+
+/** O turista da demonstração só responde enquanto uma pessoa atende: sair do atendimento o cala. */
+function stopFollowUp(conversationId: string): void {
+  clearTimeout(followUpTimers.get(conversationId));
+  followUpTimers.delete(conversationId);
+  answeredByTourist.delete(conversationId);
 }
 
 /** Pequena espera, para a tela mostrar os estados de "carregando" como no produto. */
@@ -92,8 +102,10 @@ function clearHandling(conversation: ConversationDetail): void {
 }
 
 export function listConversations(): Promise<ConversationSummary[] | null> {
+  // Como o servidor: resolvidas por último e, dentro de cada grupo, a mais recente primeiro.
+  const resolvedLast = (c: ConversationDetail) => (c.status === "resolvida" ? 1 : 0);
   const summaries = [...conversations]
-    .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+    .sort((a, b) => resolvedLast(a) - resolvedLast(b) || b.updated_at.localeCompare(a.updated_at))
     .map((conversation) => {
       const last = conversation.messages.at(-1);
       return {
@@ -112,7 +124,12 @@ export function listConversations(): Promise<ConversationSummary[] | null> {
 }
 
 export function getConversation(id: string): Promise<ConversationDetail | null> {
-  return respond(find(id) ?? null);
+  const conversation = find(id);
+  if (!conversation) return respond(null);
+  // O passeio sugerido acompanha o catálogo: editar o passeio muda o que a conversa mostra.
+  const suggested = conversation.passeio_sugerido;
+  const current = suggested ? (tours.find((t) => t.id === suggested.id) ?? suggested) : null;
+  return respond({ ...conversation, passeio_sugerido: current });
 }
 
 export function getMe(): Promise<Me | null> {
@@ -126,7 +143,11 @@ export async function updateConversationStatus(
   const conversation = find(id);
   if (!conversation) return refuse(404, "conversa não encontrada");
   conversation.status = status;
-  if (status === "resolvida") clearHandling(conversation);
+  conversation.updated_at = new Date().toISOString();
+  if (status === "resolvida") {
+    clearHandling(conversation);
+    stopFollowUp(conversation.id);
+  }
   return respond({ ok: true, data: header(conversation) });
 }
 
@@ -164,7 +185,7 @@ export async function giveBackConversation(id: string): Promise<ApiResult<Conver
     addMessage(conversation, "atendente", giveBackText(conversation.idioma_detectado));
   }
   clearHandling(conversation);
-  answeredByTourist.delete(conversation.id);
+  stopFollowUp(conversation.id);
   return respond({ ok: true, data: header(conversation) });
 }
 
@@ -172,15 +193,15 @@ export async function giveBackConversation(id: string): Promise<ApiResult<Conver
 function scheduleTouristFollowUp(conversation: ConversationDetail): void {
   if (answeredByTourist.has(conversation.id)) return;
   answeredByTourist.add(conversation.id);
-  setTimeout(() => {
-    if (conversation.atendimento === "humano") {
-      addMessage(
-        conversation,
-        "turista",
-        FOLLOW_UP[conversation.idioma_detectado ?? "pt"] ?? FOLLOW_UP.pt
-      );
-    }
+  const timer = setTimeout(() => {
+    followUpTimers.delete(conversation.id);
+    addMessage(
+      conversation,
+      "turista",
+      FOLLOW_UP[conversation.idioma_detectado ?? "pt"] ?? FOLLOW_UP.pt
+    );
   }, FOLLOW_UP_DELAY_MS);
+  followUpTimers.set(conversation.id, timer);
 }
 
 export async function sendConversationReply(

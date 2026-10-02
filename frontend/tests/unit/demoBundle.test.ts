@@ -40,13 +40,18 @@ describe("demonstration bundle", () => {
     expect(script?.text).toContain("Demonstração com dados fictícios. Nada é salvo.");
   });
 
-  it("tells the browser to refuse any network call and to run only the known inline script", () => {
+  it("tells the browser to refuse fetch and forms, and to run only the known inline script", async () => {
     const headers = files.find((f) => f.name === "_headers")?.text ?? "";
     const html = files.find((f) => f.name === "index.html")?.text ?? "";
+    const inline = /<script>([\s\S]*?)<\/script>/.exec(html)?.[1] ?? "";
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(inline));
+    const hash = `'sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}'`;
 
     expect(headers).toContain("connect-src 'none'");
     expect(headers).toContain("default-src 'self'");
-    expect(headers).toMatch(/script-src 'self' 'sha256-[A-Za-z0-9+/=]+'/);
-    expect(html).toContain("<script>");
+    expect(headers).toContain("form-action 'none'");
+    expect(headers).toContain("frame-ancestors 'none'");
+    expect(headers).toContain(`script-src 'self' ${hash}`);
+    expect(inline).not.toBe("");
   });
 });

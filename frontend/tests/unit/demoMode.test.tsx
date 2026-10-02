@@ -17,6 +17,7 @@ async function load(env: Record<string, string>) {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   window.localStorage.clear();
 });
 
@@ -46,6 +47,7 @@ describe("demonstration mode", () => {
   });
 
   it("puts the banner above the panel only in the demonstration", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("sem rede")));
     const real = await load({});
     const view = render(
       <MemoryRouter>

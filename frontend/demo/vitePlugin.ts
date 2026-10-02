@@ -26,8 +26,8 @@ function swapApi(): Plugin {
 }
 
 /**
- * Cabeçalhos do Pages para a demonstração: `connect-src 'none'` faz o navegador recusar qualquer
- * chamada de rede, mesmo que um dia o código tente. O script do tema (inline, antes da pintura) é
+ * Cabeçalhos do Pages para a demonstração: `connect-src 'none'` faz o navegador recusar fetch, XHR e
+ * WebSocket (as fontes do Google, por CSS, são a única rede externa), mesmo que um dia o código tente. O script do tema (inline, antes da pintura) é
  * liberado pelo hash, não por `unsafe-inline`.
  */
 function demoHeaders(): Plugin {

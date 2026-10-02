@@ -115,13 +115,6 @@ describe("demoApi conversations", () => {
     expect(detail?.messages.filter((m) => m.conteudo === "Posso ajudar!")).toHaveLength(1);
   });
 
-  it("refuses a reply before taking over", async () => {
-    expect(await done(demo.sendConversationReply(IN_WINDOW, "Oi", "envio-0001"))).toMatchObject({
-      ok: false,
-      status: 409,
-    });
-  });
-
   it("lets the tourist answer back once after the visitor replies, so the screen has something to reread", async () => {
     await done(demo.takeOverConversation(IN_WINDOW));
     await done(demo.sendConversationReply(IN_WINDOW, "Pick up is at 8am.", "envio-0001"));
@@ -161,6 +154,79 @@ describe("demoApi conversations", () => {
 
     const detail = await done(demo.getConversation(IN_WINDOW));
     expect(detail?.atendimento).toBe("ia");
+  });
+});
+
+describe("demoApi behaviour as the real server", () => {
+  it("lists resolved conversations last, and a conversation just resolved moves down", async () => {
+    await done(demo.updateConversationStatus(IN_WINDOW, "resolvida"));
+
+    const list = (await done(demo.listConversations())) ?? [];
+
+    const statuses = list.map((c) => c.status === "resolvida");
+    expect(statuses).toEqual([...statuses].sort((a, b) => Number(a) - Number(b)));
+    expect(list.at(-1)?.status).toBe("resolvida");
+    expect(list[0].id).not.toBe(IN_WINDOW);
+  });
+
+  /** Quantas mensagens do turista a conversa tem agora. */
+  async function touristMessages(id: string) {
+    const detail = await done(demo.getConversation(id));
+    return detail?.messages.filter((m) => m.autor === "turista").length ?? 0;
+  }
+
+  it("does not let the tourist answer when the visitor gave the conversation back first", async () => {
+    const before = await touristMessages(IN_WINDOW);
+    await done(demo.takeOverConversation(IN_WINDOW));
+    await done(demo.sendConversationReply(IN_WINDOW, "Oi", "envio-0001"));
+
+    await done(demo.giveBackConversation(IN_WINDOW));
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(await touristMessages(IN_WINDOW)).toBe(before);
+  });
+
+  it("lets the tourist answer only once after taking over again quickly", async () => {
+    const before = await touristMessages(IN_WINDOW);
+    await done(demo.takeOverConversation(IN_WINDOW));
+    await done(demo.sendConversationReply(IN_WINDOW, "Um", "envio-0001"));
+    await done(demo.giveBackConversation(IN_WINDOW));
+    await done(demo.takeOverConversation(IN_WINDOW));
+    await done(demo.sendConversationReply(IN_WINDOW, "Dois", "envio-0002"));
+
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(await touristMessages(IN_WINDOW)).toBe(before + 1);
+  });
+
+  it("shows the suggested tour as the catalog has it now, after the visitor edits the tour", async () => {
+    const tour = DEMO_TOURS[1];
+    await done(demo.updateTour(tour.id, { ...tour, preco_reais: 999 }));
+
+    const detail = await done(demo.getConversation(IN_WINDOW));
+
+    expect(detail?.passeio_sugerido).toMatchObject({ id: tour.id, preco_reais: 999 });
+  });
+
+  it.each([
+    ["before taking over", IN_WINDOW],
+    ["to a resolved conversation", RESOLVED],
+  ])("refuses a reply %s", async (_when, id) => {
+    expect(await done(demo.sendConversationReply(id, "Oi", "envio-0001"))).toMatchObject({
+      ok: false,
+      status: 409,
+    });
+  });
+
+  it.each<[string, () => Promise<unknown>]>([
+    ["changing the status", () => demo.updateConversationStatus("nao-existe", "aberta")],
+    ["taking over", () => demo.takeOverConversation("nao-existe")],
+    ["giving back", () => demo.giveBackConversation("nao-existe")],
+    ["replying", () => demo.sendConversationReply("nao-existe", "Oi", "envio-0001")],
+    ["updating a tour", () => demo.updateTour("nao-existe", { ...DEMO_TOURS[0] })],
+    ["deactivating a tour", () => demo.deleteTour("nao-existe")],
+  ])("answers 404 when %s something that does not exist", async (_what, call) => {
+    expect(await done(call())).toMatchObject({ ok: false, status: 404 });
   });
 });
 

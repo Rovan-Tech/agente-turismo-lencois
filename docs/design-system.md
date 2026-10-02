@@ -125,7 +125,7 @@ Regras: foco sempre visível (`:focus-visible` global), tudo operável por tecla
 ## Componentes
 
 - **`SuggestedTourCard`** (`src/features/suggested-tour/`): seção "Passeio sugerido pela IA" do painel da conversa. Mostra nome, descrição, selos (dificuldade em `accent-subtle`; duração e acessibilidade em `neutral-subtle`) e o preço por pessoa. Sem sugestão, mostra o texto "A IA ainda não sugeriu um passeio nesta conversa." em vez de sumir. O conteúdo vem do catálogo e é sempre texto (nunca HTML). Só usa tokens; não cria cor nova.
-- **`DemoBanner`** (`src/components/`): faixa fixa no topo da demonstração pública (ADR-0007), "Demonstração com dados fictícios. Nada é salvo.", com o botão de contato quando `DEMO_WHATSAPP` existe. Usa `bg-action-secondary` + `text-on-action` (mesmo par do selo "Precisa de atenção": 5,75:1 claro | 7,22:1 escuro). Só aparece no build `--mode demo`.
+- **`DemoBanner`** (`src/components/`): faixa fixa (`sticky`, `z-sticky`) no topo da demonstração pública (ADR-0007), "Demonstração com dados fictícios. Nada é salvo.", com o botão de contato quando `DEMO_WHATSAPP` existe. Usa `bg-action-secondary` + `text-on-action` (mesmo par do selo "Precisa de atenção": 5,75:1 claro | 7,22:1 escuro). Só aparece no build `--mode demo`.
 
 ## Consolidação feita
 

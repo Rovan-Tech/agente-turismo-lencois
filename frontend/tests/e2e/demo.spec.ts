@@ -14,14 +14,13 @@ test("says it is a demonstration with fictional data and never calls an API", as
     /Demonstração com dados fictícios. Nada é salvo./
   );
   await expect(page.getByText("+55 00 90000-0001")).toBeVisible();
-  const ownOrigin = new URL(page.url()).origin;
-  const calls = requests.filter(
-    (url) => url.startsWith("http") && /\/api\//.test(new URL(url).pathname)
-  );
-  expect(calls).toEqual([]);
-  expect(requests.filter((url) => url.startsWith(ownOrigin) && url.includes("run.app"))).toEqual(
-    []
-  );
+  const own = new URL(page.url()).origin;
+  const external = requests
+    .filter((url) => url.startsWith("http"))
+    .filter((url) => new URL(url).origin !== own)
+    .filter((url) => !/^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(url));
+  expect(external).toEqual([]);
+  expect(requests.filter((url) => new URL(url).pathname.startsWith("/api/"))).toEqual([]);
 });
 
 test("lets a visitor take over a conversation, answer and give it back, all on screen", async ({
