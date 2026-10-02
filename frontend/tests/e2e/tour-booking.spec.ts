@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { bookThreePeopleWithBoleto } from "./booking";
+
 interface FakeBooking {
   id: string;
   tour_id: string;
@@ -128,12 +130,7 @@ test("books a tour, decrements the seats instantly and lists it as paid", async 
   await expect(page.getByText(`${CAPACIDADE} vagas`)).toBeVisible();
   await expect(page.getByText("Nenhum agendamento pago para este dia ainda.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Aumentar número de pessoas" }).click();
-  await page.getByRole("button", { name: "Aumentar número de pessoas" }).click();
-  // `force`: o rádio é visualmente escondido (`sr-only`) atrás do rótulo estilizado que o cobre
-  // por inteiro — o mesmo padrão que o teclado já valida no teste abaixo, sem o hit-test do mouse.
-  await page.getByRole("radio", { name: "Boleto" }).check({ force: true });
-  await page.getByRole("button", { name: "Simular pagamento aprovado" }).click();
+  await bookThreePeopleWithBoleto(page);
 
   await expect(page.getByText(`${CAPACIDADE - 3} vagas`)).toBeVisible();
   await expect(page.getByText("Telefone não informado")).toBeVisible();

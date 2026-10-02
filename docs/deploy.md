@@ -128,8 +128,9 @@ Meta. Para isso o backend precisa dos dados do número **de produção**:
 > fluxo do n8n que silencia a IA no produto real é publicado à mão (ADR-0008).
 
 Uma versão do painel que **qualquer pessoa abre e usa** (abrir conversas, mudar status, assumir,
-responder, devolver à IA, editar passeios), com **dados fictícios e 100% em memória**: não há
-backend, banco, token nem `localStorage`; recarregar a página volta ao começo. É outro projeto do
+responder, devolver à IA, editar passeios, ver as vagas e agendar passeios com pagamento simulado),
+com **dados fictícios e 100% em memória**: não há backend, banco, token nem `localStorage`;
+recarregar a página volta ao começo. É outro projeto do
 Cloudflare Pages, `agente-turismo-lencois-demo` (endereço `agente-turismo-lencois-demo.pages.dev`),
 fora do Cloudflare Access, que continua só no painel real.
 

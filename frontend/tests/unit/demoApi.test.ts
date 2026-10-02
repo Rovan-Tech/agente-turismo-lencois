@@ -298,6 +298,41 @@ describe("demoApi bookings", () => {
     expect(overflow).toMatchObject({ ok: false, status: 409 });
   });
 
+  it("accepts a booking that exactly fills the day, adding up across bookings, and refuses one more", async () => {
+    const first = await done(demo.createBooking(TOUR, { ...payload, pessoas: 27 }));
+    const second = await done(demo.createBooking(TOUR, { ...payload, pessoas: 3 }));
+    const overflow = await done(demo.createBooking(TOUR, { ...payload, pessoas: 1 }));
+    const agenda = await done(demo.getTourAgenda(TOUR, "2026-10"));
+
+    expect(first).toMatchObject({ ok: true, data: { ocupadas: 27 } });
+    expect(second).toMatchObject({ ok: true, data: { ocupadas: 30 } });
+    expect(overflow).toMatchObject({ ok: false, status: 409 });
+    expect(agenda?.find((day) => day.data === "2026-10-06")?.ocupadas).toBe(0);
+  });
+
+  it("refuses to book a deactivated tour with 404, like the server, while still listing its days", async () => {
+    await done(demo.deleteTour(TOUR));
+
+    const booking = await done(demo.createBooking(TOUR, payload));
+    const agenda = await done(demo.getTourAgenda(TOUR, "2026-10"));
+
+    expect(booking).toMatchObject({ ok: false, status: 404 });
+    expect(agenda).toHaveLength(31);
+  });
+
+  it("keeps bookings and seats isolated per tour: booking one tour never touches another", async () => {
+    const other = DEMO_TOURS[1].id;
+
+    await done(demo.createBooking(TOUR, { ...payload, pessoas: 30 }));
+    const otherAgenda = await done(demo.getTourAgenda(other, "2026-10"));
+    const otherDayBookings = await done(demo.getDayBookings(other, "2026-10-05"));
+    const otherStillBookable = await done(demo.createBooking(other, { ...payload, pessoas: 30 }));
+
+    expect(otherAgenda?.find((day) => day.data === "2026-10-05")?.ocupadas).toBe(0);
+    expect(otherDayBookings).toEqual([]);
+    expect(otherStillBookable).toMatchObject({ ok: true, data: { ocupadas: 30 } });
+  });
+
   it("forgets the bookings when the demo is reset", async () => {
     await done(demo.createBooking(TOUR, payload));
 

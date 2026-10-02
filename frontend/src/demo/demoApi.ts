@@ -282,17 +282,20 @@ export function getTourAgenda(tourId: string, mes: string): Promise<DayOccupancy
   );
 }
 
+/** Lista os agendamentos pagos daquele passeio e dia; passeio inativo continua listado, como a API real. */
 export function getDayBookings(tourId: string, data: string): Promise<Booking[] | null> {
   if (!tours.some((tour) => tour.id === tourId)) return respond(null);
   return respond(bookings.filter((booking) => booking.tour_id === tourId && booking.data === data));
 }
 
-/** Como no servidor: entra sempre como pago e recusa (409) o que estoura a capacidade do dia. */
+/** Como no servidor: só passeio ativo (404), sempre pago e recusa (409) o que estoura o dia. */
 export async function createBooking(
   tourId: string,
   payload: BookingCreateInput
 ): Promise<ApiResult<BookingCreated>> {
-  if (!tours.some((tour) => tour.id === tourId)) return refuse(404, "passeio não encontrado");
+  if (!tours.some((tour) => tour.id === tourId && tour.ativo)) {
+    return refuse(404, "passeio não encontrado");
+  }
   const occupied = occupiedOn(tourId, payload.data);
   if (occupied + payload.pessoas > DEMO_DAILY_CAPACITY) {
     return refuse(409, "não há vagas suficientes nesse dia");

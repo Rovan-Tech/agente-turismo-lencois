@@ -50,7 +50,9 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
   Sem rede, sem `localStorage`, `sessionStorage`, IndexedDB ou cookies: "não salva nada" vale ao
   pé da letra, e recarregar a página volta ao começo. As ações funcionam só na tela (marcar como
   resolvida, mudar status, ver e editar passeios e, desde o ADR-0008, assumir a conversa, responder
-  e devolver à IA: o turista da demonstração responde uma vez sozinho para a tela mostrar a releitura).
+  e devolver à IA: o turista da demonstração responde uma vez sozinho para a tela mostrar a
+  releitura; ver as vagas do calendário e agendar passeios com pagamento simulado, com capacidade
+  fixa de 30 por dia).
 - **Dados 100% fictícios:** nomes inventados e telefones de uma faixa **inexistente** (DDD `00`,
   por exemplo `+55 00 90000-0001`). Um teste falha se alguma fixture tiver telefone fora desse
   padrão, para nenhum número real entrar na demonstração.
@@ -67,7 +69,7 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
   inclui `VITE_API_BASE_URL` nem token.
 - **Isolamento verificável:** um `_headers` emitido pelo build de demonstração (plugin em
   `frontend/demo/vitePlugin.ts`, com o hash do script inline do tema) com CSP `default-src
-  'self'` e `connect-src 'none'` (o navegador recusa qualquer chamada de rede), e um teste no CI
+'self'` e `connect-src 'none'` (o navegador recusa qualquer chamada de rede), e um teste no CI
   que procura no pacote publicado o endereço do Cloud Run, `run.app` e padrões de token.
 - **Funções futuras na demonstração:** só entram quando existirem de verdade no produto; uma
   prévia de algo ainda não pronto precisa vir marcada como "em breve".
