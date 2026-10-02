@@ -29,6 +29,7 @@ class Tour(Base):
     faixa_etaria_recomendada: Mapped[str] = mapped_column(String(200), default="")
     preco_reais: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
+    capacidade_diaria: Mapped[int] = mapped_column(default=30)
 
     def to_catalog_dict(self) -> dict:
         return {

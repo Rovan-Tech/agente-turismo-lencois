@@ -1,9 +1,13 @@
 import type {
+  Booking,
+  BookingCreateInput,
+  BookingCreated,
   ConversationDetail,
   ConversationHeader,
   ConversationMessage,
   ConversationStatus,
   ConversationSummary,
+  DayOccupancy,
   Me,
   Tour,
   TourCreateInput,
@@ -23,11 +27,15 @@ import { announcementText, FOLLOW_UP, giveBackText, WINDOW_CLOSED } from "./text
 const DAY_MS = 24 * 60 * 60 * 1000;
 const FOLLOW_UP_DELAY_MS = 6_000;
 const NETWORK_DELAY_MS = 250;
+// Mesma capacidade padrão do servidor (`server_default` da migração): a demo não edita capacidade.
+const DEMO_DAILY_CAPACITY = 30;
+const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 const VISITOR: Me = { sub: "visitante", nome: "Visitante" };
 
 let conversations: ConversationDetail[] = buildDemoConversations();
 let tours: Tour[] = DEMO_TOURS.map((tour) => ({ ...tour }));
+let bookings: Booking[] = [];
 let nextId = 1;
 const answeredByTourist = new Set<string>();
 const followUpTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -36,6 +44,7 @@ const followUpTimers = new Map<string, ReturnType<typeof setTimeout>>();
 export function resetDemo(): void {
   conversations = buildDemoConversations();
   tours = DEMO_TOURS.map((tour) => ({ ...tour }));
+  bookings = [];
   nextId = 1;
   answeredByTourist.clear();
   followUpTimers.forEach((timer) => clearTimeout(timer));
@@ -252,4 +261,62 @@ export async function deleteTour(id: string): Promise<ApiResult<Tour>> {
   const deactivated: Tour = { ...current, ativo: false };
   tours = tours.map((tour) => (tour.id === id ? deactivated : tour));
   return respond({ ok: true, data: deactivated });
+}
+
+function occupiedOn(tourId: string, data: string): number {
+  return bookings
+    .filter((booking) => booking.tour_id === tourId && booking.data === data)
+    .reduce((total, booking) => total + booking.pessoas, 0);
+}
+
+/** Ocupação dia a dia do mês; passeio inativo, inexistente ou mês inválido vira `null`, como a API. */
+export function getTourAgenda(tourId: string, mes: string): Promise<DayOccupancy[] | null> {
+  if (!tours.some((tour) => tour.id === tourId && tour.ativo) || !MONTH_PATTERN.test(mes)) {
+    return respond(null);
+  }
+  const [year, month] = mes.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return respond(
+    Array.from({ length: daysInMonth }, (_, index) => {
+      const data = `${mes}-${String(index + 1).padStart(2, "0")}`;
+      return { data, capacidade: DEMO_DAILY_CAPACITY, ocupadas: occupiedOn(tourId, data) };
+    })
+  );
+}
+
+/** Lista os agendamentos pagos daquele passeio e dia; passeio inativo ou inexistente vira `null`. */
+export function getDayBookings(tourId: string, data: string): Promise<Booking[] | null> {
+  if (!tours.some((tour) => tour.id === tourId && tour.ativo)) return respond(null);
+  return respond(bookings.filter((booking) => booking.tour_id === tourId && booking.data === data));
+}
+
+/** Como no servidor: só passeio ativo (404), sempre pago e recusa (409) o que estoura o dia. */
+export async function createBooking(
+  tourId: string,
+  payload: BookingCreateInput
+): Promise<ApiResult<BookingCreated>> {
+  if (!tours.some((tour) => tour.id === tourId && tour.ativo)) {
+    return refuse(404, "passeio não encontrado");
+  }
+  const occupied = occupiedOn(tourId, payload.data);
+  if (occupied + payload.pessoas > DEMO_DAILY_CAPACITY) {
+    return refuse(409, "não há vagas suficientes nesse dia");
+  }
+  const created: Booking = {
+    ...payload,
+    id: `demo-b${nextId++}`,
+    tour_id: tourId,
+    telefone: payload.telefone ?? null,
+    status_pagamento: "pago",
+    created_at: new Date().toISOString(),
+  };
+  bookings = [...bookings, created];
+  return respond({
+    ok: true,
+    data: {
+      ...created,
+      capacidade: DEMO_DAILY_CAPACITY,
+      ocupadas: occupied + payload.pessoas,
+    },
+  });
 }

@@ -67,6 +67,12 @@ Cores literais (hex/rgb/hsl) só existem em `tokens.css`. Um hook e o gate acusa
 | `--color-status-error-fg`       | `#601f1b` | `#f1d3d1` | estados de feedback (sucesso, alerta, erro, info) |
 | `--color-status-info-bg`        | `#f2f6fa` | `#0e1e2e` | estados de feedback (sucesso, alerta, erro, info) |
 | `--color-status-info-fg`        | `#163557` | `#d0ddec` | estados de feedback (sucesso, alerta, erro, info) |
+| `--color-occupancy-low-bg`      | `#1e7a3c` | `#64a479` | barra/célula de ocupação com vagas sobrando       |
+| `--color-occupancy-low-fg`      | `#ffffff` | `#1f2a2e` | texto sobre a ocupação baixa                      |
+| `--color-occupancy-medium-bg`   | `#87400a` | `#cc8956` | barra/célula de ocupação acima de 60%             |
+| `--color-occupancy-medium-fg`   | `#ffffff` | `#1f2a2e` | texto sobre a ocupação média                      |
+| `--color-occupancy-full-bg`     | `#9c5227` | `#d1af9b` | barra/célula de ocupação esgotada (terracota)      |
+| `--color-occupancy-full-fg`     | `#ffffff` | `#1f2a2e` | texto sobre a ocupação esgotada                   |
 
 O tema escuro segue `prefers-color-scheme` e pode ser forçado com `data-theme="dark"` ou `data-theme="light"` no `<html>`.
 
@@ -119,12 +125,19 @@ Contraste mínimo de 4,5:1 (texto) e 3:1 (texto grande, borda de campo e anel de
 | borda de campos (`border-strong` / `bg-page`)                                   | 3.52:1  | 5.42:1  |
 | borda de atenção (`border-attention` / `bg-page`), mínimo 3:1                   | 5.56:1  | 7.22:1  |
 | indicador online (`indicator-online` / `bg-page`), mínimo 3:1                   | 5.20:1  | 6.61:1  |
+| ocupação baixa (`occupancy-low-fg` / `occupancy-low-bg`)                        | 5.38:1  | 4.99:1  |
+| ocupação média (`occupancy-medium-fg` / `occupancy-medium-bg`)                  | 7.59:1  | 5.09:1  |
+| ocupação esgotada (`occupancy-full-fg` / `occupancy-full-bg`)                   | 5.75:1  | 7.22:1  |
 
 Regras: foco sempre visível (`:focus-visible` global), tudo operável por teclado, `alt` em imagens, `label` em todo campo, estado nunca só por cor (o selo de status sempre traz texto).
 
 ## Componentes
 
 - **`SuggestedTourCard`** (`src/features/suggested-tour/`): seção "Passeio sugerido pela IA" do painel da conversa. Mostra nome, descrição, selos (dificuldade em `accent-subtle`; duração e acessibilidade em `neutral-subtle`) e o preço por pessoa. Sem sugestão, mostra o texto "A IA ainda não sugeriu um passeio nesta conversa." em vez de sumir. O conteúdo vem do catálogo e é sempre texto (nunca HTML). Só usa tokens; não cria cor nova.
+- **`OccupancyBar`** (`src/features/tour-booking/`): barra de progresso + selo "X vagas"/"Esgotado" da ocupação de hoje. `role="progressbar"` com `aria-valuenow/min/max` e `aria-label`; a cor (`occupancy-low/medium/full`) nunca é a única pista, o texto do selo também muda.
+- **`BookingCalendar`** (`src/features/tour-booking/`): grade do mês, um botão por dia com `aria-label` ("Dia 28: 12 vagas") e `aria-pressed` no dia selecionado; célula colorida pelo mesmo par `occupancy-*`.
+- **`DayBookingsList`** (`src/features/tour-booking/`): lista dos agendamentos pagos do dia (telefone, pessoas, forma de pagamento, selo "Pago" em `status-success`); estado vazio com texto, nunca lista sumida.
+- **`NewBookingPanel`** (`src/features/tour-booking/`): formulário de novo agendamento — stepper de pessoas, forma de pagamento como `<fieldset>`/`<legend>` com `input type="radio"` nativo (visualmente parecido com abas, via `peer-checked:`; a navegação por setas entre as opções vem de graça do próprio radio group) e um selo fixo "Simulação — nenhum pagamento real é processado" (`status-warning`). Cada opção mostra só um texto estático simulado (QR Pix, código de barras de boleto, aviso de cartão de teste); **nunca** um campo de número de cartão, real ou fake.
 - **`DemoBanner`** (`src/components/`): faixa fixa (`sticky`, `z-sticky`) no topo da demonstração pública (ADR-0007), "Demonstração com dados fictícios. Nada é salvo.", seguida de que as respostas do assistente são exemplos fixos e de que a demonstração real se pede à Rovantech, com o botão "Falar com a Rovantech" quando `DEMO_CONTACT_URL` existe. Usa `bg-action-secondary` + `text-on-action` (mesmo par do selo "Precisa de atenção": 5,75:1 claro | 7,22:1 escuro). Só aparece no build `--mode demo`.
 
 ## Consolidação feita

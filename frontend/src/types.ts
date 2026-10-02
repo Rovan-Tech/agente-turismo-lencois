@@ -1,14 +1,18 @@
 import type { z } from "zod";
 
 import type {
+  BookingCreatedSchema,
+  BookingSchema,
   ConversationDetailSchema,
   ConversationHeaderSchema,
   ConversationMessageSchema,
   ConversationStatusSchema,
   ConversationSummarySchema,
+  DayOccupancySchema,
   HandlingSchema,
   LastMessageSchema,
   MeSchema,
+  PaymentMethodSchema,
   SuggestedTourSchema,
 } from "./lib/schemas";
 
@@ -49,3 +53,19 @@ export type TourCreateInput = Omit<Tour, "ativo"> & { ativo?: boolean };
 
 /** Payload de `PUT /api/tours/{id}`: substituição completa, `ativo` é obrigatório. */
 export type TourUpdateInput = Omit<Tour, "id">;
+
+// Tipos do agendamento com pagamento simulado: derivados dos schemas Zod (lib/schemas.ts).
+export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
+/** Ocupação de um passeio num dia (compõe o calendário do mês). */
+export type DayOccupancy = z.infer<typeof DayOccupancySchema>;
+export type Booking = z.infer<typeof BookingSchema>;
+/** Resposta de `POST .../agendamentos`: o agendamento criado mais a ocupação já atualizada. */
+export type BookingCreated = z.infer<typeof BookingCreatedSchema>;
+
+/** Payload de `POST /api/tours/{id}/agendamentos`. */
+export interface BookingCreateInput {
+  data: string;
+  pessoas: number;
+  forma_pagamento: PaymentMethod;
+  telefone?: string;
+}

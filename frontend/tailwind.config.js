@@ -17,6 +17,9 @@ const surfaces = {
   "status-warning": cssVar("color-status-warning-bg"),
   "status-error": cssVar("color-status-error-bg"),
   "status-info": cssVar("color-status-info-bg"),
+  "occupancy-low": cssVar("color-occupancy-low-bg"),
+  "occupancy-medium": cssVar("color-occupancy-medium-bg"),
+  "occupancy-full": cssVar("color-occupancy-full-bg"),
 };
 
 const texts = {
@@ -32,6 +35,9 @@ const texts = {
   "status-warning": cssVar("color-status-warning-fg"),
   "status-error": cssVar("color-status-error-fg"),
   "status-info": cssVar("color-status-info-fg"),
+  "occupancy-low": cssVar("color-occupancy-low-fg"),
+  "occupancy-medium": cssVar("color-occupancy-medium-fg"),
+  "occupancy-full": cssVar("color-occupancy-full-fg"),
 };
 
 const borders = {

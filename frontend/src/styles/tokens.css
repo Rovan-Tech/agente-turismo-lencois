@@ -120,6 +120,12 @@
   --color-status-error-fg: var(--palette-error-800);
   --color-status-info-bg: var(--palette-info-50);
   --color-status-info-fg: var(--palette-info-800);
+  --color-occupancy-low-bg: var(--palette-success-600);
+  --color-occupancy-low-fg: var(--palette-neutral-0);
+  --color-occupancy-medium-bg: var(--palette-warning-700);
+  --color-occupancy-medium-fg: var(--palette-neutral-0);
+  --color-occupancy-full-bg: var(--palette-secondary-700);
+  --color-occupancy-full-fg: var(--palette-neutral-0);
 
   /* Tipografia */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -218,6 +224,12 @@
     --color-status-error-fg: var(--palette-error-100);
     --color-status-info-bg: var(--palette-info-900);
     --color-status-info-fg: var(--palette-info-100);
+    --color-occupancy-low-bg: var(--palette-success-400);
+    --color-occupancy-low-fg: var(--palette-neutral-900);
+    --color-occupancy-medium-bg: var(--palette-warning-400);
+    --color-occupancy-medium-fg: var(--palette-neutral-900);
+    --color-occupancy-full-bg: var(--palette-secondary-300);
+    --color-occupancy-full-fg: var(--palette-neutral-900);
     color-scheme: dark;
   }
 }
@@ -253,5 +265,11 @@
   --color-status-error-fg: var(--palette-error-100);
   --color-status-info-bg: var(--palette-info-900);
   --color-status-info-fg: var(--palette-info-100);
+  --color-occupancy-low-bg: var(--palette-success-400);
+  --color-occupancy-low-fg: var(--palette-neutral-900);
+  --color-occupancy-medium-bg: var(--palette-warning-400);
+  --color-occupancy-medium-fg: var(--palette-neutral-900);
+  --color-occupancy-full-bg: var(--palette-secondary-300);
+  --color-occupancy-full-fg: var(--palette-neutral-900);
   color-scheme: dark;
 }

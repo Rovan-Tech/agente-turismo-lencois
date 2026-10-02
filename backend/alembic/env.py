@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import get_settings
 from app.db.base import Base
-from app.models import Conversation, Message, Tour  # noqa: F401 — registram os modelos no metadata
+from app.models import Booking, Conversation, Message, Tour  # noqa: F401 — registram no metadata
 
 config = context.config
 if config.config_file_name is not None:

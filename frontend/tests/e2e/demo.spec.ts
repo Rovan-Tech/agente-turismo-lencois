@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { expectNoViolations, switchTheme } from "./axe";
+import { bookThreePeopleWithBoleto } from "./booking";
 
 /** A demonstração pública (ADR-0007): painel real com dados fictícios, tudo em memória. */
 
@@ -88,3 +89,23 @@ for (const theme of ["light", "dark"] as const) {
     await expectNoViolations(page);
   });
 }
+
+test("lets a visitor book a tour with simulated payment, all on screen and without any API call", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  page.on("request", (request) => requests.push(new URL(request.url()).pathname));
+  await page.clock.setFixedTime(new Date("2026-09-28T09:00:00"));
+
+  await page.goto("/passeios");
+  await page.getByRole("link", { name: "Agendamentos" }).first().click();
+
+  await expect(page.getByRole("heading", { name: "Agendamentos do passeio" })).toBeVisible();
+  await expect(page.getByText("30 vagas")).toBeVisible();
+  await bookThreePeopleWithBoleto(page);
+
+  await expect(page.getByText("27 vagas")).toBeVisible();
+  await expect(page.getByText("3 pessoas · Boleto")).toBeVisible();
+  await expect(page.getByText("Pago")).toBeVisible();
+  expect(requests.filter((path) => path.startsWith("/api/"))).toEqual([]);
+});

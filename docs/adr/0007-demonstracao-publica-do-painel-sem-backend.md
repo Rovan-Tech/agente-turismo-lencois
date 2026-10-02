@@ -50,7 +50,9 @@ Adotar a **opção 1**, com o painel real privado (ADR-0006) e a **opção 2 com
   Sem rede, sem `localStorage`, `sessionStorage`, IndexedDB ou cookies: "não salva nada" vale ao
   pé da letra, e recarregar a página volta ao começo. As ações funcionam só na tela (marcar como
   resolvida, mudar status, ver e editar passeios e, desde o ADR-0008, assumir a conversa, responder
-  e devolver à IA: o turista da demonstração responde uma vez sozinho para a tela mostrar a releitura).
+  e devolver à IA: o turista da demonstração responde uma vez sozinho para a tela mostrar a
+  releitura; ver as vagas do calendário e agendar passeios com pagamento simulado, com capacidade
+  fixa de 30 por dia).
 - **Dados 100% fictícios:** nomes inventados e telefones de uma faixa **inexistente** (DDD `00`,
   por exemplo `+55 00 90000-0001`). Um teste falha se alguma fixture tiver telefone fora desse
   padrão, para nenhum número real entrar na demonstração.

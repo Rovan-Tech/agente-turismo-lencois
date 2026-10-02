@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import conversations, ingest, me, tours, webhook
+from app.api import bookings, conversations, ingest, me, tours, webhook
 from app.core.config import Settings, get_settings
 
 settings = get_settings()
@@ -66,6 +66,7 @@ def create_app(settings: Settings) -> FastAPI:
     )
     application.include_router(webhook.router)
     application.include_router(tours.router)
+    application.include_router(bookings.router)
     application.include_router(conversations.router)
     application.include_router(ingest.router)
     application.include_router(me.router)

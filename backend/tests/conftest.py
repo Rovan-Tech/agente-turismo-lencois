@@ -107,6 +107,40 @@ def pipeline_spies(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[object]]:
     return calls
 
 
+async def persist(db_session: AsyncSession, *objects: object) -> None:
+    """Adiciona um ou mais objetos, na ordem dada, e commita — para preparar o estado de um teste.
+
+    Dá `flush()` depois de cada `add()`: sem `relationship()` entre os modelos, o SQLAlchemy não
+    tem como ordenar os INSERTs por dependência de FK sozinho. SQLite não aplica a constraint e
+    deixava passar calado; o Postgres recusa se um `Booking` for inserido antes do `Tour` que ele
+    referencia. Passar o `Tour` antes do `Booking` nos argumentos garante a ordem certa.
+    """
+    for obj in objects:
+        db_session.add(obj)
+        await db_session.flush()
+    await db_session.commit()
+
+
+def default_tour_fields(**overrides: object) -> dict[str, object]:
+    """Campos válidos mínimos de um `Tour`, para montar variações em testes sem repetir tudo."""
+    fields: dict[str, object] = {
+        "id": "passeio-teste",
+        "nome": "Passeio de teste",
+        "descricao": "Descrição do passeio de teste.",
+        "dificuldade_fisica": DifficultyLevel.MEDIA,
+        "caminhada_areia_minutos": 10,
+        "acessivel_idosos": False,
+        "acessivel_cadeirantes": False,
+        "acessivel_criancas_pequenas": False,
+        "duracao_horas": 2.0,
+        "faixa_etaria_recomendada": "todas as idades",
+        "preco_reais": 90.0,
+        "ativo": True,
+    }
+    fields.update(overrides)
+    return fields
+
+
 @pytest.fixture
 def sample_tours() -> list[Tour]:
     return [
