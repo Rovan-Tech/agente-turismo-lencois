@@ -1,6 +1,6 @@
 ---
 name: prepare-pr
-description: Deixa a branch atual pronta e abre o PR - sincroniza com a main (resolvendo conflito se houver), confere se os testes exigidos existem, roda /security-check e o gate de qualidade completo (`scripts/quality_gate.py --full`, a mesma fonte do CI), corrige o que falhar, sobe a branch e cria o PR com título e descrição do que foi feito. Use SOMENTE quando o usuário pedir explicitamente para abrir o PR — nunca por conta própria ao terminar uma tarefa, pois o usuário precisa testar antes.
+description: Deixa a branch atual pronta e abre o PR - sincroniza com a main (resolvendo conflito se houver), confere se os testes exigidos existem, roda o gate de qualidade completo (`scripts/quality_gate.py --full`, a mesma fonte do CI), corrige o que falhar, sobe a branch e cria o PR com título e descrição do que foi feito. Use SOMENTE quando o usuário pedir explicitamente para abrir o PR — nunca por conta própria ao terminar uma tarefa, pois o usuário precisa testar antes.
 ---
 
 # prepare-pr
@@ -41,21 +41,18 @@ Automatiza tudo entre "terminei de codar nesta branch" e "PR aberto, pronto para
    componentes e Playwright para tudo visível/interativo no frontend; teste de segurança para
    superfície de ataque)? Se faltar, escreva antes de seguir.
 
-5. **Segurança**: rode o skill `/security-check`. Toda falha é corrigida com teste de regressão.
+5. **Segurança**: o CI já roda CodeQL, Semgrep, gitleaks e auditoria de dependências. Rode
+   `/security-check` só se a mudança mexe em autenticação, webhook ou dado pessoal.
 
-6. **Fluxo de revisão e gate**: confirme que `code-reviewer` e `qa-tester` aprovaram o código
-   atual (o hook `SubagentStop` registra o veredito **e a contagem do checklist**; `FALHA = 0` nos
-   dois) e rode o gate completo, a mesma fonte do CI. Antes, confira o Anti-AI-slop (`GIT-3`): zero
-   `print`/`console.log`/`debugger`, código comentado e comentário redundante (`/clean-code`):
+6. **Gate:** rode o gate completo, a mesma fonte do CI, depois de conferir o básico do
+   `/clean-code` (zero `print`/`console.log`/`debugger`, código comentado e comentário redundante):
 
    ```bash
    python3 scripts/quality_gate.py --full
    ```
 
-   Ele cobre backend (formatação, ruff, mypy, pytest+cobertura, vulture, bandit, pip-audit) e
-   frontend (prettier, tsc, vitest+cobertura, build, npm audit, E2E). Correção não trivial com
-   dúvida sobre a intenção original → pergunte. Depois de qualquer correção, rode o gate de novo e
-   volte ao `code-reviewer` (mudança de código invalida as aprovações).
+   Correção não trivial com dúvida sobre a intenção original → pergunte. Se a mudança for de risco
+   (auth, webhook, dado pessoal, LLM, migração), rode `/revisar` antes de abrir o PR.
 
 7. **Subir a branch**: `git push -u origin $(git branch --show-current)`.
 
@@ -69,15 +66,13 @@ Automatiza tudo entre "terminei de codar nesta branch" e "PR aberto, pronto para
 
    ## Test plan
    - [x] `python3 scripts/quality_gate.py --full` verde
-   - [x] code-reviewer e qa-tester APROVADOS (checklist `docs/checklist-engenharia.md`:
-         OK _n_ · N/A _n_ · FALHA 0)
+   - [x] revisão (`/revisar`), se a mudança era de risco
 
-   ## Checklist de engenharia (N/A justificados)
-   - ID: motivo
+   ## Documentos
    - ADR: docs/adr/NNNN-… (se houve) · Threat model: docs/threat-models/… (se houve)
 
    ## Security
-   - [x] bandit / pip-audit / npm audit / pentest local (/security-check)
+   - [x] CI (CodeQL, Semgrep, gitleaks, auditorias); `/security-check` se aplicável
    - achados e correções: ...
    EOF
    )"
@@ -89,5 +84,5 @@ Automatiza tudo entre "terminei de codar nesta branch" e "PR aberto, pronto para
 
 - Não force-push para sincronizar — sempre merge.
 - Não resolver conflito apagando um lado sem entender.
-- Não pular checks, testes ou o `/security-check`.
+- Não pular checks nem testes.
 - Não fazer merge/approve do próprio PR.
