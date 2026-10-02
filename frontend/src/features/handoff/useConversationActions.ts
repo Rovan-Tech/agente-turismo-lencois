@@ -33,7 +33,7 @@ export function useConversationActions(
   id: string | undefined,
   setConversation: SetConversation,
   reload: () => Promise<void>,
-  onResolved: () => void
+  callbacks: { onResolved: () => void; onTookOver: () => void; onGaveBack: () => void }
 ): ConversationActions {
   const [busy, setBusy] = useState(false);
   const [statusFailed, setStatusFailed] = useState(false);
@@ -71,13 +71,19 @@ export function useConversationActions(
       () => updateConversationStatus(id ?? "", next),
       () => setStatusFailed(true)
     );
-    if (accepted && next === "resolvida") onResolved();
+    if (accepted && next === "resolvida") callbacks.onResolved();
   }
 
   /** Assumir e devolver mudam também as mensagens (o aviso ao turista), então a tela é relida. */
-  async function changeHandling(call: () => Promise<ApiResult<ConversationHeader>>) {
+  async function changeHandling(
+    call: () => Promise<ApiResult<ConversationHeader>>,
+    onAccepted: () => void
+  ) {
     setHandoffError(null);
-    if (await run(call, setHandoffError)) await reload();
+    const accepted = await run(call, setHandoffError);
+    // Recusada (ex.: outra pessoa assumiu antes) a tela também é relida, para mostrar o estado real.
+    await reload();
+    if (accepted) onAccepted();
   }
 
   async function sendReply(text: string): Promise<boolean> {
@@ -104,8 +110,8 @@ export function useConversationActions(
     handoffError,
     replyError,
     changeStatus,
-    takeOver: () => changeHandling(() => takeOverConversation(id ?? "")),
-    giveBack: () => changeHandling(() => giveBackConversation(id ?? "")),
+    takeOver: () => changeHandling(() => takeOverConversation(id ?? ""), callbacks.onTookOver),
+    giveBack: () => changeHandling(() => giveBackConversation(id ?? ""), callbacks.onGaveBack),
     sendReply,
   };
 }

@@ -159,11 +159,18 @@ test("keeps the phone and the status badge apart on a phone-sized screen", async
 
   // Pior caso: "Precisa de atenção" é o selo mais largo e a linha ainda tem a borda de atenção.
   const row = page.getByRole("link", { name: /98212-7743/ });
-  const phone = await boxOf(row.getByText("+55 98 98212-7743"));
-  const badge = await boxOf(row.getByRole("status"));
-  const sideBySide = phone.x + phone.width <= badge.x;
-  const badgeBelow = badge.y >= phone.y + phone.height;
-  expect(sideBySide || badgeBelow).toBe(true);
+  await expect(row).toBeVisible();
+  // Medir antes de a fonte carregar dá larguras de outra fonte (o teste falhava de vez em quando).
+  await page.evaluate(() => document.fonts.ready);
+  await expect
+    .poll(async () => {
+      const phone = await boxOf(row.getByText("+55 98 98212-7743"));
+      const badge = await boxOf(row.getByRole("status"));
+      const sideBySide = phone.x + phone.width <= badge.x;
+      const badgeBelow = badge.y >= phone.y + phone.height;
+      return sideBySide || badgeBelow;
+    })
+    .toBe(true);
 });
 
 test("sizes the tourist's message bubble to its text instead of stretching it", async ({

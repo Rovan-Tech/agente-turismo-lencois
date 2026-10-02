@@ -4,6 +4,8 @@ import { ErrorAlert } from "../../components/ErrorAlert";
 import { PrimaryButton } from "../../components/PrimaryButton";
 import { MAX_REPLY_LENGTH } from "../../lib/handoff";
 
+export const REPLY_FIELD_ID = "reply-text";
+
 /**
  * Campo de resposta do atendente. Sem `blockedReason` o campo vale; com ele (janela de 24 h
  * fechada) o campo fica desabilitado e o motivo aparece. O texto só é limpo quando o servidor
@@ -27,9 +29,11 @@ export function ReplyComposer({
     event?.preventDefault();
     if (!canSend) return;
     setSending(true);
-    const accepted = await onSend(trimmed);
-    setSending(false);
-    if (accepted) setText("");
+    try {
+      if (await onSend(trimmed)) setText("");
+    } finally {
+      setSending(false);
+    }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
@@ -41,11 +45,11 @@ export function ReplyComposer({
       onSubmit={submit}
       className="flex flex-col gap-2 border-t border-subtle px-4 py-4 sm:px-6"
     >
-      <label htmlFor="reply-text" className="text-sm font-semibold text-primary">
+      <label htmlFor={REPLY_FIELD_ID} className="text-sm font-semibold text-primary">
         Resposta ao turista
       </label>
       <textarea
-        id="reply-text"
+        id={REPLY_FIELD_ID}
         value={text}
         onChange={(event) => setText(event.target.value)}
         onKeyDown={handleKeyDown}

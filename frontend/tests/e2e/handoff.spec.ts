@@ -55,13 +55,16 @@ async function mockHandoffApi(page: Page) {
   return state;
 }
 
+let api: Awaited<ReturnType<typeof mockHandoffApi>>;
+
+test.beforeEach(async ({ page }) => {
+  api = await mockHandoffApi(page);
+  await page.goto("/conversas/e2e-atendimento");
+});
+
 test("takes over a conversation, answers the tourist and gives it back to the AI", async ({
   page,
 }) => {
-  const api = await mockHandoffApi(page);
-
-  await page.goto("/conversas/e2e-atendimento");
-
   await expect(page.getByText("O turista verá o aviso com o seu nome: Ana.")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Resposta ao turista" })).toHaveCount(0);
 
@@ -85,16 +88,22 @@ test("takes over a conversation, answers the tourist and gives it back to the AI
   await expect(field).toHaveCount(0);
 });
 
-test("lets the keyboard reach the reply field and send with Ctrl+Enter", async ({ page }) => {
-  const api = await mockHandoffApi(page);
-  await page.goto("/conversas/e2e-atendimento");
-  await page.getByRole("button", { name: "Assumir conversa" }).click();
+test("keeps the keyboard flow: take over with Enter, type, send with Ctrl+Enter", async ({
+  page,
+}) => {
+  await page.getByRole("button", { name: "Assumir conversa" }).focus();
+  await page.keyboard.press("Enter");
 
+  // O botão que tinha o foco sumiu: o foco vai para o campo de resposta, sem recomeçar do topo.
   const field = page.getByRole("textbox", { name: "Resposta ao turista" });
-  await field.focus();
+  await expect(field).toBeFocused();
   await page.keyboard.type("Posso ajudar?");
   await page.keyboard.press("Control+Enter");
 
   await expect(field).toHaveValue("");
   expect(api.replies.map((reply) => reply.texto)).toEqual(["Posso ajudar?"]);
+
+  await page.getByRole("button", { name: "Devolver para a IA" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Assumir conversa" })).toBeFocused();
 });

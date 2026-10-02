@@ -80,7 +80,8 @@ Adotar a **opção 1**, com estas regras:
 - **IA pausada:** o n8n passa a chamar `POST /api/ingest/conversas/atendimento`
   com o telefone no **corpo** (`INGEST_API_TOKEN`; na URL o telefone cairia no log de acesso) antes de gerar a resposta. Com a conversa em `humano`, o n8n **só registra**
   a mensagem do turista (rota de ingest só de entrada) e **não responde**. Se a consulta falhar, o
-  fluxo cai na contingência (nunca responde "no escuro" por cima de um humano).
+  fluxo cai na contingência: a IA nunca responde por cima de um humano, mas um aviso fixo de
+  contingência ainda é enviado ao turista.
 - **Devolução automática:** depois de `HUMAN_HANDOFF_IDLE_HOURS` (padrão **2**) sem mensagem do
   atendente, a conversa volta para a IA, para o turista nunca ficar sem resposta porque alguém
   esqueceu de devolver. O fluxo do n8n é quem pergunta, então a regra vale no momento da pergunta
@@ -158,3 +159,7 @@ Decisões que dependem do Patrick estão em
 6. **Reversão:** o backend aceita estado `ia` para todas as conversas, então voltar o fluxo do n8n
    para a versão anterior e `downgrade` da migração desfaz tudo; as mensagens de atendente já
    enviadas continuam no histórico.
+   - Reverter só o backend (`downgrade` da `0004`) com o painel novo no ar faz o painel recusar a lista
+     de conversas (os campos `atendimento` e `autor` passam a faltar): reverta o painel junto.
+   - **Ordem de entrada:** backend, depois o fluxo do n8n, depois o painel (o painel é publicado no
+     merge). Com o painel antes do n8n, "Assumir conversa" avisa o turista mas a IA continua falando.
