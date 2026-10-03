@@ -16,7 +16,7 @@ export function Brand() {
         </svg>
       </span>
       <div className="leading-tight">
-        <p className="font-display text-sm font-bold text-primary">Lençóis Tour</p>
+        <p className="font-display text-sm font-bold text-primary">Vento Branco Expedições</p>
         <p className="text-xs text-muted">Painel do agente</p>
       </div>
     </div>
