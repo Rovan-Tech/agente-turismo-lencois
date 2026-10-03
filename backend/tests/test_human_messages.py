@@ -223,7 +223,8 @@ async def test_state_endpoint_writes_nothing(client, db_session, held):
     await _ask_state(client, PHONE)
 
     await db_session.refresh(held)
-    assert (held.updated_at, held.humano_atividade_em, await _count(db_session)) == before
+    after = (held.updated_at, held.humano_atividade_em, await _count(db_session))
+    assert after == before
 
 
 @pytest.mark.usefixtures("ingest_token")

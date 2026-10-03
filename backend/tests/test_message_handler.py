@@ -141,8 +141,10 @@ async def test_resolve_incoming_text_removes_temp_audio_when_transcription_fails
     monkeypatch.setattr(whatsapp_client, "download_media", fake_download_media)
     monkeypatch.setattr(transcription_module, "transcribe_audio", failing_transcribe_audio)
 
+    settings = get_settings()
+
     with pytest.raises(TranscriptionFailedError):
-        await resolve_incoming_text(get_settings(), "audio", None, "media-1")
+        await resolve_incoming_text(settings, "audio", None, "media-1")
 
     # LGPD: mesmo com falha, o áudio bruto não pode ficar em disco.
     assert not Path(seen_paths[0]).exists()

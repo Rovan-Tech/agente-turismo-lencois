@@ -222,8 +222,10 @@ def _raises(error):
 async def test_ask_groq_raises_a_domain_error_when_the_provider_fails(monkeypatch, handler):
     _install_groq(monkeypatch, handler)
 
+    settings = get_settings()
+
     with pytest.raises(GroqUnavailableError):
-        await ask_groq(get_settings(), "SISTEMA", "oi")
+        await ask_groq(settings, "SISTEMA", "oi")
 
 
 @pytest.mark.asyncio
@@ -251,8 +253,10 @@ async def test_ask_groq_raises_a_domain_error_when_the_provider_fails(monkeypatc
 async def test_groq_error_carries_the_cause_for_diagnosis(monkeypatch, handler, cause, status):
     _install_groq(monkeypatch, handler)
 
+    settings = get_settings()
+
     with pytest.raises(GroqUnavailableError) as raised:
-        await ask_groq(get_settings(), "SISTEMA", "oi")
+        await ask_groq(settings, "SISTEMA", "oi")
 
     assert raised.value.causa == cause
     assert raised.value.status_http == status

@@ -183,16 +183,19 @@ async def test_get_day_bookings_excludes_what_isnt_paid_for_that_day(
 
 @pytest.mark.asyncio
 async def test_get_day_bookings_rejects_unknown_tour(db_session):
+    day = date(2026, 9, 28)
+
     with pytest.raises(tour_catalog.TourNotFoundError):
-        await booking_service.get_day_bookings(db_session, "nao-existe", date(2026, 9, 28))
+        await booking_service.get_day_bookings(db_session, "nao-existe", day)
 
 
 @pytest.mark.asyncio
 async def test_get_day_bookings_rejects_inactive_tour(db_session):
     await persist(db_session, _tour(ativo=False))
+    day = date(2026, 9, 28)
 
     with pytest.raises(tour_catalog.TourNotFoundError):
-        await booking_service.get_day_bookings(db_session, "passeio-teste", date(2026, 9, 28))
+        await booking_service.get_day_bookings(db_session, "passeio-teste", day)
 
 
 @pytest.mark.asyncio
