@@ -67,6 +67,19 @@ def test_parse_mypy_extracts_file_line_message_and_code(tmp_path):
     assert msg.startswith("Missing type arguments")
 
 
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ('Missing "dict"  [type-arg]', ('Missing "dict"', "type-arg")),
+        ("Sem codigo no fim", ("Sem codigo no fim", None)),
+        ("Termina em colchete [nota]", ("Termina em colchete [nota]", None)),
+        ("Codigo  [com espaco]", ("Codigo  [com espaco]", None)),
+    ],
+)
+def test_split_mypy_code_separates_only_a_trailing_error_code(text, expected):
+    assert gs.split_mypy_code(text) == expected
+
+
 def test_run_mypy_fails_loudly_when_mypy_is_missing(monkeypatch):
     missing = RunResult(1, "/usr/bin/python3: No module named mypy")
     monkeypatch.setattr(gs, "run", lambda *_a, **_k: missing)

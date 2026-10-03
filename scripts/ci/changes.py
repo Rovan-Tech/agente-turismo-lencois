@@ -16,23 +16,25 @@ import subprocess
 import sys
 from pathlib import Path
 
+_CI_WORKFLOW = ".github/workflows/ci.yml"
+
 # Grupo -> prefixos de caminho que o afetam.
 _GROUPS: dict[str, tuple[str, ...]] = {
-    "backend": ("backend/", "scripts/", ".github/workflows/ci.yml"),
-    "frontend": ("frontend/", "scripts/", ".github/workflows/ci.yml"),
+    "backend": ("backend/", "scripts/", _CI_WORKFLOW),
+    "frontend": ("frontend/", "scripts/", _CI_WORKFLOW),
     "docker": (
         "backend/app/",
         "backend/alembic",
         "backend/Dockerfile",
         "backend/requirements",
         ".hadolint.yaml",
-        ".github/workflows/ci.yml",
+        _CI_WORKFLOW,
     ),
     "deps": (
         "backend/requirements",
         "frontend/package.json",
         "frontend/package-lock.json",
-        ".github/workflows/ci.yml",
+        _CI_WORKFLOW,
     ),
     "workflows": (".github/", "scripts/ci/"),
 }

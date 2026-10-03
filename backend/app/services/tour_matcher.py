@@ -29,8 +29,10 @@ _CHILDREN_KEYWORDS = (
     "hijos pequeños",
 )
 
+# Possessivos: sem `r`/`$`, os dois `\s*` ficam adjacentes e o retrocesso seria quadrático.
 _PRICE_CEILING_RE = re.compile(
-    r"(?:at[ée]|no m[áa]ximo|m[áa]ximo de|up to|hasta)\s*r?\$?\s*(\d+(?:[.,]\d+)?)", re.IGNORECASE
+    r"(?:at[ée]|no m[áa]ximo|m[áa]ximo de|up to|hasta)\s*+r?+\$?+\s*+(\d+(?:[.,]\d+)?)",
+    re.IGNORECASE,
 )
 _DURATION_CEILING_RE = re.compile(
     r"(?:at[ée]|no m[áa]ximo|m[áa]ximo de|up to|hasta)\s*(\d+(?:[.,]\d+)?)\s*h", re.IGNORECASE

@@ -14,6 +14,27 @@ def test_real_tokens_pass_wcag_aa_in_both_themes():
     assert cdt.check_contrast(css) == []
 
 
+def test_parse_tokens_ignores_comments_and_unrelated_blocks():
+    css = (
+        "/* --color-a: #111111; */ :root { --color-a: #222222; /* --x: #333; */ }\n"
+        ".card { --color-b: #444444; }\n"
+        ':root[data-theme="dark"] { --color-a: #eeeeee }\n'
+        ":root:not([data-theme='light']) { --color-c: #ffffff; }"
+    )
+
+    light, dark, dark_media = cdt.parse_tokens(css)
+
+    assert light == {"--color-a": "#222222"}
+    assert dark == {}
+    assert dark_media == {}
+
+
+def test_parse_tokens_keeps_an_unterminated_comment_and_reads_the_rest():
+    light, _dark, _dark_media = cdt.parse_tokens(":root { --color-a: #111111; } /* sem fim")
+
+    assert light == {"--color-a": "#111111"}
+
+
 def test_check_contrast_reports_low_contrast_pair():
     css = ":root { --color-text-primary: #ffffff; --color-bg-page: #fefefe; }"
 

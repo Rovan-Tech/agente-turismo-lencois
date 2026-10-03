@@ -25,14 +25,14 @@ from gate_common import (
 
 RUFF_CONFIG = str(BACKEND / "pyproject.toml")
 LEGACY_SELECT = "E,F,I,UP,B"
-MYPY_LINE_RE = re.compile(
-    r"^(?P<file>.+?):(?P<line>\d+): error: (?P<msg>.*?)(?:  \[(?P<code>[\w-]+)\])?$"
-)
+MYPY_LINE_RE = re.compile(r"^(?P<file>.+?):(?P<line>\d+): error: (?P<text>.*)$")
+MYPY_CODE_RE = re.compile(r"[\w-]+")
 MYPY_BASELINE = ROOT / ".mypy-baseline.json"
 MYPY_SUMMARY_RE = re.compile(r"^(Success:|Found \d+ errors?)", re.M)
 # O ruff ancora estas regras na linha do `def`; vale a função inteira.
 FUNCTION_LEVEL_CODES = {"C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915"}
 MAX_DETAIL_LINES = 25
+FORMAT_FRONTEND_NAME = "formatação frontend"
 
 
 @dataclass
@@ -104,13 +104,13 @@ def format_python(files: list[Path]) -> StepResult:
 def format_frontend(files: list[Path] | None) -> StepResult:
     """Prettier no frontend: em arquivos específicos ou no projeto inteiro (`None`)."""
     if files is not None and not files:
-        return StepResult("formatação frontend", True)
+        return StepResult(FORMAT_FRONTEND_NAME, True)
     if missing := needs_node():
-        return StepResult("formatação frontend", False, [missing])
+        return StepResult(FORMAT_FRONTEND_NAME, False, [missing])
     npx = shutil.which("npx") or "npx"
     targets = ["."] if files is None else [str(p.relative_to(FRONTEND)) for p in files]
     result = run([npx, "prettier", "--check", *targets], cwd=FRONTEND)
-    return StepResult("formatação frontend", result.returncode == 0, tail(result.output))
+    return StepResult(FORMAT_FRONTEND_NAME, result.returncode == 0, tail(result.output))
 
 
 def lint_legacy(files: list[Path]) -> StepResult:
@@ -181,6 +181,15 @@ def mypy_key(path: Path, code: str | None, msg: str) -> str:
     return f"{rel(path)}|{code or '-'}|{msg}"
 
 
+def split_mypy_code(text: str) -> tuple[str, str | None]:
+    """Separa a mensagem do mypy do código final ``  [codigo]``; sem código, devolve `None`."""
+    if text.endswith("]"):
+        msg, separator, code = text[:-1].rpartition("  [")
+        if separator and MYPY_CODE_RE.fullmatch(code):
+            return msg, code
+    return text, None
+
+
 def parse_mypy(cwd: Path, output: str) -> MypyErrors:
     """Extrai `(arquivo, linha, mensagem, código)` de cada erro do mypy."""
     errors = []
@@ -188,7 +197,8 @@ def parse_mypy(cwd: Path, output: str) -> MypyErrors:
         match = MYPY_LINE_RE.match(raw)
         if match:
             path = (cwd / match["file"]).resolve()
-            errors.append((path, int(match["line"]), match["msg"], match["code"]))
+            msg, code = split_mypy_code(match["text"])
+            errors.append((path, int(match["line"]), msg, code))
     return errors
 
 
@@ -284,7 +294,9 @@ def limits(files: list[Path], changed: Changed) -> StepResult:
             if touches(changed.get(path.resolve(), frozenset()), violation.start, violation.end):
                 problems.append(f"{rel(path)}:{violation.start} {violation.message}")
     return StepResult(
-        "limites (função, aninhamento, módulo)", not problems, problems[:MAX_DETAIL_LINES]
+        "limites (função, aninhamento, módulo)",
+        not problems,
+        problems[:MAX_DETAIL_LINES],
     )
 
 

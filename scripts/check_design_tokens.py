@@ -33,8 +33,18 @@ CONTRAST_PAIRS: tuple[tuple[str, str, float, str], ...] = (
     ("text-link", "bg-page", 4.5, "link na página"),
     ("text-link", "bg-surface", 4.5, "link em cartões"),
     ("text-on-action", "action-primary", 4.5, "texto sobre ação primária"),
-    ("text-on-action", "action-primary-hover", 4.5, "texto sobre ação primária (hover)"),
-    ("text-on-action", "action-primary-active", 4.5, "texto sobre ação primária (active)"),
+    (
+        "text-on-action",
+        "action-primary-hover",
+        4.5,
+        "texto sobre ação primária (hover)",
+    ),
+    (
+        "text-on-action",
+        "action-primary-active",
+        4.5,
+        "texto sobre ação primária (active)",
+    ),
     ("text-on-header", "bg-header", 4.5, "texto no cabeçalho"),
     ("text-on-action", "action-secondary", 4.5, "texto sobre ação secundária"),
     ("accent-subtle-fg", "accent-subtle-bg", 4.5, "selo de destaque"),
@@ -77,6 +87,20 @@ class Violation:
         return f"{rel}:{self.line} — {self.message}"
 
 
+def _strip_comments(css: str) -> str:
+    """Remove os comentários `/* ... */` em tempo linear; um comentário sem fim fica como está."""
+    parts: list[str] = []
+    position = 0
+    while (start := css.find("/*", position)) != -1:
+        end = css.find("*/", start + 2)
+        if end == -1:
+            break
+        parts.append(css[position:start])
+        position = end + 2
+    parts.append(css[position:])
+    return "".join(parts)
+
+
 def parse_tokens(css: str) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
     """Extrai o tema claro (`:root`) e as duas cópias do escuro.
 
@@ -89,8 +113,10 @@ def parse_tokens(css: str) -> tuple[dict[str, str], dict[str, str], dict[str, st
         ':root[data-theme="dark"]': {},
         ':root:not([data-theme="light"])': {},
     }
-    decl = re.compile(r"(--[\w-]+)\s*:\s*([^;]+);")
-    blocks = re.findall(r"([^{}]+)\{([^{}]*)\}", re.sub(r"/\*.*?\*/", "", css, flags=re.S))
+    # Quantificadores possessivos e a âncora `(?<!...)` mantêm a busca linear: sem retrocesso e sem
+    # recomeçar a busca no meio de um nome ou de um seletor (`super-linear`, Sonar S8786).
+    decl = re.compile(r"(?<![\w-])(--[\w-]++)\s*+:([^;]++);")
+    blocks = re.findall(r"(?<![^{}])([^{}]++)\{([^{}]*+)\}", _strip_comments(css))
     for raw_selector, body in blocks:
         target = targets.get(raw_selector.strip())
         if target is not None:
