@@ -5,6 +5,7 @@ import type { ConversationHeader, Me } from "../../types";
 /** Ids dos botões: a página leva o foco a um deles quando a troca de estado desmonta o outro. */
 export const TAKE_OVER_ID = "take-over-button";
 export const GIVE_BACK_ID = "give-back-button";
+const BLOCKED_REASON_ID = "take-over-blocked-reason";
 
 const BUTTON =
   "rounded-md border border-subtle px-4 py-2 text-sm font-medium text-primary hover:bg-subtle active:bg-subtle disabled:bg-subtle disabled:text-muted";
@@ -17,9 +18,27 @@ function announcementPreview(me: Me | null): string {
     : "O turista será avisado de que uma pessoa da equipe está falando, sem nome (o seu login não tem um primeiro nome utilizável).";
 }
 
+function holderName(conversation: ConversationHeader): string {
+  return conversation.atendente_nome ?? "outra pessoa da equipe";
+}
+
 function holderLabel(conversation: ConversationHeader, isMine: boolean): string {
-  if (isMine) return "Você está atendendo";
-  return `Atendendo: ${conversation.atendente_nome ?? "outra pessoa da equipe"}`;
+  return isMine ? "Você está atendendo" : `Atendendo: ${holderName(conversation)}`;
+}
+
+/** Por que quem não é o atendente não pode assumir (o servidor também recusa com 409). */
+function TakeOverBlockedNotice({ conversation }: Readonly<{ conversation: ConversationHeader }>) {
+  return (
+    <>
+      <p id={BLOCKED_REASON_ID} className="text-xs text-muted">
+        Você não pode assumir: a conversa já está com {holderName(conversation)}. Quem atende
+        precisa devolver à IA primeiro (ou devolva você, se a conversa ficou esquecida).
+      </p>
+      <button type="button" disabled aria-describedby={BLOCKED_REASON_ID} className={BUTTON}>
+        Assumir conversa
+      </button>
+    </>
+  );
 }
 
 /** Quem responde esta conversa e os botões para assumir ou devolver para a IA. */
@@ -47,6 +66,7 @@ export function HandoffSection({
         <>
           <p className="text-sm font-semibold text-primary">{holderLabel(conversation, isMine)}</p>
           <p className="text-xs text-muted">O assistente de IA não responde enquanto isso.</p>
+          {!isMine && <TakeOverBlockedNotice conversation={conversation} />}
           <button
             id={GIVE_BACK_ID}
             type="button"

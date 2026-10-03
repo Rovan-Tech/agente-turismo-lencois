@@ -70,10 +70,32 @@ describe("HandoffSection", () => {
     expect(screen.getByRole("button", { name: "Devolver para a IA" })).toBeEnabled();
   });
 
+  it("blocks taking over a conversation another person attends and says why", () => {
+    const { onTakeOver } = renderSection({
+      ...HANDLED_CONVERSATION,
+      atendente_sub: "outra",
+      atendente_nome: "Bia",
+    });
+
+    const button = screen.getByRole("button", { name: "Assumir conversa" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(/Você não pode assumir: a conversa já está com Bia/);
+    fireEvent.click(button);
+    expect(onTakeOver).not.toHaveBeenCalled();
+  });
+
+  it("does not show the blocked take over to the person who is attending", () => {
+    renderSection(HANDLED_CONVERSATION);
+
+    expect(screen.queryByRole("button", { name: "Assumir conversa" })).toBeNull();
+    expect(screen.queryByText(/Você não pode assumir/)).toBeNull();
+  });
+
   it("names nobody when the holder has no first name", () => {
     renderSection({ ...HANDLED_CONVERSATION, atendente_sub: "outra", atendente_nome: null });
 
     expect(screen.getByText("Atendendo: outra pessoa da equipe")).toBeInTheDocument();
+    expect(screen.getByText(/já está com outra pessoa da equipe/)).toBeInTheDocument();
   });
 
   it("does not offer to take over a resolved conversation", () => {

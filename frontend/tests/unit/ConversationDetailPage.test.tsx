@@ -466,6 +466,19 @@ describe("ConversationDetailPage: taking over and answering", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("já está com Bia");
   });
 
+  it("leaves the second attendant unable to take over after the server refuses", async () => {
+    const bia = { ...HANDLED_CONVERSATION, atendente_sub: "outra", atendente_nome: "Bia" };
+    const takeOver = openWithTakeOver(REFUSED, SAMPLE_CONVERSATION, bia);
+
+    fireEvent.click(await screen.findByRole("button", TAKE_OVER));
+
+    expect(await screen.findByText("Atendendo: Bia")).toBeInTheDocument();
+    expect(screen.getByRole("button", TAKE_OVER)).toBeDisabled();
+    expect(screen.getByText(/Você não pode assumir: a conversa já está com Bia/)).toBeVisible();
+    expect(screen.queryByRole("textbox", REPLY_FIELD)).toBeNull();
+    expect(takeOver).toHaveBeenCalledTimes(1);
+  });
+
   it("blocks the reply field when the tourist's last message is older than 24 hours", async () => {
     serveConversation(HANDLED_CONVERSATION);
 

@@ -107,3 +107,43 @@ test("keeps the keyboard flow: take over with Enter, type, send with Ctrl+Enter"
   await page.keyboard.press("Enter");
   await expect(page.getByRole("button", { name: "Assumir conversa" })).toBeFocused();
 });
+
+test("refuses to take over a conversation another person took first and shows who has it", async ({
+  page,
+}) => {
+  // Bia assumiu depois que esta tela abriu: o servidor recusa com 409 e a releitura mostra a Bia.
+  let biaHolds = false;
+  await page.route("**/api/conversations/e2e-atendimento/assumir", (route) => {
+    biaHolds = true;
+    return route.fulfill({
+      status: 409,
+      json: { detail: "A conversa já está com Bia. Peça para devolver à IA." },
+    });
+  });
+  await page.route("**/api/conversations/e2e-atendimento", (route) =>
+    route.fulfill({
+      json: {
+        id: "e2e-atendimento",
+        whatsapp_phone: "5598977776666",
+        status: "precisa_atencao",
+        idioma_detectado: "pt",
+        atendimento: biaHolds ? "humano" : "ia",
+        atendente_nome: biaHolds ? "Bia" : null,
+        atendente_sub: biaHolds ? "pessoa-bia" : null,
+        created_at: "2026-09-20T09:00:00Z",
+        updated_at: "2026-09-26T09:30:00Z",
+        passeio_sugerido: null,
+        messages: api.messages,
+      },
+    })
+  );
+  await page.reload();
+
+  await page.getByRole("button", { name: "Assumir conversa" }).click();
+
+  await expect(page.getByRole("alert")).toContainText("A conversa já está com Bia.");
+  await expect(page.getByText("Atendendo: Bia")).toBeVisible();
+  await expect(page.getByText(/Você não pode assumir/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Assumir conversa" })).toBeDisabled();
+  await expect(page.getByRole("textbox", { name: "Resposta ao turista" })).toHaveCount(0);
+});
