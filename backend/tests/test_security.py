@@ -287,6 +287,15 @@ _BOOKING_PAYLOAD = {
 
 
 @pytest.mark.asyncio
+async def test_availability_endpoint_requires_dashboard_token(client):
+    response = await client.get(
+        "/api/tours/vagas", params={"dia": "2026-09-28"}, headers={"Authorization": ""}
+    )
+
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_booking_endpoints_require_dashboard_token(client, db_session, sample_tours):
     await persist(db_session, sample_tours[0])
     no_auth = {"Authorization": ""}
