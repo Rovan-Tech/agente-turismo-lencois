@@ -124,6 +124,8 @@ updates:
     directory: /.claude/skills/engineering/dependency-auditor/test-project
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
@@ -133,6 +135,8 @@ updates:
     directory: /.claude/skills/engineering/dependency-auditor/assets
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 0
     ignore:
       - dependency-name: "*"
