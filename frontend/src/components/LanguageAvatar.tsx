@@ -1,7 +1,7 @@
 import { languageCode } from "../lib/conversations";
 
 /** Círculo com a sigla do idioma detectado (PT, EN, ES); "—" quando ainda não se sabe. */
-export function LanguageAvatar({ idioma }: { idioma: string | null }) {
+export function LanguageAvatar({ idioma }: Readonly<{ idioma: string | null }>) {
   return (
     <span
       aria-hidden="true"

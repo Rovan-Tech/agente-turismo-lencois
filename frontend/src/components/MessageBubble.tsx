@@ -5,7 +5,7 @@ import { MicIcon } from "./icons";
 const AUTHOR_LABELS = { turista: null, ia: "Assistente de IA", atendente: "Equipe" } as const;
 
 /** Balão da conversa: turista à esquerda, assistente à direita, com o horário embaixo. */
-export function MessageBubble({ message }: { message: ConversationMessage }) {
+export function MessageBubble({ message }: Readonly<{ message: ConversationMessage }>) {
   const incoming = message.direction === "entrada";
   return (
     <li

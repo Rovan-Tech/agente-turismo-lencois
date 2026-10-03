@@ -21,7 +21,7 @@ function Icon({ children, ...props }: IconProps & { children: ReactNode }) {
   );
 }
 
-export function ChatIcon(props: IconProps) {
+export function ChatIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.2A8 8 0 1 1 21 12z" />
@@ -29,7 +29,7 @@ export function ChatIcon(props: IconProps) {
   );
 }
 
-export function CompassIcon(props: IconProps) {
+export function CompassIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <circle cx="12" cy="12" r="9" />
@@ -38,7 +38,7 @@ export function CompassIcon(props: IconProps) {
   );
 }
 
-export function SearchIcon(props: IconProps) {
+export function SearchIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <circle cx="11" cy="11" r="7" />
@@ -47,7 +47,7 @@ export function SearchIcon(props: IconProps) {
   );
 }
 
-export function UserIcon(props: IconProps) {
+export function UserIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <circle cx="12" cy="8" r="4" />
@@ -56,7 +56,7 @@ export function UserIcon(props: IconProps) {
   );
 }
 
-export function MicIcon(props: IconProps) {
+export function MicIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <rect x="9" y="3" width="6" height="11" rx="3" />
@@ -65,7 +65,7 @@ export function MicIcon(props: IconProps) {
   );
 }
 
-export function ChevronLeftIcon(props: IconProps) {
+export function ChevronLeftIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <path d="m15 6-6 6 6 6" />
@@ -73,7 +73,7 @@ export function ChevronLeftIcon(props: IconProps) {
   );
 }
 
-export function SunIcon(props: IconProps) {
+export function SunIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <circle cx="12" cy="12" r="4" />
@@ -82,7 +82,7 @@ export function SunIcon(props: IconProps) {
   );
 }
 
-export function MoonIcon(props: IconProps) {
+export function MoonIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
       <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />

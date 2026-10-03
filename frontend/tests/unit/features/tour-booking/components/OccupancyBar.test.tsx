@@ -8,7 +8,8 @@ describe("OccupancyBar", () => {
     render(<OccupancyBar ocupadas={10} capacidade={41} />);
 
     const bar = screen.getByRole("progressbar", { name: "Ocupação de hoje: 31 vagas" });
-    expect(bar).toHaveAttribute("aria-valuenow", "24");
+    expect(bar).toHaveAttribute("value", "24");
+    expect(bar).toHaveAttribute("max", "100");
     expect(screen.getByText("31 vagas")).toBeInTheDocument();
   });
 
@@ -22,6 +23,6 @@ describe("OccupancyBar", () => {
     render(<OccupancyBar ocupadas={41} capacidade={41} />);
 
     expect(screen.getByText("Esgotado")).toBeInTheDocument();
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    expect(screen.getByRole("progressbar")).toHaveAttribute("value", "100");
   });
 });

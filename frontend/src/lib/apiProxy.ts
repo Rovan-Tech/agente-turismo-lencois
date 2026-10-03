@@ -97,10 +97,12 @@ export async function handleApiProxy(
   const response = new Response(upstream.body, upstream);
   // Nada do que identifica o Cloud Run volta ao navegador: cookie, destino de redirecionamento
   // (apontaria direto para o `run.app`) e cabeçalhos CORS do backend.
-  for (const name of [...response.headers.keys()]) {
-    if (name === "set-cookie" || name === "location" || name.startsWith("access-control-")) {
-      response.headers.delete(name);
-    }
+  // Lista antes de apagar: remover durante a iteração de `Headers` pula entradas.
+  const sensitive = [...response.headers.keys()].filter(
+    (name) => name === "set-cookie" || name === "location" || name.startsWith("access-control-")
+  );
+  for (const name of sensitive) {
+    response.headers.delete(name);
   }
   response.headers.set("cache-control", "no-store");
   return response;

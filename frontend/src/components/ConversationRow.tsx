@@ -11,10 +11,10 @@ import { StatusBadge } from "./StatusBadge";
 export function ConversationRow({
   conversation,
   now,
-}: {
+}: Readonly<{
   conversation: ConversationSummary;
   now: Date;
-}) {
+}>) {
   const { status, ultima_mensagem: last } = conversation;
   const phoneColor = status === "resolvida" ? "text-muted" : "text-primary";
   // A borda terracota faz a prioridade aparecer na lista, não só no selo (que já traz texto).

@@ -30,14 +30,14 @@ export function HandoffSection({
   error,
   onTakeOver,
   onGiveBack,
-}: {
+}: Readonly<{
   conversation: ConversationHeader;
   me: Me | null;
   busy: boolean;
   error: string | null;
   onTakeOver: () => void;
   onGiveBack: () => void;
-}) {
+}>) {
   const isHandled = conversation.atendimento === "humano";
   const isMine = isHandled && me !== null && conversation.atendente_sub === me.sub;
   return (

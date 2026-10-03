@@ -247,8 +247,7 @@ export async function createTour(payload: TourCreateInput): Promise<ApiResult<To
 }
 
 export async function updateTour(id: string, payload: TourUpdateInput): Promise<ApiResult<Tour>> {
-  const current = tours.find((tour) => tour.id === id);
-  if (!current) return refuse(404, "passeio não encontrado");
+  if (!tours.some((tour) => tour.id === id)) return refuse(404, "passeio não encontrado");
   const updated: Tour = { ...payload, id };
   tours = tours.map((tour) => (tour.id === id ? updated : tour));
   return respond({ ok: true, data: updated });

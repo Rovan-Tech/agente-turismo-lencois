@@ -34,16 +34,21 @@ function message(
 
 type Access = { elderly: boolean; wheelchair: boolean; smallKids: boolean };
 
+/** Atributos do passeio que não são identificação (agrupados para a função não passar de 7 parâmetros). */
+type TourSpecs = {
+  level: Tour["dificuldade_fisica"];
+  sandMinutes: number;
+  access: Access;
+  hours: number;
+  ages: string;
+  price: number;
+};
+
 function tour(
   id: string,
   nome: string,
   descricao: string,
-  level: Tour["dificuldade_fisica"],
-  sandMinutes: number,
-  access: Access,
-  hours: number,
-  ages: string,
-  price: number
+  { level, sandMinutes, access, hours, ages, price }: TourSpecs
 ): Tour {
   return {
     id,
@@ -69,45 +74,53 @@ export const DEMO_TOURS: Tour[] = [
     "demo-lagoa-azul",
     "Lagoa Azul de 4x4",
     "Travessia de 4x4 e caminhada curta pelas dunas, com parada para banho.",
-    "media",
-    25,
-    NOT_WHEELCHAIR,
-    4,
-    "a partir de 4 anos",
-    150
+    {
+      level: "media",
+      sandMinutes: 25,
+      access: NOT_WHEELCHAIR,
+      hours: 4,
+      ages: "a partir de 4 anos",
+      price: 150,
+    }
   ),
   tour(
     "demo-bugre-orla",
     "Passeio de bugre pela orla",
     "Caminhada mínima, acessível a idosos e cadeirantes, com mirante das dunas.",
-    "baixa",
-    5,
-    EVERYONE,
-    2.5,
-    "todas as idades",
-    100
+    {
+      level: "baixa",
+      sandMinutes: 5,
+      access: EVERYONE,
+      hours: 2.5,
+      ages: "todas as idades",
+      price: 100,
+    }
   ),
   tour(
     "demo-rio-barco",
     "Rio e pequenos Lençóis (barco)",
     "Passeio de barco pelo rio, com paradas em vilarejos e nas dunas menores.",
-    "baixa",
-    8,
-    NOT_WHEELCHAIR,
-    6,
-    "todas as idades",
-    180
+    {
+      level: "baixa",
+      sandMinutes: 8,
+      access: NOT_WHEELCHAIR,
+      hours: 6,
+      ages: "todas as idades",
+      price: 180,
+    }
   ),
   tour(
     "demo-trilha-longa",
     "Trilha longa das dunas",
     "Trilha de dia inteiro com areia fofa e sol forte. Exige bom preparo físico.",
-    "alta",
-    90,
-    { elderly: false, wheelchair: false, smallKids: false },
-    5,
-    "12 a 55 anos",
-    130
+    {
+      level: "alta",
+      sandMinutes: 90,
+      access: { elderly: false, wheelchair: false, smallKids: false },
+      hours: 5,
+      ages: "12 a 55 anos",
+      price: 130,
+    }
   ),
 ];
 

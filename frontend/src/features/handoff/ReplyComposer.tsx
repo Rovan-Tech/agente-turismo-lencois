@@ -15,11 +15,11 @@ export function ReplyComposer({
   blockedReason,
   error,
   onSend,
-}: {
+}: Readonly<{
   blockedReason: string | null;
   error: string | null;
   onSend: (text: string) => Promise<boolean>;
-}) {
+}>) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const trimmed = text.trim();

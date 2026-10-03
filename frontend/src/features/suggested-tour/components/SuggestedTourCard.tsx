@@ -4,7 +4,7 @@ import { difficultyLabel, formatDuration, formatPrice } from "../format";
 const CHIP = "rounded-full px-2 py-1 text-xs font-medium";
 
 /** Passeio do catálogo que o assistente recomendou; sem sugestão, diz isso em vez de sumir. */
-export function SuggestedTourCard({ tour }: { tour: SuggestedTour | null }) {
+export function SuggestedTourCard({ tour }: Readonly<{ tour: SuggestedTour | null }>) {
   return (
     <section aria-labelledby="suggested-tour-title" className="flex flex-col gap-2">
       <h2
