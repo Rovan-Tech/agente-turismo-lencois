@@ -9,6 +9,7 @@ from app.api.errors import BAD_REQUEST, FORBIDDEN
 from app.core.config import Settings, get_settings
 from app.core.security import is_valid_whatsapp_signature
 from app.db.session import get_db
+from app.services.customer_name import clean_profile_name
 from app.services.message_handler import IncomingMessage, process_incoming_message
 
 router = APIRouter(prefix="/webhook/whatsapp", tags=["webhook"])
@@ -26,12 +27,30 @@ async def verify_webhook(
     return Response(content=hub_challenge, media_type="text/plain")
 
 
-def _extract_messages(payload: dict) -> list[dict]:
-    messages = []
+def _profile_names(value: dict[str, Any]) -> dict[str, object]:
+    """Nome do perfil por `wa_id`, de `contacts[].profile.name` (a Meta o manda com as mensagens).
+
+    O payload é dado não confiável: contato ou perfil que não sejam objetos são ignorados.
+    """
+    names: dict[str, object] = {}
+    for contact in value.get("contacts", []):
+        if not isinstance(contact, dict) or not isinstance(contact.get("wa_id"), str):
+            continue
+        profile = contact.get("profile")
+        names[contact["wa_id"]] = profile.get("name") if isinstance(profile, dict) else None
+    return names
+
+
+def _extract_messages(payload: dict[str, Any]) -> list[tuple[dict[str, Any], object]]:
+    """Mensagens do payload, cada uma com o nome do perfil de quem a enviou (ou `None`)."""
+    messages: list[tuple[dict[str, Any], object]] = []
     for entry in payload.get("entry", []):
         for change in entry.get("changes", []):
             value = change.get("value", {})
-            messages.extend(value.get("messages", []))
+            names = _profile_names(value)
+            for msg in value.get("messages", []):
+                sender = msg.get("from")
+                messages.append((msg, names.get(sender) if isinstance(sender, str) else None))
     return messages
 
 
@@ -45,19 +64,24 @@ def _valid_message_id(value: object) -> str | None:
     return None
 
 
-def _to_incoming(msg: dict[str, Any]) -> IncomingMessage | None:
+def _to_incoming(msg: dict[str, Any], profile_name: object) -> IncomingMessage | None:
     """Converte uma mensagem do payload da Meta; `None` para tipos que o bot não atende."""
     phone = msg.get("from")
     msg_type = msg.get("type")
     if not phone or msg_type not in ("text", "audio"):
         return None
     message_id = _valid_message_id(msg.get("id"))
+    name = clean_profile_name(profile_name)
     if msg_type == "text":
         return IncomingMessage(
-            phone, "text", msg.get("text", {}).get("body"), message_id=message_id
+            phone, "text", msg.get("text", {}).get("body"), message_id=message_id, profile_name=name
         )
     return IncomingMessage(
-        phone, "audio", media_id=msg.get("audio", {}).get("id"), message_id=message_id
+        phone,
+        "audio",
+        media_id=msg.get("audio", {}).get("id"),
+        message_id=message_id,
+        profile_name=name,
     )
 
 
@@ -85,8 +109,8 @@ async def receive_webhook(
 
     # Processa na própria requisição: no Cloud Run o trabalho depois da resposta não tem CPU
     # garantida. Se a Meta reenviar por demora, o `message_id` faz o reenvio ser descartado.
-    for msg in _extract_messages(payload):
-        incoming = _to_incoming(msg)
+    for msg, profile_name in _extract_messages(payload):
+        incoming = _to_incoming(msg, profile_name)
         if incoming:
             await process_incoming_message(db, settings, incoming)
 

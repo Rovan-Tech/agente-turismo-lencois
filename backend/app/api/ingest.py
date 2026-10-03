@@ -15,7 +15,7 @@ from app.api.deps import require_ingest_auth
 from app.api.errors import PAYLOAD_TOO_LARGE, SERVICE_UNAVAILABLE, UNPROCESSABLE
 from app.core.config import Settings, get_settings
 from app.db.session import get_db
-from app.services import handoff, tour_catalog
+from app.services import customer_name, handoff, tour_catalog
 from app.services import ingest as ingest_service
 
 logger = logging.getLogger(__name__)
@@ -46,6 +46,17 @@ class InboundPayload(BaseModel):
     telefone: str = Field(pattern=_PHONE)
     texto: _Text
     idioma: Literal["pt", "en", "es"] | None
+    # Opcional e retrocompatível: o n8n que não manda o campo continua valendo. Nome do perfil do
+    # WhatsApp (`contacts[].profile.name`): dado pessoal, só vai ao banco e ao painel.
+    cliente_nome: str | None = Field(
+        default=None,
+        max_length=customer_name.MAX_LENGTH,
+        pattern=_NO_NUL,
+        description=(
+            "Nome do perfil do WhatsApp do turista, quando a Meta o informa. Ausente, nulo ou "
+            "vazio mantém o nome já guardado; um nome novo substitui o anterior."
+        ),
+    )
 
 
 class HandlingQuery(BaseModel):
@@ -62,6 +73,20 @@ class ExchangePayload(InboundPayload):
     resposta: _Text
     passeio_sugerido_id: str | None = Field(max_length=128, pattern=_NO_NUL)
     precisa_atencao_humana: bool
+
+
+def _request_body(model: type[BaseModel]) -> dict[str, object]:
+    """Corpo da requisição no OpenAPI.
+
+    A rota lê o JSON à mão (teto de 16 KiB), então o contrato do `model` não sairia sozinho na
+    documentação.
+    """
+    return {
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": model.model_json_schema()}},
+        }
+    }
 
 
 async def _read_limited_body(request: Request) -> bytes:
@@ -94,6 +119,7 @@ def _to_exchange(payload: ExchangePayload) -> ingest_service.Exchange:
         language=payload.idioma,
         suggested_tour_id=payload.passeio_sugerido_id,
         needs_human=payload.precisa_atencao_humana,
+        customer_name=payload.cliente_nome,
     )
 
 
@@ -129,6 +155,7 @@ async def _parse(request: Request, model: type[_Payload]) -> _Payload:
 @router.post(
     "/atendimentos",
     responses={413: PAYLOAD_TOO_LARGE, 422: UNPROCESSABLE, 503: SERVICE_UNAVAILABLE},
+    openapi_extra=_request_body(ExchangePayload),
 )
 async def record_exchange(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     """Grava o atendimento (mensagem do turista e resposta enviada), uma vez por mensagem da Meta.
@@ -152,6 +179,7 @@ async def record_exchange(request: Request, db: AsyncSession = Depends(get_db)) 
 @router.post(
     "/mensagens",
     responses={413: PAYLOAD_TOO_LARGE, 422: UNPROCESSABLE, 503: SERVICE_UNAVAILABLE},
+    openapi_extra=_request_body(InboundPayload),
 )
 async def record_inbound(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     """Grava só a mensagem do turista, sem resposta: o n8n usa quando uma pessoa está atendendo.
@@ -162,7 +190,11 @@ async def record_inbound(request: Request, db: AsyncSession = Depends(get_db)) -
     """
     payload = await _parse(request, InboundPayload)
     inbound = ingest_service.Inbound(
-        payload.whatsapp_message_id, payload.telefone, payload.texto, payload.idioma
+        payload.whatsapp_message_id,
+        payload.telefone,
+        payload.texto,
+        payload.idioma,
+        payload.cliente_nome,
     )
     recorded = await _guarded(ingest_service.record_inbound(db, inbound))
     outcome = "criado" if recorded.created else "duplicado"

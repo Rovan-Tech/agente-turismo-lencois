@@ -116,6 +116,7 @@ def _summary(conversation: Conversation, settings: Settings) -> dict[str, object
     return {
         "id": conversation.id,
         "whatsapp_phone": conversation.whatsapp_phone,
+        "cliente_nome": conversation.cliente_nome,
         "status": conversation.status,
         "idioma_detectado": conversation.idioma_detectado,
         "atendimento": Handling.HUMANO if is_human else Handling.IA,

@@ -36,6 +36,9 @@ class Conversation(Base):
         String(20), default=ConversationStatus.ABERTA
     )
     idioma_detectado: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # Nome do perfil do WhatsApp do turista, quando a Meta o informa (dado pessoal, LGPD): só o
+    # painel o mostra; nunca vai a log nem a prompt de LLM.
+    cliente_nome: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # Último passeio que o assistente recomendou (validado contra os candidatos enviados ao LLM).
     passeio_sugerido_id: Mapped[str | None] = mapped_column(
         ForeignKey("tours.id"), nullable=True, index=True

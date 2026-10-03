@@ -158,3 +158,16 @@ def test_human_handoff_migration_backfills_the_author_and_is_reversible(alembic_
 
     command.upgrade(config, "head")
     assert _authors_by_content(sync_url) == {"oi": "turista", "olá": "ia"}
+
+
+def test_customer_name_migration_goes_up_down_and_up_again(alembic_config):
+    config, sync_url = alembic_config
+
+    command.upgrade(config, "head")
+    assert "cliente_nome" in _conversation_columns(sync_url)
+
+    command.downgrade(config, "0005")
+    assert "cliente_nome" not in _conversation_columns(sync_url)
+
+    command.upgrade(config, "head")
+    assert "cliente_nome" in _conversation_columns(sync_url)

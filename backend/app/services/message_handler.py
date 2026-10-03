@@ -14,7 +14,7 @@ from app.core.config import Settings
 from app.models.conversation import Conversation, ConversationStatus, Handling
 from app.models.message import Message, MessageDirection, MessageType
 from app.models.tour import Tour
-from app.services import handoff, tour_matcher, whatsapp_client
+from app.services import customer_name, handoff, tour_matcher, whatsapp_client
 from app.services.groq_client import (
     GroqReply,
     GroqUnavailableError,
@@ -104,6 +104,7 @@ class IncomingMessage:
     text_body: str | None = None
     media_id: str | None = None
     message_id: str | None = None
+    profile_name: str | None = None
 
 
 async def is_duplicate_delivery(db: AsyncSession, whatsapp_message_id: str | None) -> bool:
@@ -254,6 +255,7 @@ async def process_incoming_message(
     if await is_duplicate_delivery(db, incoming.message_id):
         return None
     conversation = await get_or_create_open_conversation(db, incoming.phone)
+    customer_name.apply_profile_name(conversation, incoming.profile_name)
     is_human = handoff.current_handling(conversation, settings) == Handling.HUMANO
 
     try:

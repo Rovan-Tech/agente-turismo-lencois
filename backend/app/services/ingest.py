@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.conversation import Conversation, ConversationStatus
 from app.models.message import Message, MessageDirection, MessageType
 from app.models.tour import Tour
-from app.services import message_handler
+from app.services import customer_name, message_handler
 from app.services.message_handler import IncomingMessage
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ class Exchange:
     language: str | None
     suggested_tour_id: str | None
     needs_human: bool
+    customer_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +39,7 @@ class Inbound:
     phone: str
     text: str
     language: str | None
+    customer_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +103,7 @@ async def _record(db: AsyncSession, exchange: Exchange) -> RecordedExchange:
             idioma=exchange.language,
         )
     )
+    customer_name.apply_profile_name(conversation, exchange.customer_name)
     _register_activity(
         conversation, exchange, await _active_tour_id(db, exchange.suggested_tour_id)
     )
@@ -139,6 +142,7 @@ async def _record_inbound(db: AsyncSession, inbound: Inbound) -> RecordedExchang
         return RecordedExchange(False, await _conversation_of(db, inbound.message_id))
     if inbound.language is not None:
         conversation.idioma_detectado = inbound.language
+    customer_name.apply_profile_name(conversation, inbound.customer_name)
     await db.commit()
     return RecordedExchange(True, conversation.id)
 
