@@ -70,7 +70,7 @@ describe("AppShell", () => {
     renderShellAt("/");
 
     expect(screen.getByText("página inicial")).toBeInTheDocument();
-    expect(screen.getAllByText("Lençóis Tour").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Vento Branco Expedições").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Painel do agente").length).toBeGreaterThan(0);
     expect(screen.getByText("Assistente de IA respondendo agora")).toBeInTheDocument();
     expect(screen.getByText("Equipe")).toBeInTheDocument();
