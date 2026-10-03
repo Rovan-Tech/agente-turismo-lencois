@@ -66,6 +66,23 @@ describe("lib/api", () => {
     expect(await load()).toEqual(body);
   });
 
+  it("keeps the customer name the server sends", async () => {
+    respondWith([summary({ id: "1", cliente_nome: "Mariana Souza" })]);
+
+    expect(await listConversations()).toMatchObject([{ cliente_nome: "Mariana Souza" }]);
+  });
+
+  it("treats a response without the customer name (older backend) as having no name", async () => {
+    const { cliente_nome: _omitted, ...withoutName } = summary({ id: "1" });
+    const { cliente_nome: _omittedToo, ...detailWithoutName } = SAMPLE_CONVERSATION;
+    void [_omitted, _omittedToo];
+
+    respondWith([withoutName]);
+    expect(await listConversations()).toMatchObject([{ cliente_nome: null }]);
+    respondWith(detailWithoutName);
+    expect(await loadDetail()).toMatchObject({ cliente_nome: null });
+  });
+
   it.each(["baixa", "media", "alta"] as const)(
     "accepts a suggested tour with %s difficulty",
     async (level) => {

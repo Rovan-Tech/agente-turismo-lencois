@@ -7,7 +7,10 @@ import { LanguageAvatar } from "./LanguageAvatar";
 import { MicIcon } from "./icons";
 import { StatusBadge } from "./StatusBadge";
 
-/** Uma linha da lista: idioma, telefone, prévia da última mensagem, há quanto tempo e status. */
+/**
+ * Uma linha da lista: avatar, nome do cliente (ou o telefone, se o WhatsApp não informou nome), prévia
+ * da última mensagem, há quanto tempo e status. Com nome, o telefone vira a linha secundária.
+ */
 export function ConversationRow({
   conversation,
   now,
@@ -15,8 +18,9 @@ export function ConversationRow({
   conversation: ConversationSummary;
   now: Date;
 }>) {
-  const { status, ultima_mensagem: last } = conversation;
-  const phoneColor = status === "resolvida" ? "text-muted" : "text-primary";
+  const { status, ultima_mensagem: last, cliente_nome: name } = conversation;
+  const phone = formatPhone(conversation.whatsapp_phone);
+  const titleColor = status === "resolvida" ? "text-muted" : "text-primary";
   // A borda terracota faz a prioridade aparecer na lista, não só no selo (que já traz texto).
   // A borda ocupa 3 px do padding esquerdo, para o avatar não sair do alinhamento das outras linhas.
   const attention =
@@ -28,16 +32,17 @@ export function ConversationRow({
         to={`/conversas/${conversation.id}`}
         className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 hover:bg-subtle focus-visible:-outline-offset-2 ${attention}`}
       >
-        <LanguageAvatar idioma={conversation.idioma_detectado} />
+        <LanguageAvatar idioma={conversation.idioma_detectado} nome={name} />
         <div className="min-w-0 flex-1 basis-[12rem]">
-          <p className={`flex items-center gap-2 font-semibold ${phoneColor}`}>
-            <span className="whitespace-nowrap">{formatPhone(conversation.whatsapp_phone)}</span>
+          <p className={`flex items-center gap-2 font-semibold ${titleColor}`}>
+            <span className={name ? "min-w-0 truncate" : "whitespace-nowrap"}>{name ?? phone}</span>
             {last?.tipo === "audio_transcrito" && (
               <span role="img" aria-label="áudio transcrito">
                 <MicIcon />
               </span>
             )}
           </p>
+          {name && <p className="whitespace-nowrap text-xs text-muted">{phone}</p>}
           {conversation.atendimento === "humano" && (
             <p className="text-xs font-semibold text-link">
               Atendendo: {conversation.atendente_nome ?? "equipe"}

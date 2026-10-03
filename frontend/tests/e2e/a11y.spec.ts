@@ -18,6 +18,8 @@ const MESSAGE = {
 const HEADER = {
   id: "a11y-conversa",
   whatsapp_phone: "5598977776666",
+  // Com nome: título, linha secundária do telefone e iniciais no avatar entram no scan de contraste.
+  cliente_nome: "Mariana Souza",
   status: "precisa_atencao",
   idioma_detectado: "pt",
   ...HANDLING_BY_AI,

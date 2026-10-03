@@ -39,6 +39,9 @@ export const ConversationMessageSchema = z.object({
 export const ConversationHeaderSchema = z.object({
   id: z.string(),
   whatsapp_phone: z.string(),
+  // Nome do perfil do WhatsApp, quando a Meta o informa (dado pessoal); sem ele, só o telefone.
+  // `default(null)`: um backend ainda sem o campo (deploy em etapas) não derruba a tela.
+  cliente_nome: z.string().nullable().default(null),
   status: ConversationStatusSchema,
   idioma_detectado: z.string().nullable(),
   // Quem responde agora; o nome e o `sub` só vêm preenchidos quando é uma pessoa (`humano`).

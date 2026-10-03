@@ -26,20 +26,22 @@ function ConversationHeaderBar({
   titleRef: React.RefObject<HTMLHeadingElement>;
 }>) {
   const language = languageName(conversation.idioma_detectado);
+  const name = conversation.cliente_nome;
+  const phone = formatPhone(conversation.whatsapp_phone);
   return (
     <header className="mt-1 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:mt-3 sm:px-6 sm:py-4">
-      <div className="flex items-center gap-3">
-        <LanguageAvatar idioma={conversation.idioma_detectado} />
-        <div>
+      <div className="flex min-w-0 items-center gap-3">
+        <LanguageAvatar idioma={conversation.idioma_detectado} nome={name} />
+        <div className="min-w-0">
           <h1
             ref={titleRef}
             tabIndex={-1}
-            className="font-display text-xl font-semibold text-primary"
+            className="break-words font-display text-xl font-semibold text-primary"
           >
-            {formatPhone(conversation.whatsapp_phone)}
+            {name ?? phone}
           </h1>
           <p className="text-sm text-muted">
-            Cliente desde {formatCustomerSince(conversation.created_at)}
+            {name ? `${phone} · ` : ""}Cliente desde {formatCustomerSince(conversation.created_at)}
             {language ? ` · ${language}` : ""}
           </p>
         </div>

@@ -71,6 +71,33 @@ describe("ConversationDetailPage", () => {
     expect(screen.getByText("Recomendo o bugre!")).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      "the customer name, the phone as secondary and initials",
+      "Mariana Souza",
+      "MS",
+      /^\+55 98 99999-8888 · Cliente desde .* · português$/,
+    ],
+    [
+      "the phone alone, with the language in the avatar",
+      null,
+      "PT",
+      /^Cliente desde .* · português$/,
+    ],
+  ])("titles the header with %s", async (_case, name, avatar, subtitle) => {
+    vi.spyOn(api, "getConversation").mockResolvedValue({
+      ...SAMPLE_CONVERSATION,
+      cliente_nome: name,
+    });
+
+    renderAt("abc123");
+
+    const title = name ?? "+55 98 99999-8888";
+    expect(await screen.findByRole("heading", { level: 1, name: title })).toBeVisible();
+    expect(screen.getByText(subtitle)).toBeVisible();
+    expect(screen.getByText(avatar)).toBeInTheDocument();
+  });
+
   it("shows the tour the assistant suggested in the side panel", async () => {
     vi.spyOn(api, "getConversation").mockResolvedValue({
       ...SAMPLE_CONVERSATION,

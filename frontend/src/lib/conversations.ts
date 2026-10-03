@@ -57,6 +57,23 @@ export function filterConversations(
   });
 }
 
+/**
+ * Iniciais para o avatar: a primeira letra (ou dígito) da primeira e da última palavra do nome,
+ * "Mariana Souza" -> "MS", "Zé" -> "Z". Palavra sem letra (emoji, símbolo) é ignorada; sem nenhuma
+ * letra, `null` (o avatar volta à sigla do idioma).
+ */
+export function initialsOf(name: string | null): string | null {
+  if (!name) return null;
+  const letters = name
+    .trim()
+    .split(/\s+/)
+    .map((word) => Array.from(word).find((char) => /[\p{L}\p{N}]/u.test(char)))
+    .filter((char): char is string => char !== undefined);
+  if (letters.length === 0) return null;
+  const picked = letters.length === 1 ? letters[0] : letters[0] + letters[letters.length - 1];
+  return picked.toLocaleUpperCase();
+}
+
 /** "PT", "EN", "ES"; "—" quando o idioma ainda não foi detectado. */
 export function languageCode(idioma: string | null): string {
   return idioma ? idioma.slice(0, 2).toUpperCase() : "—";

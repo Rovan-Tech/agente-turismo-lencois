@@ -4,6 +4,7 @@ import {
   countByFilter,
   filterConversations,
   formatPhone,
+  initialsOf,
   languageCode,
   languageName,
 } from "../../src/lib/conversations";
@@ -106,5 +107,23 @@ describe("language and phone helpers", () => {
     ["abc", "abc"],
   ])("formatPhone(%s) -> %s", (input, expected) => {
     expect(formatPhone(input)).toBe(expected);
+  });
+});
+
+describe("initialsOf", () => {
+  it.each([
+    ["Mariana Souza", "MS"],
+    ["  maria  de  souza ", "MS"],
+    ["Zé", "Z"],
+    ["émile zola", "ÉZ"],
+    ["Ana 🌴", "A"],
+    ["🌴 João Pedro", "JP"],
+    ["日本 太郎", "日太"],
+    ["🌴🌴", null],
+    ["   ", null],
+    ["", null],
+    [null, null],
+  ])("initialsOf(%j) -> %j", (input, expected) => {
+    expect(initialsOf(input)).toBe(expected);
   });
 });

@@ -124,7 +124,12 @@ export const DEMO_TOURS: Tour[] = [
   ),
 ];
 
-const BASE = { passeio_sugerido: null, atendente_nome: null, atendente_sub: null } as const;
+const BASE = {
+  passeio_sugerido: null,
+  atendente_nome: null,
+  atendente_sub: null,
+  cliente_nome: null,
+} as const;
 
 export function buildDemoConversations(): ConversationDetail[] {
   return [
@@ -132,6 +137,7 @@ export function buildDemoConversations(): ConversationDetail[] {
       ...BASE,
       id: "demo-c1",
       whatsapp_phone: "5500900000001",
+      cliente_nome: "Emily Carter",
       status: "precisa_atencao",
       idioma_detectado: "en",
       atendimento: "ia",
@@ -166,6 +172,7 @@ export function buildDemoConversations(): ConversationDetail[] {
       ...BASE,
       id: "demo-c2",
       whatsapp_phone: "5500900000002",
+      cliente_nome: "Marcos Oliveira",
       status: "aberta",
       idioma_detectado: "pt",
       atendimento: "ia",

@@ -38,6 +38,7 @@ export function fillTourFormRequiredFields(id: string, nome: string) {
 const SAMPLE_HEADER: ConversationHeader = {
   id: "abc123",
   whatsapp_phone: "5598999998888",
+  cliente_nome: null,
   status: "aberta",
   idioma_detectado: "pt",
   atendimento: "ia",

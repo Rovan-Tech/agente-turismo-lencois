@@ -58,6 +58,27 @@ describe("ConversationsPage", () => {
     expect(row).toHaveAttribute("href", "/conversas/a");
   });
 
+  it("shows the customer name as the title with the phone below, and initials in the avatar", async () => {
+    renderPage([summary({ id: "n", cliente_nome: "Mariana Souza", idioma_detectado: "pt" })]);
+
+    const row = (await screen.findByText("Mariana Souza")).closest("a") as HTMLElement;
+    const withinRow = within(row);
+    expect(withinRow.getByText("MS")).toBeInTheDocument();
+    expect(withinRow.queryByText("PT")).toBeNull();
+    const phone = withinRow.getByText("+55 98 99999-8888");
+    expect(phone).toHaveClass("text-muted");
+    // O telefone é a linha secundária: depois do título, não dentro dele.
+    expect(phone.closest("p")).not.toBe(withinRow.getByText("Mariana Souza").closest("p"));
+  });
+
+  it("shows only the phone, with the language in the avatar, when there is no name", async () => {
+    renderPage([summary({ id: "s", cliente_nome: null, idioma_detectado: "pt" })]);
+
+    const row = (await screen.findByText("+55 98 99999-8888")).closest("a") as HTMLElement;
+    expect(within(row).getByText("PT")).toBeInTheDocument();
+    expect(within(row).getAllByText(/\+55 98 99999-8888/)).toHaveLength(1);
+  });
+
   it("highlights the ones that need attention and mutes the resolved ones", async () => {
     renderPage(MIXED);
 

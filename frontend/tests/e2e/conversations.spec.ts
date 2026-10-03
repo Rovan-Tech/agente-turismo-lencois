@@ -208,3 +208,29 @@ test("says so when the assistant suggested no tour", async ({ page }) => {
 
   await expect(page.getByText("A IA ainda não sugeriu um passeio nesta conversa.")).toBeVisible();
 });
+
+test("shows the customer name when the WhatsApp profile has one, and only the phone otherwise", async ({
+  page,
+}) => {
+  const named = { ...INBOX[0], id: "nome", cliente_nome: "Mariana Souza" };
+  const unnamed = { ...INBOX[1], id: "sem-nome" };
+  await page.route("**/api/conversations", (route) => route.fulfill({ json: [named, unnamed] }));
+  await page.route("**/api/conversations/nome", (route) =>
+    route.fulfill({ json: { ...named, passeio_sugerido: null, messages: [] } })
+  );
+
+  await page.goto("/");
+
+  const namedRow = page.getByRole("link", { name: /Mariana Souza/ });
+  await expect(namedRow.getByText("Mariana Souza")).toBeVisible();
+  await expect(namedRow.getByText("+55 98 99184-2201")).toBeVisible();
+  await expect(namedRow.getByText("MS")).toBeVisible();
+  const unnamedRow = page.getByRole("link", { name: /98212-7743/ });
+  await expect(unnamedRow.getByText("+55 98 98212-7743")).toBeVisible();
+  await expect(unnamedRow.getByText("EN", { exact: true })).toBeVisible();
+
+  await namedRow.click();
+
+  await expect(page.getByRole("heading", { level: 1, name: "Mariana Souza" })).toBeVisible();
+  await expect(page.getByText(/^\+55 98 99184-2201 · Cliente desde/)).toBeVisible();
+});
