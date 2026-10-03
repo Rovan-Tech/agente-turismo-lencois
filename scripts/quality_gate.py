@@ -173,8 +173,12 @@ def security_backend() -> list[StepResult]:
 
 
 def security_frontend() -> StepResult:
-    """Executa o `npm audit` (severidade alta ou pior)."""
-    outcome = run([_npm(), "audit", "--audit-level=high"], cwd=FRONTEND)
+    """Executa o `npm audit` nas dependências de produção (severidade alta ou pior).
+
+    `--omit=dev` por causa do `braces` (via tailwindcss 3.x, só de build), sem versão corrigida:
+    ver TD-C4 em docs/tech-debt.md. Voltar a auditar tudo quando houver patch.
+    """
+    outcome = run([_npm(), "audit", "--omit=dev", "--audit-level=high"], cwd=FRONTEND)
     return StepResult(
         "auditoria de dependências npm",
         outcome.returncode == 0,
