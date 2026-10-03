@@ -17,13 +17,12 @@ const STATUS_CLASSES: Record<ConversationStatus, string> = {
   resolvida: "bg-neutral-subtle text-neutral-subtle",
 };
 
-export function StatusBadge({ status }: { status: ConversationStatus }) {
+export function StatusBadge({ status }: Readonly<{ status: ConversationStatus }>) {
   return (
-    <span
-      role="status"
+    <output
       className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${STATUS_CLASSES[status]}`}
     >
       {STATUS_LABELS[status]}
-    </span>
+    </output>
   );
 }

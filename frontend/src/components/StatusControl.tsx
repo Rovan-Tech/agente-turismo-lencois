@@ -17,13 +17,13 @@ export function StatusControl({
   status,
   busy,
   onChange,
-}: {
+}: Readonly<{
   status: ConversationStatus;
   busy: boolean;
   onChange: (next: ConversationStatus) => void;
-}) {
+}>) {
   return (
-    <div role="group" aria-label="Status da conversa" className="flex flex-col gap-2">
+    <fieldset aria-label="Status da conversa" className="min-w-0 flex flex-col gap-2">
       {OPTIONS.map(({ value, label, dot }) => {
         const selected = value === status;
         const canChoose = !selected && !busy;
@@ -44,6 +44,6 @@ export function StatusControl({
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 }

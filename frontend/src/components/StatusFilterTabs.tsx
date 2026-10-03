@@ -5,13 +5,13 @@ export function StatusFilterTabs({
   active,
   counts,
   onChange,
-}: {
+}: Readonly<{
   active: StatusFilter;
   counts: Record<StatusFilter, number>;
   onChange: (filter: StatusFilter) => void;
-}) {
+}>) {
   return (
-    <div role="group" aria-label="Filtrar por status" className="flex flex-wrap gap-2">
+    <fieldset aria-label="Filtrar por status" className="min-w-0 flex flex-wrap gap-2">
       {STATUS_FILTERS.map(({ value, label }) => {
         const selected = value === active;
         return (
@@ -33,6 +33,6 @@ export function StatusFilterTabs({
           </button>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
