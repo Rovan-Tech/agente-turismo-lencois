@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -101,6 +102,24 @@ def _strip_comments(css: str) -> str:
     return "".join(parts)
 
 
+def _iter_blocks(css: str) -> Iterator[tuple[str, str]]:
+    """Gera `(seletor, corpo)` de cada `seletor { corpo }` sem chaves dentro, também aninhado.
+
+    Corta o CSS nas chaves e procura `texto { texto }` em sequência, em tempo linear. Uma regex
+    com lookbehind e quantificadores sobre `[^{}]` fazia o mesmo, mas o Sonar a acusa de
+    super-linear (S8786).
+    """
+    pieces = re.split(r"([{}])", css)
+    index = 0
+    while index + 3 < len(pieces):
+        selector, open_brace, body, close_brace = pieces[index : index + 4]
+        if selector and open_brace == "{" and close_brace == "}":
+            yield selector, body
+            index += 4
+        else:
+            index += 2
+
+
 def parse_tokens(css: str) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
     """Extrai o tema claro (`:root`) e as duas cópias do escuro.
 
@@ -114,10 +133,9 @@ def parse_tokens(css: str) -> tuple[dict[str, str], dict[str, str], dict[str, st
         ':root:not([data-theme="light"])': {},
     }
     # Quantificadores possessivos e a âncora `(?<!...)` mantêm a busca linear: sem retrocesso e sem
-    # recomeçar a busca no meio de um nome ou de um seletor (`super-linear`, Sonar S8786).
+    # recomeçar a busca no meio de um nome (`super-linear`, Sonar S8786).
     decl = re.compile(r"(?<![\w-])(--[\w-]++)\s*+:([^;]++);")
-    blocks = re.findall(r"(?<![^{}])([^{}]++)\{([^{}]*+)\}", _strip_comments(css))
-    for raw_selector, body in blocks:
+    for raw_selector, body in _iter_blocks(_strip_comments(css)):
         target = targets.get(raw_selector.strip())
         if target is not None:
             target.update({name: value.strip() for name, value in decl.findall(body)})
