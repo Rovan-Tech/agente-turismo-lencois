@@ -1,5 +1,6 @@
 import { fireEvent, screen } from "@testing-library/react";
 
+import type { ApiResult } from "../../src/lib/api";
 import type {
   Booking,
   ConversationDetail,
@@ -86,6 +87,12 @@ export const HANDLED_CONVERSATION: ConversationDetail = {
 };
 
 export const ME = { sub: "pessoa-123", nome: "Ana" };
+
+export const TRANSLATE_FAILURE: ApiResult<string> = {
+  ok: false,
+  status: 503,
+  message: "indisponível",
+};
 
 export function summary(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return { ...SAMPLE_HEADER, ultima_mensagem: null, ...overrides };

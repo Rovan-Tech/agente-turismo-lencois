@@ -97,3 +97,12 @@ export function MoonIcon(props: Readonly<IconProps>) {
     </Icon>
   );
 }
+
+export function TranslateIcon(props: Readonly<IconProps>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 5h9M8.5 3v2M6 5c.6 3.4 3 6.2 6.5 8M12 5c-.6 3.6-3.2 6.6-7.5 8.5" />
+      <path d="M13 20l4-9 4 9M14.5 17h5" />
+    </Icon>
+  );
+}

@@ -1,11 +1,19 @@
 import { formatClock } from "../lib/time";
 import type { ConversationMessage } from "../types";
 import { MicIcon } from "./icons";
+import { TranslateToggle } from "./TranslateToggle";
 
 const AUTHOR_LABELS = { turista: null, ia: "Assistente de IA", atendente: "Equipe" } as const;
 
-/** Balão da conversa: turista à esquerda, assistente à direita, com o horário embaixo. */
-export function MessageBubble({ message }: Readonly<{ message: ConversationMessage }>) {
+/**
+ * Balão da conversa: turista à esquerda, assistente à direita, com o horário embaixo.
+ * `translatable` mostra o botão "Traduzir" nas mensagens recebidas (a conversa não está em
+ * português); a IA e a equipe já respondem no idioma do turista, então as próprias não precisam.
+ */
+export function MessageBubble({
+  message,
+  translatable = false,
+}: Readonly<{ message: ConversationMessage; translatable?: boolean }>) {
   const incoming = message.direction === "entrada";
   return (
     <li
@@ -28,6 +36,7 @@ export function MessageBubble({ message }: Readonly<{ message: ConversationMessa
         {AUTHOR_LABELS[message.autor] && `${AUTHOR_LABELS[message.autor]} · `}
         <time dateTime={message.created_at}>{formatClock(message.created_at)}</time>
       </p>
+      {incoming && translatable && <TranslateToggle texto={message.conteudo} />}
     </li>
   );
 }

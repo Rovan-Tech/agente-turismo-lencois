@@ -102,7 +102,11 @@ export function ConversationDetailPage() {
         {conversation && (
           <>
             <ConversationHeaderBar conversation={conversation} titleRef={titleRef} />
-            <MessageList messages={conversation.messages} scroll={scroll} />
+            <MessageList
+              messages={conversation.messages}
+              scroll={scroll}
+              translatable={conversation.idioma_detectado !== "pt"}
+            />
             {isMine && (
               <ReplyComposer
                 blockedReason={
@@ -110,6 +114,11 @@ export function ConversationDetailPage() {
                 }
                 error={actions.replyError}
                 onSend={sendReply}
+                targetLanguage={
+                  conversation.idioma_detectado === "en" || conversation.idioma_detectado === "es"
+                    ? conversation.idioma_detectado
+                    : undefined
+                }
               />
             )}
           </>

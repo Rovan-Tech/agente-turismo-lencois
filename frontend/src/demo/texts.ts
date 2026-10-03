@@ -26,6 +26,13 @@ export const FOLLOW_UP: Record<string, string> = {
   es: "Perfecto, ¡gracias! Lo hablo con mi grupo y vuelvo enseguida.",
 };
 
+/** Tradução de demonstração: um texto fixo por idioma, não uma IA traduzindo o que foi digitado. */
+export const TRANSLATION_DEMO: Record<string, string> = {
+  pt: "Esta é uma tradução de demonstração. Na versão real, a IA traduz o texto digitado.",
+  en: "This is a demo translation. In the real product, the AI translates what was typed.",
+  es: "Esta es una traducción de demostración. En el producto real, la IA traduce lo escrito.",
+};
+
 export const WINDOW_CLOSED =
   "A última mensagem do turista tem mais de 24 horas: o WhatsApp só permite responder dentro desse prazo. Espere o turista escrever de novo.";
 

@@ -14,6 +14,7 @@ import {
   listTours,
   sendConversationReply,
   takeOverConversation,
+  translateText,
   updateConversationStatus,
   updateTour,
 } from "../../src/lib/api";
@@ -347,6 +348,31 @@ describe("lib/api", () => {
       ok: false,
       status: 409,
       message: reason,
+    });
+  });
+
+  it("translateText posts the text and the target language, and unwraps the translation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { traducao: "Hello!" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await translateText("Olá!", "en");
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain("/api/conversations/traducao");
+    expect(JSON.parse(init.body)).toEqual({ texto: "Olá!", idioma_destino: "en" });
+    expect(result).toEqual({ ok: true, data: "Hello!" });
+  });
+
+  it("translateText gives the server's reason when it refuses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(jsonResponse(503, { detail: "Tradução indisponível." }))
+    );
+
+    expect(await translateText("Olá!", "en")).toEqual({
+      ok: false,
+      status: 503,
+      message: "Tradução indisponível.",
     });
   });
 

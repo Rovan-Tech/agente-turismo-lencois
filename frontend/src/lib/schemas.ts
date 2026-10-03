@@ -113,3 +113,8 @@ export const BookingCreatedSchema = BookingSchema.extend({
 
 /** Quem está logado: o `sub` identifica a pessoa e `nome` é o primeiro nome que o turista verá. */
 export const MeSchema = z.object({ sub: z.string(), nome: z.string().nullable() });
+
+export const TranslateResponseSchema = z.object({ traducao: z.string() });
+
+/** Os três idiomas que o Groq traduz (ver `docs/decisoes-de-arquitetura.md`). */
+export type TargetLanguage = "pt" | "en" | "es";

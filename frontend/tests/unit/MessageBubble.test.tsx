@@ -14,10 +14,10 @@ const MESSAGE: ConversationMessage = {
   created_at: "2026-09-28T09:14:00Z",
 };
 
-function renderBubble(overrides: Partial<ConversationMessage> = {}) {
+function renderBubble(overrides: Partial<ConversationMessage> = {}, translatable?: boolean) {
   render(
     <ul>
-      <MessageBubble message={{ ...MESSAGE, ...overrides }} />
+      <MessageBubble message={{ ...MESSAGE, ...overrides }} translatable={translatable} />
     </ul>
   );
 }
@@ -81,5 +81,23 @@ describe("MessageBubble", () => {
     renderBubble({ autor: "turista" });
 
     expect(screen.queryByText(/·/)).toBeNull();
+  });
+
+  it("offers a translate button on an incoming message when translatable", () => {
+    renderBubble({}, true);
+
+    expect(screen.getByRole("button", { name: /Traduzir/ })).toBeInTheDocument();
+  });
+
+  it("hides the translate button by default", () => {
+    renderBubble();
+
+    expect(screen.queryByRole("button", { name: /Traduzir/ })).toBeNull();
+  });
+
+  it("never offers to translate the agency's own messages, even when translatable", () => {
+    renderBubble({ direction: "saida" }, true);
+
+    expect(screen.queryByRole("button", { name: /Traduzir/ })).toBeNull();
   });
 });
