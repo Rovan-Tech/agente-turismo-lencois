@@ -273,11 +273,15 @@ async def send_conversation_message(
     return _message_dict(message)
 
 
-@router.post("/traducao", responses={503: {"description": "Tradução indisponível"}})
+@router.post("/traducao", responses={424: {"description": "Tradução indisponível"}})
 async def translate_message(
     payload: TranslateBody, settings: Settings = Depends(get_settings)
 ) -> dict[str, str]:
-    """Traduz um texto sob demanda (rascunho do atendente ou mensagem recebida), via Groq."""
+    """Traduz um texto sob demanda (rascunho do atendente ou mensagem recebida), via Groq.
+
+    424 (não 503): o pedido do painel está correto, quem falhou foi a dependência externa (Groq) —
+    e o portão de contrato (`not_a_server_error`) recusa qualquer 5xx desta API.
+    """
     try:
         traducao = await groq_client.translate_text(settings, payload.texto, payload.idioma_destino)
     except groq_client.GroqUnavailableError as error:
@@ -287,7 +291,7 @@ async def translate_message(
             error.status_http,
             extra={"event": "translation_unavailable", "causa": error.causa},
         )
-        raise HTTPException(status_code=503, detail="Tradução indisponível no momento.") from None
+        raise HTTPException(status_code=424, detail="Tradução indisponível no momento.") from None
     return {"traducao": traducao}
 
 

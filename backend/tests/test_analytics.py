@@ -59,6 +59,11 @@ def _human_reply(conversation: Conversation, *, ago: timedelta, autor_sub: str) 
     )
 
 
+def _tour() -> Tour:
+    """O passeio que `_booking` referencia — precisa existir antes (FK, real no Postgres do CI)."""
+    return Tour(**default_tour_fields(id="passeio-teste", capacidade_diaria=10))
+
+
 def _booking(
     phone: str, *, status: PaymentStatus = PaymentStatus.PAGO, pessoas: int = 2
 ) -> Booking:
@@ -96,7 +101,7 @@ async def test_compute_analytics_with_no_data_is_all_zero(db_session):
 @pytest.mark.asyncio
 async def test_a_paid_booking_counts_the_conversation_as_a_sale(db_session):
     conversation = _conv("5598900000001")
-    await persist(db_session, conversation, _booking("5598900000001"))
+    await persist(db_session, _tour(), conversation, _booking("5598900000001"))
 
     result = await _compute(db_session, 7)
 
@@ -109,7 +114,7 @@ async def test_a_paid_booking_counts_the_conversation_as_a_sale(db_session):
 @pytest.mark.asyncio
 async def test_a_pending_booking_counts_as_created_but_not_paid(db_session):
     pendente = _booking("5598900000002", status=PaymentStatus.PENDENTE)
-    await persist(db_session, _conv("5598900000002"), pendente)
+    await persist(db_session, _tour(), _conv("5598900000002"), pendente)
 
     result = await _compute(db_session, 7)
 
@@ -172,7 +177,7 @@ async def test_first_human_reply_is_the_median_gap_after_the_tourists_last_messa
 @pytest.mark.asyncio
 async def test_por_pessoa_groups_by_attendant_and_counts_their_sales(db_session):
     attended = _conv("5598900000008")
-    await persist(db_session, attended, _booking("5598900000008"))
+    await persist(db_session, _tour(), attended, _booking("5598900000008"))
     await persist(
         db_session, _human_reply(attended, ago=timedelta(minutes=1), autor_sub="pessoa-1")
     )

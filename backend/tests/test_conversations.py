@@ -357,13 +357,14 @@ async def test_translate_message_rejects_empty_text(client):
 
 
 @pytest.mark.asyncio
-async def test_translate_message_returns_503_when_groq_is_unavailable(client, monkeypatch):
+async def test_translate_message_returns_424_when_groq_is_unavailable(client, monkeypatch):
     async def failing_translate_text(settings, texto, idioma_destino):
         raise groq_client.GroqUnavailableError("ReadTimeout")
 
     monkeypatch.setattr(groq_client, "translate_text", failing_translate_text)
 
-    assert (await _translate(client)).status_code == 503
+    # Não 503: a API em si está bem, quem falhou foi o Groq — e o portão de contrato recusa 5xx.
+    assert (await _translate(client)).status_code == 424
 
 
 @pytest.mark.asyncio
