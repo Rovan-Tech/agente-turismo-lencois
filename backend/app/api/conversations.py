@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import require_dashboard_auth, require_panel_identity
+from app.api.errors import CONVERSATION_NOT_FOUND, NOT_FOUND
 from app.core.access_jwt import AccessIdentity
 from app.core.config import Settings, get_settings
 from app.db.session import get_db
@@ -89,7 +90,7 @@ async def _load(db: AsyncSession, conversation_id: str, *, lock: bool = False) -
     else:
         conversation = await db.get(Conversation, conversation_id)
     if not conversation:
-        raise HTTPException(status_code=404, detail="conversa não encontrada")
+        raise HTTPException(status_code=404, detail=CONVERSATION_NOT_FOUND)
     return conversation
 
 
@@ -175,7 +176,7 @@ async def list_conversations(
     ]
 
 
-@router.patch("/{conversation_id}/status")
+@router.patch("/{conversation_id}/status", responses={404: NOT_FOUND})
 async def update_conversation_status(
     conversation_id: str,
     payload: StatusUpdate,
@@ -220,7 +221,7 @@ async def _run_action(action: Action, conversation_id: str, ctx: PanelContext) -
     return _summary(conversation, ctx.settings)
 
 
-@router.post("/{conversation_id}/assumir")
+@router.post("/{conversation_id}/assumir", responses={404: NOT_FOUND})
 async def take_over_conversation(
     conversation_id: str, ctx: PanelContext = Depends(panel_context), _body: EmptyBody | None = None
 ) -> dict[str, object]:
@@ -228,7 +229,7 @@ async def take_over_conversation(
     return await _run_action(handoff.take_over, conversation_id, ctx)
 
 
-@router.post("/{conversation_id}/devolver")
+@router.post("/{conversation_id}/devolver", responses={404: NOT_FOUND})
 async def give_back_conversation(
     conversation_id: str, ctx: PanelContext = Depends(panel_context), _body: EmptyBody | None = None
 ) -> dict[str, object]:
@@ -236,7 +237,7 @@ async def give_back_conversation(
     return await _run_action(handoff.give_back, conversation_id, ctx)
 
 
-@router.post("/{conversation_id}/mensagens")
+@router.post("/{conversation_id}/mensagens", responses={404: NOT_FOUND})
 async def send_conversation_message(
     conversation_id: str, payload: ReplyBody, ctx: PanelContext = Depends(panel_context)
 ) -> dict[str, object]:
@@ -250,7 +251,7 @@ async def send_conversation_message(
     return _message_dict(message)
 
 
-@router.get("/{conversation_id}")
+@router.get("/{conversation_id}", responses={404: NOT_FOUND})
 async def get_conversation(
     conversation_id: str,
     db: AsyncSession = Depends(get_db),
@@ -264,7 +265,7 @@ async def get_conversation(
     )
     conversation = result.scalars().first()
     if not conversation:
-        raise HTTPException(status_code=404, detail="conversa não encontrada")
+        raise HTTPException(status_code=404, detail=CONVERSATION_NOT_FOUND)
 
     suggested = conversation.passeio_sugerido
     return {

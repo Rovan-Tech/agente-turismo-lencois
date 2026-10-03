@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_dashboard_auth
+from app.api.errors import CONFLICT, NOT_FOUND, TOUR_NOT_FOUND
 from app.db.session import get_db
 from app.models.tour import DifficultyLevel, Tour
 from app.services import tour_catalog
@@ -66,7 +67,7 @@ async def _get_or_404(coro: Awaitable[Tour]) -> Tour:
     try:
         return await coro
     except tour_catalog.TourNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="passeio não encontrado") from exc
+        raise HTTPException(status_code=404, detail=TOUR_NOT_FOUND) from exc
 
 
 @router.get("")
@@ -87,7 +88,7 @@ async def list_tours(
     return [_to_dict(tour) for tour in tours]
 
 
-@router.post("", status_code=201)
+@router.post("", status_code=201, responses={409: CONFLICT})
 async def create_tour(payload: TourCreate, db: AsyncSession = Depends(get_db)) -> dict[str, object]:
     """Cria um novo passeio no catálogo.
 
@@ -108,7 +109,7 @@ async def create_tour(payload: TourCreate, db: AsyncSession = Depends(get_db)) -
     return _to_dict(tour)
 
 
-@router.put("/{tour_id}")
+@router.put("/{tour_id}", responses={404: NOT_FOUND})
 async def update_tour(
     tour_id: str,
     payload: TourUpdate,
@@ -119,7 +120,7 @@ async def update_tour(
     return _to_dict(tour)
 
 
-@router.delete("/{tour_id}")
+@router.delete("/{tour_id}", responses={404: NOT_FOUND})
 async def deactivate_tour(tour_id: str, db: AsyncSession = Depends(get_db)) -> dict[str, object]:
     """Desativa um passeio (soft delete, nunca apaga); levanta 404 se ``tour_id`` não existir."""
     tour = await _get_or_404(tour_catalog.deactivate_tour(db, tour_id))

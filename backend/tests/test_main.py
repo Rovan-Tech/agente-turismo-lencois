@@ -19,8 +19,7 @@ def test_sanitize_for_json_replaces_inf_and_nan_recursively():
     assert sanitized == {"a": [None, None, 1.5], "b": "texto"}
 
 
-@pytest.mark.asyncio
-async def test_validation_error_handler_survives_non_json_native_ctx():
+def test_validation_error_handler_survives_non_json_native_ctx():
     # ctx com ValueError (comum em @field_validator) e Decimal (comum em limites de Numeric) —
     # nenhum dos dois é serializável por json.dumps sem passar pelo jsonable_encoder antes.
     errors = [
@@ -35,7 +34,7 @@ async def test_validation_error_handler_survives_non_json_native_ctx():
     exc = RequestValidationError(errors)
 
     # request não é usado pelo handler; None evita montar um Request de verdade só pro teste.
-    response = await _handle_validation_error(None, exc)  # type: ignore[arg-type]
+    response = _handle_validation_error(None, exc)  # type: ignore[arg-type]
 
     assert response.status_code == 422
     body = json.loads(bytes(response.body))

@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_ingest_auth
+from app.api.errors import PAYLOAD_TOO_LARGE, SERVICE_UNAVAILABLE, UNPROCESSABLE
 from app.core.config import Settings, get_settings
 from app.db.session import get_db
 from app.services import handoff, tour_catalog
@@ -125,7 +126,10 @@ async def _parse(request: Request, model: type[_Payload]) -> _Payload:
         raise HTTPException(status_code=422, detail=_safe_errors(error)) from None
 
 
-@router.post("/atendimentos")
+@router.post(
+    "/atendimentos",
+    responses={413: PAYLOAD_TOO_LARGE, 422: UNPROCESSABLE, 503: SERVICE_UNAVAILABLE},
+)
 async def record_exchange(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     """Grava o atendimento (mensagem do turista e resposta enviada), uma vez por mensagem da Meta.
 
@@ -145,7 +149,10 @@ async def record_exchange(request: Request, db: AsyncSession = Depends(get_db)) 
     return {"status": outcome, "conversa_id": recorded.conversation_id}
 
 
-@router.post("/mensagens")
+@router.post(
+    "/mensagens",
+    responses={413: PAYLOAD_TOO_LARGE, 422: UNPROCESSABLE, 503: SERVICE_UNAVAILABLE},
+)
 async def record_inbound(request: Request, db: AsyncSession = Depends(get_db)) -> dict[str, str]:
     """Grava só a mensagem do turista, sem resposta: o n8n usa quando uma pessoa está atendendo.
 
@@ -167,7 +174,10 @@ async def record_inbound(request: Request, db: AsyncSession = Depends(get_db)) -
     return {"status": outcome, "conversa_id": recorded.conversation_id}
 
 
-@router.post("/conversas/atendimento")
+@router.post(
+    "/conversas/atendimento",
+    responses={413: PAYLOAD_TOO_LARGE, 422: UNPROCESSABLE, 503: SERVICE_UNAVAILABLE},
+)
 async def conversation_handling(
     request: Request,
     db: AsyncSession = Depends(get_db),
