@@ -1,3 +1,4 @@
+import threading
 from pathlib import Path
 
 import pytest
@@ -89,6 +90,61 @@ async def test_resolve_incoming_text_transcribes_audio(monkeypatch):
 
     assert (content, tipo) == ("transcrição falsa", MessageType.AUDIO_TRANSCRITO)
     # LGPD: o áudio bruto nunca deve sobreviver à transcrição (só o texto é persistido).
+    assert not Path(seen_paths[0]).exists()
+
+
+class TranscriptionFailedError(Exception):
+    """Falha simulada do Whisper."""
+
+
+@pytest.mark.asyncio
+async def test_resolve_incoming_text_transcribes_audio_off_the_event_loop(monkeypatch):
+    async def fake_get_media_url(settings, media_id):
+        return "https://media.example/x"
+
+    async def fake_download_media(settings, media_url, max_bytes):
+        return b"raw-audio-bytes"
+
+    seen_threads: list[int] = []
+    seen_contents: list[bytes] = []
+
+    def fake_transcribe_audio(settings, path):
+        seen_threads.append(threading.get_ident())
+        seen_contents.append(Path(path).read_bytes())
+        return "ok", "pt"
+
+    monkeypatch.setattr(whatsapp_client, "get_media_url", fake_get_media_url)
+    monkeypatch.setattr(whatsapp_client, "download_media", fake_download_media)
+    monkeypatch.setattr(transcription_module, "transcribe_audio", fake_transcribe_audio)
+
+    await resolve_incoming_text(get_settings(), "audio", None, "media-1")
+
+    assert seen_threads != [threading.get_ident()]
+    assert seen_contents == [b"raw-audio-bytes"]
+
+
+@pytest.mark.asyncio
+async def test_resolve_incoming_text_removes_temp_audio_when_transcription_fails(monkeypatch):
+    async def fake_get_media_url(settings, media_id):
+        return "https://media.example/x"
+
+    async def fake_download_media(settings, media_url, max_bytes):
+        return b"raw-audio-bytes"
+
+    seen_paths = []
+
+    def failing_transcribe_audio(settings, path):
+        seen_paths.append(path)
+        raise TranscriptionFailedError
+
+    monkeypatch.setattr(whatsapp_client, "get_media_url", fake_get_media_url)
+    monkeypatch.setattr(whatsapp_client, "download_media", fake_download_media)
+    monkeypatch.setattr(transcription_module, "transcribe_audio", failing_transcribe_audio)
+
+    with pytest.raises(TranscriptionFailedError):
+        await resolve_incoming_text(get_settings(), "audio", None, "media-1")
+
+    # LGPD: mesmo com falha, o áudio bruto não pode ficar em disco.
     assert not Path(seen_paths[0]).exists()
 
 
