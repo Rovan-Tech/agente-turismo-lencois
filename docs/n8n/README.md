@@ -46,9 +46,19 @@ WhatsApp → Meta → [Receber WhatsApp] → [Só mensagens de texto] → [Consu
 - **Registro no painel (ADR-0005):** depois de responder, o nó "Registrar atendimento" chama
   `POST /api/ingest/atendimentos` com o id da mensagem da Meta, o telefone, o texto original do
   turista (até 4096), a resposta enviada, `idioma`, `passeio_sugerido_id` e
-  `precisa_atencao_humana`. São 3 tentativas com 10 s de limite; repetir é seguro (o backend
+  `precisa_atencao_humana` e, opcional, `cliente_nome` (ver abaixo). São 3 tentativas com 10 s de limite; repetir é seguro (o backend
   deduplica pelo id). Se falhar, **não** dispara a contingência (o turista já foi respondido) e o
   atendimento fica só na execução do n8n. O backend só aceita passeio ativo do catálogo.
+- **Nome do cliente (opcional, LGPD):** os três nós de registro (atendimento, contingência e
+  mensagem com atendente ativo) enviam `cliente_nome`, lido de `contacts[0].profile.name` do gatilho
+  (o nome do perfil do WhatsApp, até 100 caracteres, `null` se a Meta não mandou). O backend guarda
+  na conversa e o painel mostra no lugar do telefone, que vira a linha secundária. O campo é
+  opcional no contrato: um fluxo antigo, sem ele, continua válido (o nome só não aparece). Ausente,
+  nulo ou vazio **não apaga** um nome já guardado; um nome novo o substitui. **O nome nunca entra no
+  prompt do Gemini** (o nó "Preparar entrada do modelo" só leva o texto do turista, o catálogo e a
+  agência) e o backend não o põe em log nem em mensagem de erro; `test_n8n_flow.py` confere os dois
+  lados. Ao reimportar o fluxo, os três nós já trazem o campo; no n8n publicado, acrescente-o à
+  mão nos mesmos três nós.
 - **"Precisa de atenção"** (decisão do Patrick): `precisa_atencao_humana` é `true` só quando o
   modelo não sabe responder ou está em dúvida, ou o turista pede uma pessoa, e na contingência. O
   backend só escala o status; a marca sai quando uma pessoa resolve a conversa no painel.

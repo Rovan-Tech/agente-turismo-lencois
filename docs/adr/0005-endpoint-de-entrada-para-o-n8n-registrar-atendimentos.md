@@ -171,3 +171,25 @@ Regras:
 6. **Reversão:** remover o nó HTTP do fluxo (o endpoint fica inerte) e/ou apagar
    `INGEST_API_TOKEN` (a rota passa a responder 401). Nenhum dado nem migração para desfazer; as
    conversas já gravadas continuam no painel.
+
+## Adendo (2026-10-03): nome do perfil do WhatsApp
+
+Pedido do Patrick (tarefa do ClickUp "Painel: mostrar o nome do cliente quando estiver disponível"):
+o painel mostra o nome do cliente, quando existe, no lugar do telefone. Mudança **aditiva**, sem
+novo ADR, porque não troca nenhuma decisão acima:
+
+- **Contrato:** `cliente_nome` **opcional** (texto de até 100 caracteres sem NUL, ou `null`) em
+  `POST /api/ingest/atendimentos` e em `POST /api/ingest/mensagens`. Quem não manda o campo continua
+  válido (retrocompatível). Ausente, nulo ou só espaços **mantém** o nome guardado; um nome novo
+  substitui o anterior (o turista pode trocar o nome do perfil). O backend colapsa espaços e remove
+  caracteres de controle antes de gravar. A resposta continua sem telefone nem nome.
+- **Origem:** o n8n lê `contacts[0].profile.name` do gatilho do WhatsApp; o webhook antigo do
+  backend lê `entry[].changes[].value.contacts[]` e casa `wa_id` com o `from` da mensagem.
+- **Onde fica:** coluna `conversations.cliente_nome` (migração `0006`, nula nas conversas
+  existentes), exposta como `cliente_nome` em `GET /api/conversations` e `GET /api/conversations/{id}`.
+  Não há tabela de clientes: o nome vai e some com a conversa, então o expurgo de 90 dias o apaga
+  junto. Uma conversa nova do mesmo telefone recebe o nome na próxima mensagem (a Meta o envia em
+  toda entrega).
+- **LGPD:** o nome é dado pessoal e texto do próprio turista (não confiável; o painel o renderiza
+  como texto). Nunca vai a log, mensagem de erro (o 422 já não devolve valores), prompt do LLM nem
+  resposta do n8n; testes em `backend/tests/test_customer_name.py` e `test_n8n_flow.py`.

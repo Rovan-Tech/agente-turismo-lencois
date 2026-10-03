@@ -204,7 +204,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  whatsapp_message_id: $(\"Só mensagens de texto\").first().json.messages[0].id,\n  telefone: $(\"Só mensagens de texto\").first().json.messages[0].from,\n  texto: Array.from(String($(\"Só mensagens de texto\").first().json.messages[0].text.body ?? \"\")).slice(0, 4096).join(\"\"),\n  resposta: Array.from(String($(\"Gerar resposta do turismo\").first().json.output.resposta)).slice(0, 4000).join(\"\"),\n  idioma: $(\"Gerar resposta do turismo\").first().json.output.idioma,\n  passeio_sugerido_id: $(\"Gerar resposta do turismo\").first().json.output.passeio_sugerido_id,\n  precisa_atencao_humana: $(\"Gerar resposta do turismo\").first().json.output.precisa_atencao_humana\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  whatsapp_message_id: $(\"Só mensagens de texto\").first().json.messages[0].id,\n  telefone: $(\"Só mensagens de texto\").first().json.messages[0].from,\n  cliente_nome: Array.from(String($(\"Só mensagens de texto\").first().json.contacts?.[0]?.profile?.name ?? \"\")).slice(0, 100).join(\"\") || null,\n  texto: Array.from(String($(\"Só mensagens de texto\").first().json.messages[0].text.body ?? \"\")).slice(0, 4096).join(\"\"),\n  resposta: Array.from(String($(\"Gerar resposta do turismo\").first().json.output.resposta)).slice(0, 4000).join(\"\"),\n  idioma: $(\"Gerar resposta do turismo\").first().json.output.idioma,\n  passeio_sugerido_id: $(\"Gerar resposta do turismo\").first().json.output.passeio_sugerido_id,\n  precisa_atencao_humana: $(\"Gerar resposta do turismo\").first().json.output.precisa_atencao_humana\n}) }}",
         "options": { "timeout": 10000 }
       },
       "onError": "continueRegularOutput",
@@ -229,7 +229,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  whatsapp_message_id: $(\"Só mensagens de texto\").first().json.messages[0].id,\n  telefone: $(\"Só mensagens de texto\").first().json.messages[0].from,\n  texto: Array.from(String($(\"Só mensagens de texto\").first().json.messages[0].text.body ?? \"\")).slice(0, 4096).join(\"\"),\n  resposta: \"Estamos com dificuldade para responder agora. Uma pessoa da nossa equipe vai falar com você em breve.\\nWe are having trouble answering right now. Someone from our team will contact you soon.\\nEstamos teniendo dificultades para responder ahora. Alguien de nuestro equipo te contactará pronto.\",\n  idioma: null,\n  passeio_sugerido_id: null,\n  precisa_atencao_humana: true\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  whatsapp_message_id: $(\"Só mensagens de texto\").first().json.messages[0].id,\n  telefone: $(\"Só mensagens de texto\").first().json.messages[0].from,\n  cliente_nome: Array.from(String($(\"Só mensagens de texto\").first().json.contacts?.[0]?.profile?.name ?? \"\")).slice(0, 100).join(\"\") || null,\n  texto: Array.from(String($(\"Só mensagens de texto\").first().json.messages[0].text.body ?? \"\")).slice(0, 4096).join(\"\"),\n  resposta: \"Estamos com dificuldade para responder agora. Uma pessoa da nossa equipe vai falar com você em breve.\\nWe are having trouble answering right now. Someone from our team will contact you soon.\\nEstamos teniendo dificultades para responder ahora. Alguien de nuestro equipo te contactará pronto.\",\n  idioma: null,\n  passeio_sugerido_id: null,\n  precisa_atencao_humana: true\n}) }}",
         "options": { "timeout": 10000 }
       },
       "onError": "continueRegularOutput",
@@ -304,7 +304,7 @@
         "sendBody": true,
         "contentType": "json",
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  whatsapp_message_id: $(\"Só mensagens de texto\").first().json.messages[0].id,\n  telefone: $(\"Só mensagens de texto\").first().json.messages[0].from,\n  texto: Array.from(String($(\"Só mensagens de texto\").first().json.messages[0].text.body ?? \"\")).slice(0, 4096).join(\"\"),\n  idioma: null\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  whatsapp_message_id: $(\"Só mensagens de texto\").first().json.messages[0].id,\n  telefone: $(\"Só mensagens de texto\").first().json.messages[0].from,\n  cliente_nome: Array.from(String($(\"Só mensagens de texto\").first().json.contacts?.[0]?.profile?.name ?? \"\")).slice(0, 100).join(\"\") || null,\n  texto: Array.from(String($(\"Só mensagens de texto\").first().json.messages[0].text.body ?? \"\")).slice(0, 4096).join(\"\"),\n  idioma: null\n}) }}",
         "options": { "timeout": 10000 }
       },
       "onError": "continueRegularOutput",

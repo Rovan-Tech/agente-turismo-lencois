@@ -124,3 +124,37 @@ def test_the_export_carries_no_credential_id_webhook_id_or_token(flow):
     assert all(set(credential) == {"name"} for credential in credentials)
     assert not any("webhookId" in node for node in flow["nodes"])
     assert "Bearer " not in text
+
+
+REGISTRATIONS = [
+    HUMAN_ONLY,
+    "Registrar atendimento no painel",
+    "Registrar atendimento (contingência)",
+]
+
+
+@pytest.mark.parametrize("node", REGISTRATIONS)
+def test_registrations_send_the_whatsapp_profile_name_as_an_optional_nullable_field(flow, node):
+    body = _node(flow, node)["parameters"]["jsonBody"]
+
+    assert "cliente_nome" in _body_keys(_node(flow, node))
+    assert "contacts?.[0]?.profile?.name" in body
+    assert "|| null" in body
+    assert ".slice(0, 100)" in body
+
+
+def test_the_profile_name_never_reaches_the_model_prompt(flow):
+    """LGPD: nome é dado pessoal; o Gemini só recebe o texto do turista e o catálogo."""
+    model_side = [
+        node
+        for node in flow["nodes"]
+        if node["name"] in {"Preparar entrada do modelo", "Gerar resposta do turismo"}
+        or node["type"].startswith("@n8n/n8n-nodes-langchain.")
+    ]
+
+    assert model_side
+    for node in model_side:
+        text = json.dumps(node["parameters"], ensure_ascii=False)
+        assert "contacts" not in text
+        assert "profile" not in text
+        assert "cliente_nome" not in text
