@@ -84,6 +84,15 @@ export const DayOccupancySchema = z.object({
 
 export const DayOccupancyListSchema = z.array(DayOccupancySchema);
 
+/** Vagas de um passeio ativo num dia (`GET /api/tours/vagas?dia=`). */
+export const TourAvailabilitySchema = z.object({
+  tour_id: z.string(),
+  capacidade: z.number(),
+  ocupadas: z.number(),
+});
+
+export const TourAvailabilityListSchema = z.array(TourAvailabilitySchema);
+
 export const BookingSchema = z.object({
   id: z.string(),
   tour_id: z.string(),

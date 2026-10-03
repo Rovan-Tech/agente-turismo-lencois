@@ -14,6 +14,7 @@ import type {
   MeSchema,
   PaymentMethodSchema,
   SuggestedTourSchema,
+  TourAvailabilitySchema,
 } from "./lib/schemas";
 
 // Tipos das respostas de conversas: derivados dos schemas Zod (lib/schemas.ts).
@@ -59,6 +60,8 @@ export type PaymentMethod = z.infer<typeof PaymentMethodSchema>;
 /** Ocupação de um passeio num dia (compõe o calendário do mês). */
 export type DayOccupancy = z.infer<typeof DayOccupancySchema>;
 export type Booking = z.infer<typeof BookingSchema>;
+/** Vagas de um passeio ativo num dia, para a lista de passeios. */
+export type TourAvailability = z.infer<typeof TourAvailabilitySchema>;
 /** Resposta de `POST .../agendamentos`: o agendamento criado mais a ocupação já atualizada. */
 export type BookingCreated = z.infer<typeof BookingCreatedSchema>;
 

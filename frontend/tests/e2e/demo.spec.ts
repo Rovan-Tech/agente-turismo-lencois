@@ -74,7 +74,7 @@ test("explains why a conversation older than 24 hours cannot be taken over", asy
 test("keeps the tour catalog editable in memory", async ({ page }) => {
   await page.goto("/passeios");
 
-  await expect(page.getByText("Lagoa Azul de 4x4")).toBeVisible();
+  await expect(page.getByText("Lagoa Azul de 4x4").first()).toBeVisible();
   await page.getByRole("button", { name: "Desativar" }).first().click();
 
   await expect(page.getByText("Inativo").first()).toBeVisible();

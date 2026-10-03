@@ -8,6 +8,7 @@ import {
   getDayBookings,
   getMe,
   getTourAgenda,
+  getTourAvailability,
   giveBackConversation,
   listConversations,
   listTours,
@@ -234,6 +235,24 @@ describe("lib/api", () => {
     respondWith([{ ...SAMPLE_DAY_OCCUPANCY, capacidade: "muitas" }]);
 
     expect(await getTourAgenda("passeio-bugre-orla", "2026-09")).toBeNull();
+  });
+
+  it("getTourAvailability requests the given day and returns each tour's seats", async () => {
+    const availability = [{ tour_id: "passeio-bugre-orla", capacidade: 30, ocupadas: 12 }];
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, availability));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await getTourAvailability("2026-09-29");
+
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toContain("/api/tours/vagas?dia=2026-09-29");
+    expect(result).toEqual(availability);
+  });
+
+  it("getTourAvailability returns null for a malformed answer", async () => {
+    respondWith([{ tour_id: "passeio-bugre-orla", capacidade: "muitas", ocupadas: 1 }]);
+
+    expect(await getTourAvailability("2026-09-29")).toBeNull();
   });
 
   it("getDayBookings requests the given date and returns that day's paid bookings", async () => {

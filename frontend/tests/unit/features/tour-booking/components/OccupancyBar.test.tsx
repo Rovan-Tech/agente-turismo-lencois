@@ -13,6 +13,12 @@ describe("OccupancyBar", () => {
     expect(screen.getByText("31 vagas")).toBeInTheDocument();
   });
 
+  it("names the day it describes in the accessible name", () => {
+    render(<OccupancyBar ocupadas={10} capacidade={41} dayLabel="amanhã" />);
+
+    expect(screen.getByRole("progressbar", { name: "Ocupação de amanhã: 31 vagas" })).toBeVisible();
+  });
+
   it("says 1 vaga in the singular when only one seat remains", () => {
     render(<OccupancyBar ocupadas={40} capacidade={41} />);
 

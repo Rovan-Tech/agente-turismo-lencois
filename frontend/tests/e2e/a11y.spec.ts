@@ -30,6 +30,10 @@ async function mockApi(page: Page) {
   await page.route("**/api/tours**", (route) =>
     route.fulfill({ json: [{ ...TOUR, ativo: true }] })
   );
+  // Registrada depois do curinga acima, então vale primeiro: a barra de vagas aparece na varredura.
+  await page.route("**/api/tours/vagas**", (route) =>
+    route.fulfill({ json: [{ tour_id: TOUR.id, capacidade: 10, ocupadas: 7 }] })
+  );
   await page.route("**/api/conversations/a11y-conversa**", (route) =>
     route.fulfill({ json: { ...HEADER, passeio_sugerido: TOUR, messages: [MESSAGE] } })
   );

@@ -24,7 +24,9 @@ import {
   ConversationMessageSchema,
   DayOccupancyListSchema,
   MeSchema,
+  TourAvailabilityListSchema,
 } from "./schemas";
+import type { TourAvailability } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const API_TOKEN = import.meta.env.VITE_API_TOKEN;
@@ -190,6 +192,12 @@ export function getTourAgenda(tourId: string, mes: string): Promise<DayOccupancy
     `/api/tours/${encodeURIComponent(tourId)}/agenda${query}`,
     DayOccupancyListSchema
   );
+}
+
+/** Vagas de cada passeio ativo num dia (`dia` no formato `YYYY-MM-DD`). */
+export function getTourAvailability(dia: string): Promise<TourAvailability[] | null> {
+  const query = `?dia=${encodeURIComponent(dia)}`;
+  return fetchJson(`/api/tours/vagas${query}`, TourAvailabilityListSchema);
 }
 
 /** Agendamentos pagos de um passeio num dia (`data` no formato `YYYY-MM-DD`). */

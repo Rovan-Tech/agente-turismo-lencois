@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as api from "../../src/lib/api";
 import { ToursPage } from "../../src/pages/ToursPage";
@@ -23,6 +23,10 @@ async function renderWithSingleTour() {
 const SECOND_TOUR = { ...ACTIVE_TOUR, id: "passeio-vale-do-paraiso", nome: "Vale do Paraíso" };
 
 describe("ToursPage", () => {
+  beforeEach(() => {
+    vi.spyOn(api, "getTourAvailability").mockResolvedValue([]);
+  });
+
   it("shows an error when the catalog fails to load", async () => {
     vi.spyOn(api, "listTours").mockResolvedValue(null);
 
@@ -138,5 +142,31 @@ describe("ToursPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Desativar" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("falha ao desativar");
+  });
+
+  it("shows the seats-by-day section for the active tours only", async () => {
+    const inactive = { ...SECOND_TOUR, ativo: false };
+    vi.spyOn(api, "listTours").mockResolvedValue([ACTIVE_TOUR, inactive]);
+    vi.spyOn(api, "getTourAvailability").mockResolvedValue([
+      { tour_id: ACTIVE_TOUR.id, capacidade: 30, ocupadas: 10 },
+      { tour_id: inactive.id, capacidade: 30, ocupadas: 10 },
+    ]);
+
+    renderPage();
+
+    expect(await screen.findByText("20 vagas")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Vagas por dia" })).toBeInTheDocument();
+    expect(screen.getAllByText("20 vagas")).toHaveLength(1);
+  });
+
+  it("hides the seats-by-day section when no tour is active", async () => {
+    const getAvailability = vi.spyOn(api, "getTourAvailability");
+    vi.spyOn(api, "listTours").mockResolvedValue([{ ...ACTIVE_TOUR, ativo: false }]);
+
+    renderPage();
+    await screen.findByText("Inativo");
+
+    expect(screen.queryByRole("heading", { name: "Vagas por dia" })).not.toBeInTheDocument();
+    expect(getAvailability).not.toHaveBeenCalled();
   });
 });
