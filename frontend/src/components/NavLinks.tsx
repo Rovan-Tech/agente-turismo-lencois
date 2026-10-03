@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 
-import { ChatIcon, CompassIcon } from "./icons";
+import { BarChartIcon, ChatIcon, CompassIcon } from "./icons";
 
 const NAV_ITEMS = [
   {
@@ -14,6 +14,12 @@ const NAV_ITEMS = [
     label: "Passeios",
     Icon: CompassIcon,
     isActive: (path: string) => path.startsWith("/passeios"),
+  },
+  {
+    to: "/analises",
+    label: "Análises",
+    Icon: BarChartIcon,
+    isActive: (path: string) => path.startsWith("/analises"),
   },
 ];
 

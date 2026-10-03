@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import type {
+  Analytics,
   Booking,
   BookingCreateInput,
   BookingCreated,
@@ -16,6 +17,7 @@ import type {
   TourUpdateInput,
 } from "../types";
 import {
+  AnalyticsSchema,
   BookingCreatedSchema,
   BookingListSchema,
   ConversationDetailSchema,
@@ -137,6 +139,11 @@ export function updateConversationStatus(
 /** Quem está logado (o painel mostra ao atendente o nome que o turista vai ver). */
 export function getMe(): Promise<Me | null> {
   return fetchJson("/api/me", MeSchema);
+}
+
+/** Indicadores da tela Análises para um dos períodos oferecidos (7, 30 ou 90 dias). */
+export function getAnalytics(periodoDias: number): Promise<Analytics | null> {
+  return fetchJson(`/api/analytics?periodo_dias=${periodoDias}`, AnalyticsSchema);
 }
 
 function conversationAction(id: string, action: string): string {

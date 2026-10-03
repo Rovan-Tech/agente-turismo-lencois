@@ -118,3 +118,40 @@ export const TranslateResponseSchema = z.object({ traducao: z.string() });
 
 /** Os três idiomas que o Groq traduz (ver `docs/decisoes-de-arquitetura.md`). */
 export type TargetLanguage = "pt" | "en" | "es";
+
+export const AnalyticsSummarySchema = z.object({
+  conversas: z.number(),
+  vendas: z.number(),
+  taxa_conversao_pct: z.number(),
+  resolvidas_so_ia_pct: z.number(),
+  primeira_resposta_humana_min: z.number().nullable(),
+});
+
+/** Uma linha de ranking (destino, idioma, passeio…); `percentual` é nulo sem um total com sentido. */
+export const AnalyticsBarSchema = z.object({
+  rotulo: z.string(),
+  quantidade: z.number(),
+  percentual: z.number().nullable(),
+  sub: z.string().nullable(),
+});
+
+export const AnalyticsHeatmapSchema = z.object({
+  dias: z.array(z.string()),
+  faixas: z.array(z.string()),
+  valores: z.array(z.array(z.number())),
+});
+
+export const AnalyticsSchema = z.object({
+  periodo_dias: z.number(),
+  periodos_disponiveis: z.array(z.number()),
+  atual: AnalyticsSummarySchema,
+  anterior: AnalyticsSummarySchema,
+  pessoas_em_passeios: z.number(),
+  pessoas_em_passeios_anterior: z.number(),
+  destinos: z.array(AnalyticsBarSchema),
+  quem_atendeu: z.array(AnalyticsBarSchema),
+  por_pessoa: z.array(AnalyticsBarSchema),
+  passeios: z.array(AnalyticsBarSchema),
+  idiomas: z.array(AnalyticsBarSchema),
+  mapa_calor: AnalyticsHeatmapSchema,
+});

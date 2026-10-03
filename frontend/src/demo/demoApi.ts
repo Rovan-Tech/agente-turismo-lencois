@@ -1,4 +1,5 @@
 import type {
+  Analytics,
   Booking,
   BookingCreateInput,
   BookingCreated,
@@ -16,6 +17,7 @@ import type {
 import type { ApiResult } from "../lib/api";
 import type { TourAvailability } from "../types";
 import type { TargetLanguage } from "../lib/schemas";
+import { demoAnalytics } from "./analyticsFixtures";
 import { buildDemoConversations, DEMO_TOURS } from "./fixtures";
 import {
   announcementText,
@@ -245,6 +247,10 @@ export async function sendConversationReply(
 /** Tradução de demonstração: um texto fixo por idioma, nunca o conteúdo digitado (sem IA ao vivo). */
 export function translateText(texto: string, idioma: TargetLanguage): Promise<ApiResult<string>> {
   return respond({ ok: true, data: TRANSLATION_DEMO[idioma] ?? texto });
+}
+
+export function getAnalytics(periodoDias: number): Promise<Analytics | null> {
+  return respond(demoAnalytics(periodoDias));
 }
 
 export function listTours(includeInactive = false): Promise<Tour[] | null> {

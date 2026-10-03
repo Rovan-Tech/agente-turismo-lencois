@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/AppShell";
+import { AnalisesPage } from "./pages/AnalisesPage";
 import { ConversationDetailPage } from "./pages/ConversationDetailPage";
 import { ConversationsPage } from "./pages/ConversationsPage";
 import { TourBookingPage } from "./pages/TourBookingPage";
@@ -15,6 +16,7 @@ export function App() {
           <Route path="/conversas/:id" element={<ConversationDetailPage />} />
           <Route path="/passeios" element={<ToursPage />} />
           <Route path="/passeios/:id" element={<TourBookingPage />} />
+          <Route path="/analises" element={<AnalisesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

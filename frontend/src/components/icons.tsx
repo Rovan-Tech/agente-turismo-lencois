@@ -98,6 +98,14 @@ export function MoonIcon(props: Readonly<IconProps>) {
   );
 }
 
+export function BarChartIcon(props: Readonly<IconProps>) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </Icon>
+  );
+}
+
 export function TranslateIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>
