@@ -43,7 +43,7 @@ export function ReplyComposer({
   return (
     <form
       onSubmit={submit}
-      className="flex flex-col gap-2 border-t border-subtle px-4 py-4 sm:px-6"
+      className="flex shrink-0 flex-col gap-2 border-t border-subtle px-4 py-3 sm:py-4 sm:px-6"
     >
       <label htmlFor={REPLY_FIELD_ID} className="text-sm font-semibold text-primary">
         Resposta ao turista
@@ -54,7 +54,7 @@ export function ReplyComposer({
         onChange={(event) => setText(event.target.value)}
         onKeyDown={handleKeyDown}
         maxLength={MAX_REPLY_LENGTH}
-        rows={3}
+        rows={2}
         disabled={Boolean(blockedReason)}
         aria-describedby="reply-help"
         className="rounded-md border border-subtle bg-surface p-2 text-primary disabled:bg-subtle disabled:text-muted"

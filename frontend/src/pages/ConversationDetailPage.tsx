@@ -9,12 +9,13 @@ import { useConversationDetail } from "../features/handoff/useConversationDetail
 import { useMe } from "../features/handoff/useMe";
 import { ConversationSidePanel } from "../components/ConversationSidePanel";
 import { LanguageAvatar } from "../components/LanguageAvatar";
-import { MessageBubble } from "../components/MessageBubble";
+import { MessageList } from "../components/MessageList";
 import { StatusBadge } from "../components/StatusBadge";
 import { ChevronLeftIcon } from "../components/icons";
 import { formatPhone, languageName } from "../lib/conversations";
 import { WINDOW_CLOSED_NOTICE, isReplyWindowOpen } from "../lib/handoff";
 import { formatCustomerSince } from "../lib/time";
+import { useStickToBottom } from "../lib/useStickToBottom";
 import type { ConversationDetail } from "../types";
 
 function ConversationHeaderBar({
@@ -26,7 +27,7 @@ function ConversationHeaderBar({
 }>) {
   const language = languageName(conversation.idioma_detectado);
   return (
-    <header className="mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-subtle px-4 py-4 sm:px-6">
+    <header className="mt-1 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-subtle px-4 py-3 sm:mt-3 sm:px-6 sm:py-4">
       <div className="flex items-center gap-3">
         <LanguageAvatar idioma={conversation.idioma_detectado} />
         <div>
@@ -71,15 +72,25 @@ export function ConversationDetailPage() {
     (target ?? titleRef.current)?.focus();
     setFocusNext(null);
   }, [focusNext, conversation]);
+  const lastMessageId = conversation?.messages.at(-1)?.id ?? null;
+  const scroll = useStickToBottom(id, lastMessageId);
+  async function sendReply(text: string) {
+    const accepted = await actions.sendReply(text);
+    // Quem acabou de responder quer ver a própria mensagem, mesmo que estivesse lendo as antigas.
+    if (accepted) scroll.pin();
+    return accepted;
+  }
   const isMine =
     conversation?.atendimento === "humano" && me !== null && conversation.atendente_sub === me.sub;
 
   return (
-    <main className="flex flex-1 flex-col md:flex-row">
-      <section className="min-w-0 flex-1">
+    // A tela tem a altura da janela: só a lista de mensagens rola. No celular o painel de detalhes
+    // fica abaixo da conversa (rola-se o `main` até ele); no desktop é uma coluna ao lado.
+    <main className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+      <section className="flex h-full min-h-0 min-w-0 flex-none flex-col md:flex-1">
         <Link
           to="/"
-          className="flex items-center gap-1 px-4 pt-4 text-sm font-semibold text-link hover:underline sm:px-6"
+          className="flex shrink-0 items-center gap-1 px-4 pt-3 sm:pt-4 text-sm font-semibold text-link hover:underline sm:px-6"
         >
           <ChevronLeftIcon />
           Conversas
@@ -91,18 +102,14 @@ export function ConversationDetailPage() {
         {conversation && (
           <>
             <ConversationHeaderBar conversation={conversation} titleRef={titleRef} />
-            <ul className="flex flex-col gap-4 px-4 py-6 sm:px-6">
-              {conversation.messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
-              ))}
-            </ul>
+            <MessageList messages={conversation.messages} scroll={scroll} />
             {isMine && (
               <ReplyComposer
                 blockedReason={
                   isReplyWindowOpen(conversation.messages, new Date()) ? null : WINDOW_CLOSED_NOTICE
                 }
                 error={actions.replyError}
-                onSend={actions.sendReply}
+                onSend={sendReply}
               />
             )}
           </>

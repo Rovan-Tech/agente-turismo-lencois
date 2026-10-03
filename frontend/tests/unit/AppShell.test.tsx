@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -74,6 +74,19 @@ describe("AppShell", () => {
     expect(screen.getAllByText("Painel do agente").length).toBeGreaterThan(0);
     expect(screen.getByText("Assistente de IA respondendo agora")).toBeInTheDocument();
     expect(screen.getByText("Equipe")).toBeInTheDocument();
+  });
+
+  it("fits the open conversation to the window height, while other pages grow with content", () => {
+    renderShellAt("/conversas/abc123");
+    const shell = screen.getByText("página da conversa").closest("div.flex.flex-col.bg-page");
+    expect(shell).toHaveClass("h-dvh");
+    expect(shell).not.toHaveClass("min-h-screen");
+    cleanup();
+
+    renderShellAt("/passeios");
+    const other = screen.getByText("página de passeios").closest("div.flex.flex-col.bg-page");
+    expect(other).toHaveClass("min-h-screen");
+    expect(other).not.toHaveClass("h-dvh");
   });
 
   it("shows today's date in the top bar", () => {

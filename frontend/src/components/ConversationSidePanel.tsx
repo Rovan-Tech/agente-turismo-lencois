@@ -23,7 +23,7 @@ export function ConversationSidePanel({
   return (
     <aside
       aria-label="Detalhes da conversa"
-      className="flex flex-col gap-4 border-t border-subtle bg-surface p-4 md:w-panel md:shrink-0 md:border-l md:border-t-0"
+      className="flex shrink-0 flex-col gap-4 border-t border-subtle bg-surface p-4 md:w-panel md:overflow-y-auto md:border-l md:border-t-0"
     >
       <h2 className={HEADING}>Status da conversa</h2>
       <StatusControl status={status} busy={updating} onChange={onChange} />
