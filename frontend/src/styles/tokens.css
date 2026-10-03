@@ -9,7 +9,9 @@
 
 :root {
   /* Paleta base — escalas 50–900. Âncoras da marca: primary-600 (lagoa), secondary-700
-     (terracota), neutral-50 (areia) e neutral-900 (grafite). */
+     (terracota), neutral-50 (areia) e neutral-900 (grafite). Vento Branco (redesign): a ponta
+     clara do neutro (0–300) ganhou o tom areia/pergaminho do desenho; 400–900 seguem o mesmo
+     verde-azulado que já tínhamos, sem mudar. */
   --palette-primary-50: #f1f7f8;
   --palette-primary-100: #cbe2e6;
   --palette-primary-200: #a5cdd4;
@@ -32,12 +34,12 @@
   --palette-secondary-800: #62361c;
   --palette-secondary-900: #291a12;
 
-  --palette-neutral-0: #ffffff;
-  --palette-neutral-50: #fdfbf6;
-  --palette-neutral-100: #e4e4e0;
-  --palette-neutral-200: #cccdca;
-  --palette-neutral-300: #b3b5b3;
-  --palette-neutral-400: #9a9e9d;
+  --palette-neutral-0: #fffdf9;
+  --palette-neutral-50: #fcfbf6;
+  --palette-neutral-100: #ece5d8;
+  --palette-neutral-200: #d9d0be;
+  --palette-neutral-300: #c3b9a5;
+  --palette-neutral-400: #95a39e;
   --palette-neutral-500: #828787;
   --palette-neutral-600: #697071;
   --palette-neutral-700: #50585a;
@@ -127,9 +129,9 @@
   --color-occupancy-full-bg: var(--palette-secondary-700);
   --color-occupancy-full-fg: var(--palette-neutral-0);
 
-  /* Tipografia */
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Tipografia — Figtree/Instrument Serif (Vento Branco, redesign); ver docs/design-system.md */
+  --font-sans: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --font-weight-regular: 400;
   --font-weight-medium: 500;
