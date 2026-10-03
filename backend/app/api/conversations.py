@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.deps import require_dashboard_auth, require_panel_identity
-from app.api.errors import CONVERSATION_NOT_FOUND, NOT_FOUND
+from app.api.errors import CONFLICT, CONVERSATION_NOT_FOUND, NOT_FOUND
 from app.core.access_jwt import AccessIdentity
 from app.core.config import Settings, get_settings
 from app.db.session import get_db
@@ -221,11 +221,16 @@ async def _run_action(action: Action, conversation_id: str, ctx: PanelContext) -
     return _summary(conversation, ctx.settings)
 
 
-@router.post("/{conversation_id}/assumir", responses={404: NOT_FOUND})
+@router.post("/{conversation_id}/assumir", responses={404: NOT_FOUND, 409: CONFLICT})
 async def take_over_conversation(
     conversation_id: str, ctx: PanelContext = Depends(panel_context), _body: EmptyBody | None = None
 ) -> dict[str, object]:
-    """A pessoa logada assume a conversa; o turista recebe o aviso com o primeiro nome dela."""
+    """A pessoa logada assume a conversa; o turista recebe o aviso com o primeiro nome dela.
+
+    409 se a conversa já está com outra pessoa ("A conversa já está com <nome>. Peça para devolver
+    à IA."): a conversa continua com quem a assumiu primeiro e nada é enviado ao turista. Também
+    é 409 quando está resolvida ou a janela de 24 h do WhatsApp fechou.
+    """
     return await _run_action(handoff.take_over, conversation_id, ctx)
 
 
@@ -237,7 +242,7 @@ async def give_back_conversation(
     return await _run_action(handoff.give_back, conversation_id, ctx)
 
 
-@router.post("/{conversation_id}/mensagens", responses={404: NOT_FOUND})
+@router.post("/{conversation_id}/mensagens", responses={404: NOT_FOUND, 409: CONFLICT})
 async def send_conversation_message(
     conversation_id: str, payload: ReplyBody, ctx: PanelContext = Depends(panel_context)
 ) -> dict[str, object]:

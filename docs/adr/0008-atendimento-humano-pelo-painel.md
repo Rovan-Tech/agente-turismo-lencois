@@ -66,7 +66,9 @@ Adotar a **opção 1**, com estas regras:
   - **Ordem:** o aviso é enviado **antes** de mudar o estado. Se a Meta recusar (por exemplo, janela
     de 24 h fechada), a conversa **não** muda para `humano` e a pessoa vê o motivo. Assumir de novo
     uma conversa que já está com a mesma pessoa não reenvia o aviso; se estiver com outra pessoa, é
-    409 ("já está com <nome>"): para trocar, quem está atendendo devolve primeiro.
+    409 ("A conversa já está com <nome>. Peça para devolver à IA."), documentado no `responses=` de
+    `POST /api/conversations/{id}/assumir`: a conversa continua com quem assumiu primeiro e nada é
+    enviado ao turista. Para trocar, quem está atendendo devolve primeiro.
 - **Mensagens:** `messages.autor` (`turista`, `ia` ou `atendente`) e `messages.autor_sub` (a pessoa,
   só para `atendente`; vale também para o aviso de que assumiu) e `messages.client_message_id` (único), gerado pelo painel para **o envio ser
   idempotente** (clique duplo ou nova tentativa não manda duas vezes).
@@ -91,11 +93,16 @@ Adotar a **opção 1**, com estas regras:
   agora", marca "atendente" nas mensagens, e a tela da conversa **atualiza sozinha a cada 15 s**
   enquanto estiver em `humano` (hoje não há atualização, e o atendente precisa ver o que o turista
   escreve). O texto da lateral ("o assistente também atualiza o status…") é corrigido.
+  Para quem **não** é o atendente, "Assumir conversa" aparece desabilitado, com o motivo ao lado
+  ("Você não pode assumir: a conversa já está com <nome>…"); "Devolver para a IA" continua
+  disponível para liberar uma conversa esquecida. Se o painel estava desatualizado e o servidor
+  recusa com 409, a tela mostra a frase do servidor e relê a conversa para mostrar quem atende.
 - **Segredos:** `WHATSAPP_TOKEN` e `WHATSAPP_PHONE_NUMBER_ID` de **produção** nos secrets do GitHub
   (feito por quem tem o token da Meta, nunca no repositório nem na conversa).
 - **Concorrência:** assumir, devolver e enviar travam a linha da conversa (`SELECT … FOR UPDATE`) e
   reavaliam o estado depois da trava, então dois cliques ou duas pessoas ao mesmo tempo não mandam
-  dois avisos: o segundo vira "mesma pessoa" (200, sem reenviar) ou 409.
+  dois avisos: o segundo vira "mesma pessoa" (200, sem reenviar) ou 409. Dois atendentes assumindo a mesma
+  conversa ao mesmo tempo: só o primeiro consegue (teste com duas conexões reais em PostgreSQL).
 - **Log:** só método, molde da rota, `sub` e o resultado; nunca texto, telefone nem token.
 
 Decisões que dependem do Patrick estão em
