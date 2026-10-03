@@ -2,19 +2,27 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReplyComposer } from "../../src/features/handoff/ReplyComposer";
+import * as api from "../../src/lib/api";
+import type { TargetLanguage } from "../../src/lib/schemas";
+import { TRANSLATE_FAILURE } from "./fixtures";
 
 const FIELD = { name: "Resposta ao turista" };
 const SEND = { name: "Enviar" };
 
 function renderComposer(
   onSend: (text: string) => Promise<boolean>,
-  props: { blockedReason?: string | null; error?: string | null } = {}
+  props: {
+    blockedReason?: string | null;
+    error?: string | null;
+    targetLanguage?: TargetLanguage;
+  } = {}
 ) {
   render(
     <ReplyComposer
       blockedReason={props.blockedReason ?? null}
       error={props.error ?? null}
       onSend={onSend}
+      targetLanguage={props.targetLanguage}
     />
   );
 }
@@ -97,5 +105,54 @@ describe("ReplyComposer", () => {
     fireEvent.keyDown(screen.getByRole("textbox", FIELD), { key: "Enter", ctrlKey: true });
 
     expect(onSend).toHaveBeenCalledTimes(1);
+  });
+});
+
+/** Digita o rascunho e clica em "Traduzir para inglês" até a revisão aparecer. */
+async function reachReview(onSend: (text: string) => Promise<boolean>) {
+  vi.spyOn(api, "translateText").mockResolvedValue({ ok: true, data: "I can help!" });
+  renderComposer(onSend, { targetLanguage: "en" });
+
+  type("Posso ajudar!");
+  fireEvent.click(screen.getByRole("button", { name: "Traduzir para inglês" }));
+
+  expect(await screen.findByText("I can help!")).toBeInTheDocument();
+}
+
+describe("ReplyComposer with a non-Portuguese conversation", () => {
+  it("translates the draft before sending, and sends the translation", async () => {
+    const onSend = vi.fn().mockResolvedValue(true);
+    await reachReview(onSend);
+
+    expect(api.translateText).toHaveBeenCalledWith("Posso ajudar!", "en");
+    expect(onSend).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enviar em inglês" }));
+
+    await waitFor(() => expect(onSend).toHaveBeenCalledWith("I can help!"));
+  });
+
+  it("goes back to editing without sending", async () => {
+    const onSend = vi.fn();
+    await reachReview(onSend);
+
+    fireEvent.click(screen.getByRole("button", { name: "Voltar e editar" }));
+
+    expect(screen.queryByText("I can help!")).toBeNull();
+    expect(screen.getByRole("textbox", FIELD)).not.toBeDisabled();
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("shows an error and stays editable when the translation fails", async () => {
+    vi.spyOn(api, "translateText").mockResolvedValue(TRANSLATE_FAILURE);
+    renderComposer(vi.fn(), { targetLanguage: "es" });
+
+    type("Posso ajudar!");
+    fireEvent.click(screen.getByRole("button", { name: "Traduzir para espanhol" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Não foi possível traduzir agora.");
+    });
+    expect(screen.getByRole("textbox", FIELD)).not.toBeDisabled();
   });
 });

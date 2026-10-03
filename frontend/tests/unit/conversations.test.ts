@@ -5,6 +5,7 @@ import {
   filterConversations,
   formatPhone,
   languageCode,
+  languageFilterOptions,
   languageName,
 } from "../../src/lib/conversations";
 import type { ConversationSummary } from "../../src/types";
@@ -77,6 +78,54 @@ describe("filterConversations", () => {
 
   it("ignores a query made only of spaces", () => {
     expect(ids("todas", "   ")).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("filters by language", () => {
+    const list = [
+      summary({ id: "a", idioma_detectado: "pt" }),
+      summary({ id: "b", idioma_detectado: "en" }),
+    ];
+    expect(filterConversations(list, "todas", "", "EN").map((c) => c.id)).toEqual(["b"]);
+  });
+
+  it("combines status, language and search", () => {
+    const list = [
+      summary({
+        id: "a",
+        status: "aberta",
+        idioma_detectado: "en",
+        ultima_mensagem: message("hello"),
+      }),
+      summary({
+        id: "b",
+        status: "aberta",
+        idioma_detectado: "pt",
+        ultima_mensagem: message("hello"),
+      }),
+    ];
+    expect(filterConversations(list, "aberta", "hello", "EN").map((c) => c.id)).toEqual(["a"]);
+  });
+});
+
+describe("languageFilterOptions", () => {
+  it("lists 'todos' plus each detected language, most frequent first", () => {
+    const list = [
+      summary({ id: "a", idioma_detectado: "pt" }),
+      summary({ id: "b", idioma_detectado: "en" }),
+      summary({ id: "c", idioma_detectado: "pt" }),
+      summary({ id: "d", idioma_detectado: null }),
+    ];
+    expect(languageFilterOptions(list)).toEqual([
+      { value: "todos", code: null, label: "Todos os idiomas", count: 4 },
+      { value: "PT", code: "PT", label: "português", count: 2 },
+      { value: "EN", code: "EN", label: "inglês", count: 1 },
+    ]);
+  });
+
+  it("returns only 'todos' when nothing has a detected language", () => {
+    expect(languageFilterOptions([summary({ idioma_detectado: null })])).toEqual([
+      { value: "todos", code: null, label: "Todos os idiomas", count: 1 },
+    ]);
   });
 });
 

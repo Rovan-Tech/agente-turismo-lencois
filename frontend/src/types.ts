@@ -1,6 +1,9 @@
 import type { z } from "zod";
 
 import type {
+  AnalyticsBarSchema,
+  AnalyticsSchema,
+  AnalyticsSummarySchema,
   BookingCreatedSchema,
   BookingSchema,
   ConversationDetailSchema,
@@ -72,3 +75,9 @@ export interface BookingCreateInput {
   forma_pagamento: PaymentMethod;
   telefone?: string;
 }
+
+/** Conversas, vendas e tempos de resposta de um período (`GET /api/analytics`). */
+export type AnalyticsSummary = z.infer<typeof AnalyticsSummarySchema>;
+/** Uma linha de ranking (destino da conversa, idioma, passeio, pessoa da equipe…). */
+export type AnalyticsBar = z.infer<typeof AnalyticsBarSchema>;
+export type Analytics = z.infer<typeof AnalyticsSchema>;

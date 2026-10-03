@@ -1,6 +1,7 @@
 import type { z } from "zod";
 
 import type {
+  Analytics,
   Booking,
   BookingCreateInput,
   BookingCreated,
@@ -16,6 +17,7 @@ import type {
   TourUpdateInput,
 } from "../types";
 import {
+  AnalyticsSchema,
   BookingCreatedSchema,
   BookingListSchema,
   ConversationDetailSchema,
@@ -24,7 +26,9 @@ import {
   ConversationMessageSchema,
   DayOccupancyListSchema,
   MeSchema,
+  type TargetLanguage,
   TourAvailabilityListSchema,
+  TranslateResponseSchema,
 } from "./schemas";
 import type { TourAvailability } from "../types";
 
@@ -137,6 +141,11 @@ export function getMe(): Promise<Me | null> {
   return fetchJson("/api/me", MeSchema);
 }
 
+/** Indicadores da tela Análises para um dos períodos oferecidos (7, 30 ou 90 dias). */
+export function getAnalytics(periodoDias: number): Promise<Analytics | null> {
+  return fetchJson(`/api/analytics?periodo_dias=${periodoDias}`, AnalyticsSchema);
+}
+
 function conversationAction(id: string, action: string): string {
   return `/api/conversations/${encodeURIComponent(id)}/${action}`;
 }
@@ -166,6 +175,19 @@ export function sendConversationReply(
     { texto: text, client_message_id: clientMessageId },
     ConversationMessageSchema
   );
+}
+
+/** Traduz um texto sob demanda (rascunho do atendente ou mensagem recebida); nada é gravado. */
+export function translateText(
+  texto: string,
+  idiomaDestino: TargetLanguage
+): Promise<ApiResult<string>> {
+  return sendJson(
+    "/api/conversations/traducao",
+    "POST",
+    { texto, idioma_destino: idiomaDestino },
+    TranslateResponseSchema
+  ).then((result) => (result.ok ? { ok: true, data: result.data.traducao } : result));
 }
 
 export function listTours(includeInactive = false): Promise<Tour[] | null> {

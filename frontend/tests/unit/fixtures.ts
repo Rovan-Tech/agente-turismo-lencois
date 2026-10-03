@@ -1,6 +1,8 @@
 import { fireEvent, screen } from "@testing-library/react";
 
+import type { ApiResult } from "../../src/lib/api";
 import type {
+  Analytics,
   Booking,
   ConversationDetail,
   ConversationHeader,
@@ -87,6 +89,12 @@ export const HANDLED_CONVERSATION: ConversationDetail = {
 
 export const ME = { sub: "pessoa-123", nome: "Ana" };
 
+export const TRANSLATE_FAILURE: ApiResult<string> = {
+  ok: false,
+  status: 503,
+  message: "indisponível",
+};
+
 export function summary(overrides: Partial<ConversationSummary> = {}): ConversationSummary {
   return { ...SAMPLE_HEADER, ultima_mensagem: null, ...overrides };
 }
@@ -106,4 +114,39 @@ export const SAMPLE_BOOKING: Booking = {
   status_pagamento: "pago",
   telefone: "5598999998888",
   created_at: "2026-09-28T12:00:00Z",
+};
+
+function bar(rotulo: string, quantidade: number) {
+  return { rotulo, quantidade, percentual: 50, sub: null };
+}
+
+export const SAMPLE_ANALYTICS: Analytics = {
+  periodo_dias: 30,
+  periodos_disponiveis: [7, 30, 90],
+  atual: {
+    conversas: 100,
+    vendas: 20,
+    taxa_conversao_pct: 20,
+    resolvidas_so_ia_pct: 70,
+    primeira_resposta_humana_min: 6,
+  },
+  anterior: {
+    conversas: 90,
+    vendas: 15,
+    taxa_conversao_pct: 16.7,
+    resolvidas_so_ia_pct: 65,
+    primeira_resposta_humana_min: 8,
+  },
+  pessoas_em_passeios: 50,
+  pessoas_em_passeios_anterior: 40,
+  destinos: [bar("Virou venda", 20), bar("Em andamento", 80)],
+  quem_atendeu: [bar("Só a IA", 70), bar("Com apoio humano", 30)],
+  por_pessoa: [bar("pessoa-1", 10)],
+  passeios: [bar("Lagoa Azul de 4x4", 30)],
+  idiomas: [bar("PT", 80), bar("EN", 20)],
+  mapa_calor: {
+    dias: ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"],
+    faixas: ["6-9h", "9-12h", "12-15h", "15-18h", "18-21h", "21-24h"],
+    valores: Array.from({ length: 7 }, () => [0, 0, 0, 0, 0, 0]),
+  },
 };

@@ -4,6 +4,7 @@ import pytest
 
 from app.models.conversation import Conversation, ConversationStatus
 from app.models.message import Message, MessageDirection, MessageType
+from app.services import groq_client
 
 
 async def _create_conversation_with_messages(db_session, phone):
@@ -317,3 +318,57 @@ async def test_detail_still_shows_a_suggested_tour_that_was_deactivated(
     detail = (await client.get(f"/api/conversations/{conversation.id}")).json()
 
     assert detail["passeio_sugerido"]["id"] == "passeio-bugre-orla"
+
+
+async def _translate(client, *, texto="Olá!", idioma_destino="en", headers=None):
+    return await client.post(
+        "/api/conversations/traducao",
+        json={"texto": texto, "idioma_destino": idioma_destino},
+        headers=headers,
+    )
+
+
+@pytest.mark.asyncio
+async def test_translate_message_returns_the_translation(client, monkeypatch):
+    captured = {}
+
+    async def fake_translate_text(settings, texto, idioma_destino):
+        captured["texto"] = texto
+        captured["idioma_destino"] = idioma_destino
+        return "Hello!"
+
+    monkeypatch.setattr(groq_client, "translate_text", fake_translate_text)
+
+    response = await _translate(client)
+
+    assert response.status_code == 200
+    assert response.json() == {"traducao": "Hello!"}
+    assert captured == {"texto": "Olá!", "idioma_destino": "en"}
+
+
+@pytest.mark.asyncio
+async def test_translate_message_rejects_an_unsupported_target_language(client):
+    assert (await _translate(client, idioma_destino="fr")).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_translate_message_rejects_empty_text(client):
+    assert (await _translate(client, texto="   ")).status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_translate_message_returns_424_when_groq_is_unavailable(client, monkeypatch):
+    async def failing_translate_text(settings, texto, idioma_destino):
+        raise groq_client.GroqUnavailableError("ReadTimeout")
+
+    monkeypatch.setattr(groq_client, "translate_text", failing_translate_text)
+
+    # Não 503: a API em si está bem, quem falhou foi o Groq — e o portão de contrato recusa 5xx.
+    assert (await _translate(client)).status_code == 424
+
+
+@pytest.mark.asyncio
+async def test_translate_message_unauthenticated_returns_401(client):
+    response = await _translate(client, headers={"Authorization": ""})
+
+    assert response.status_code == 401

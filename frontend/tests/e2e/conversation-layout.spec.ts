@@ -57,6 +57,8 @@ async function mockApi(page: Page, messages: ReturnType<typeof message>[]) {
     updated_at: "2026-09-26T09:30:00Z",
   };
   await page.route("**/api/me", (route) => route.fulfill({ json: ME }));
+  // A partir de `lg`, a conversa aberta divide a tela com a lista: sem isso ela bateria na rede.
+  await page.route("**/api/conversations", (route) => route.fulfill({ json: [] }));
   await page.route(`**/api/conversations/${CONVERSATION_ID}/mensagens`, (route) => {
     const reply = message("atendente", route.request().postDataJSON().texto);
     messages.push(reply);
@@ -89,7 +91,9 @@ for (const size of SIZES) {
       await switchTheme(page, theme);
 
       const log = messageLog(page);
-      const heading = page.getByRole("heading", { level: 1 });
+      // A partir de `lg` a lista de conversas some, mas o h1 dela ("Conversas") continua
+      // montado ao lado do h1 da conversa aberta — o nome escolhe o certo.
+      const heading = page.getByRole("heading", { level: 1, name: /^\+/ });
       const lastMessage = page.getByText(`Mensagem ${LONG_CONVERSATION}:`);
 
       // Abre já na mensagem mais recente, com cabeçalho e campo de resposta à vista.

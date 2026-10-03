@@ -10,7 +10,13 @@ import { MessageBubble } from "./MessageBubble";
 export function MessageList({
   messages,
   scroll,
-}: Readonly<{ messages: ConversationMessage[]; scroll: StickToBottom }>) {
+  translatable = false,
+}: Readonly<{
+  messages: ConversationMessage[];
+  scroll: StickToBottom;
+  /** A conversa não está em português: mostra "Traduzir" nas mensagens recebidas. */
+  translatable?: boolean;
+}>) {
   return (
     <div
       ref={scroll.ref}
@@ -22,7 +28,7 @@ export function MessageList({
     >
       <ul className="flex flex-col gap-4 px-4 py-6 sm:px-6">
         {messages.map((message) => (
-          <MessageBubble key={message.id} message={message} />
+          <MessageBubble key={message.id} message={message} translatable={translatable} />
         ))}
       </ul>
     </div>

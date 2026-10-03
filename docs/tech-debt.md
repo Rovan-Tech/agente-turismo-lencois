@@ -48,6 +48,14 @@ apareciam com menos cobertura do que realmente tinham — ver `[tool.coverage.ru
 
 ## Média prioridade
 
+- **Análises: "Assuntos mais perguntados" e "Por que passou para uma pessoa" não existem**
+  (`backend/app/services/analytics.py`, `GET /api/analytics`). O desenho do redesign (Claude
+  Design, ClickUp 86e3jkx6t) pede os dois, mas não há classificação de assunto nem de motivo de
+  transferência gravada em lugar nenhum hoje — exigiria o Groq rotular cada conversa, uma
+  capacidade de IA nova (governança: `ai-governance.md`). Decisão (2026-10-03): entregar os outros
+  9 blocos com dado real agora e deixar esses dois de fora, em vez de inventar número ou criar a
+  classificação sem o Patrick decidir o escopo e o custo.
+
 - **mypy strict (15)**: `dict` sem parâmetros de tipo em `api/conversations.py`, `api/webhook.py`,
   `main.py:health`, `db/session.py`, `models/tour.py`, `services/tour_matcher.py`
   (`dict[str, Any]`/`TypedDict`); `whatsapp_client.py:28` retorna `Any`; `transcription.py` sem

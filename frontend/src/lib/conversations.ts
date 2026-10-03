@@ -44,17 +44,57 @@ export function countByFilter(
 export function filterConversations(
   conversations: readonly ConversationSummary[],
   filter: StatusFilter,
-  query: string
+  query: string,
+  language: LanguageFilter = "todos"
 ): ConversationSummary[] {
   const text = normalize(query.trim());
   const digits = PHONE_QUERY.test(query.trim()) ? digitsOf(query) : "";
   return conversations.filter((conversation) => {
     if (filter !== "todas" && conversation.status !== filter) return false;
+    if (language !== "todos" && languageCode(conversation.idioma_detectado) !== language) {
+      return false;
+    }
     if (!text) return true;
     const matchesPhone = digits !== "" && digitsOf(conversation.whatsapp_phone).includes(digits);
     const preview = normalize(conversation.ultima_mensagem?.conteudo ?? "");
     return matchesPhone || preview.includes(text);
   });
+}
+
+/** "todos" ou um código de duas letras ("PT", "EN"…); nasce dos idiomas vistos nos dados. */
+export type LanguageFilter = "todos" | string;
+
+export interface LanguageFilterOption {
+  value: LanguageFilter;
+  code: string | null;
+  label: string;
+  count: number;
+}
+
+/**
+ * Opções do filtro de idioma: "Todos os idiomas" seguido de cada idioma detectado, do mais para o
+ * menos frequente. Um idioma novo nos dados aparece sozinho, sem precisar alterar código (mesma
+ * regra do desenho do redesign: "o filtro nasce dos idiomas que a IA detectou").
+ */
+export function languageFilterOptions(
+  conversations: readonly ConversationSummary[]
+): LanguageFilterOption[] {
+  const counts = new Map<string, number>();
+  for (const conversation of conversations) {
+    const code = languageCode(conversation.idioma_detectado);
+    if (code === "—") continue;
+    counts.set(code, (counts.get(code) ?? 0) + 1);
+  }
+  const byCount = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  return [
+    { value: "todos", code: null, label: "Todos os idiomas", count: conversations.length },
+    ...byCount.map(([code, count]) => ({
+      value: code,
+      code,
+      label: languageName(code.toLowerCase()) ?? code,
+      count,
+    })),
+  ];
 }
 
 /** "PT", "EN", "ES"; "—" quando o idioma ainda não foi detectado. */

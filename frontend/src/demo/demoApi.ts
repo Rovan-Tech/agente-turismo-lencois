@@ -1,4 +1,5 @@
 import type {
+  Analytics,
   Booking,
   BookingCreateInput,
   BookingCreated,
@@ -15,8 +16,16 @@ import type {
 } from "../types";
 import type { ApiResult } from "../lib/api";
 import type { TourAvailability } from "../types";
+import type { TargetLanguage } from "../lib/schemas";
+import { demoAnalytics } from "./analyticsFixtures";
 import { buildDemoConversations, DEMO_TOURS } from "./fixtures";
-import { announcementText, FOLLOW_UP, giveBackText, WINDOW_CLOSED } from "./texts";
+import {
+  announcementText,
+  FOLLOW_UP,
+  giveBackText,
+  TRANSLATION_DEMO,
+  WINDOW_CLOSED,
+} from "./texts";
 
 /**
  * Troca de `lib/api.ts` no build de demonstração (ADR-0007): mesmos nomes e mesmos contratos, mas
@@ -233,6 +242,15 @@ export async function sendConversationReply(
   created.id = `demo-${clientMessageId}`;
   scheduleTouristFollowUp(conversation);
   return respond({ ok: true, data: created });
+}
+
+/** Tradução de demonstração: um texto fixo por idioma, nunca o conteúdo digitado (sem IA ao vivo). */
+export function translateText(texto: string, idioma: TargetLanguage): Promise<ApiResult<string>> {
+  return respond({ ok: true, data: TRANSLATION_DEMO[idioma] ?? texto });
+}
+
+export function getAnalytics(periodoDias: number): Promise<Analytics | null> {
+  return respond(demoAnalytics(periodoDias));
 }
 
 export function listTours(includeInactive = false): Promise<Tour[] | null> {

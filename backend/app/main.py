@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import bookings, conversations, ingest, me, tours, webhook
+from app.api import analytics, bookings, conversations, ingest, me, tours, webhook
 from app.core.config import Settings, get_settings
 
 settings = get_settings()
@@ -71,6 +71,7 @@ def create_app(settings: Settings) -> FastAPI:
     application.include_router(conversations.router)
     application.include_router(ingest.router)
     application.include_router(me.router)
+    application.include_router(analytics.router)
     application.exception_handler(RequestValidationError)(_handle_validation_error)
     application.add_api_route("/health", health, methods=["GET"])
     return application

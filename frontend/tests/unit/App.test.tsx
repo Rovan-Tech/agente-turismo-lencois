@@ -26,7 +26,7 @@ describe("App routing", () => {
 
     render(<App />);
 
-    await expectHeading("Catálogo de passeios");
+    await expectHeading("Passeios");
   });
 
   it("navigates to the tours page via the header link", async () => {
@@ -41,6 +41,6 @@ describe("App routing", () => {
       .getByRole("link", { name: "Passeios" })
       .click();
 
-    await expectHeading("Catálogo de passeios");
+    await expectHeading("Passeios");
   });
 });

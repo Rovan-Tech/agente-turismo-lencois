@@ -1,8 +1,7 @@
 import { useState } from "react";
 
 import { TourForm } from "../components/TourForm";
-import { TourList } from "../components/TourList";
-import { TourAvailability } from "../features/tour-booking/components/TourAvailability";
+import { TourCardGrid } from "../features/tour-booking/components/TourCardGrid";
 import { createTour, deleteTour, listTours, updateTour } from "../lib/api";
 import { useFetchState } from "../lib/useFetchState";
 import type { Tour } from "../types";
@@ -28,12 +27,13 @@ export function ToursPage() {
   }
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8">
-      <div className="flex items-center justify-between">
+    <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-primary">Catálogo de passeios</h1>
+          <h1 className="font-display text-3xl font-bold text-primary">Passeios</h1>
           <p className="mt-1 text-sm text-secondary">
-            Passeios oferecidos pela agência e usados pelo assistente no WhatsApp.
+            Veja as vagas de cada passeio por dia e cuide do catálogo que o assistente oferece aos
+            turistas.
           </p>
         </div>
         {formMode.kind === "closed" && (
@@ -81,12 +81,8 @@ export function ToursPage() {
         <p className="mt-8 text-muted">Nenhum passeio cadastrado.</p>
       )}
 
-      {toursState.status === "ready" && toursState.data.some((tour) => tour.ativo) && (
-        <TourAvailability tours={toursState.data.filter((tour) => tour.ativo)} />
-      )}
-
       {toursState.status === "ready" && toursState.data.length > 0 && (
-        <TourList
+        <TourCardGrid
           tours={toursState.data}
           onEdit={(tour) => setFormMode({ kind: "edit", tour })}
           onToggleActive={handleToggleActive}

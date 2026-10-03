@@ -38,8 +38,9 @@ async function mockBackend(page: Page, requestedDays: string[] = []) {
   });
 }
 
-function row(page: Page, name: string): Locator {
-  return page.getByRole("link", { name: new RegExp(name) });
+/** O card do passeio (nome em `<h2>`), onde ficam a ocupação do dia e as ações. */
+function card(page: Page, name: string): Locator {
+  return page.locator("li").filter({ has: page.getByRole("heading", { name }) });
 }
 
 test("switches the day tab and reads each tour's seats, with the three occupancy colors", async ({
@@ -50,27 +51,26 @@ test("switches the day tab and reads each tour's seats, with the three occupancy
 
   await page.goto("/passeios");
 
-  await expect(page.getByRole("heading", { name: "Vagas por dia" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Hoje" })).toHaveAttribute("aria-pressed", "true");
 
   // Hoje: 40-6 = 34 vagas (verde), 30-26 = 4 vagas (âmbar), 20-20 = esgotado (terracota).
-  await expect(row(page, "Passeio de Buggy").getByText("34 vagas")).toBeVisible();
-  await expect(row(page, "Passeio de Barco").getByText("4 vagas")).toBeVisible();
-  await expect(row(page, "Trilha das Lagoas").getByText("Esgotado")).toBeVisible();
+  await expect(card(page, "Passeio de Buggy").getByText("34 vagas")).toBeVisible();
+  await expect(card(page, "Passeio de Barco").getByText("4 vagas")).toBeVisible();
+  await expect(card(page, "Trilha das Lagoas").getByText("Esgotado")).toBeVisible();
   expect(requestedDays).toEqual(["2026-09-28"]);
 
   const low = await tokenColor(page, "--color-occupancy-low-bg");
   const medium = await tokenColor(page, "--color-occupancy-medium-bg");
   const full = await tokenColor(page, "--color-occupancy-full-bg");
-  await expect(row(page, "Passeio de Buggy").getByText("34 vagas")).toHaveCSS(
+  await expect(card(page, "Passeio de Buggy").getByText("34 vagas")).toHaveCSS(
     "background-color",
     low
   );
-  await expect(row(page, "Passeio de Barco").getByText("4 vagas")).toHaveCSS(
+  await expect(card(page, "Passeio de Barco").getByText("4 vagas")).toHaveCSS(
     "background-color",
     medium
   );
-  await expect(row(page, "Trilha das Lagoas").getByText("Esgotado")).toHaveCSS(
+  await expect(card(page, "Trilha das Lagoas").getByText("Esgotado")).toHaveCSS(
     "background-color",
     full
   );
@@ -81,36 +81,36 @@ test("switches the day tab and reads each tour's seats, with the three occupancy
     "aria-pressed",
     "true"
   );
-  await expect(row(page, "Passeio de Barco").getByText("Esgotado")).toBeVisible();
-  await expect(row(page, "Passeio de Buggy").getByText("16 vagas")).toBeVisible();
-  await expect(row(page, "Trilha das Lagoas").getByText("20 vagas")).toBeVisible();
-  await expect(row(page, "Passeio de Barco").getByText("Esgotado")).toHaveCSS(
+  await expect(card(page, "Passeio de Barco").getByText("Esgotado")).toBeVisible();
+  await expect(card(page, "Passeio de Buggy").getByText("16 vagas")).toBeVisible();
+  await expect(card(page, "Trilha das Lagoas").getByText("20 vagas")).toBeVisible();
+  await expect(card(page, "Passeio de Barco").getByText("Esgotado")).toHaveCSS(
     "background-color",
     full
   );
-  await expect(row(page, "Passeio de Buggy").getByText("16 vagas")).toHaveCSS(
+  await expect(card(page, "Passeio de Buggy").getByText("16 vagas")).toHaveCSS(
     "background-color",
     medium
   );
-  await expect(row(page, "Trilha das Lagoas").getByText("20 vagas")).toHaveCSS(
+  await expect(card(page, "Trilha das Lagoas").getByText("20 vagas")).toHaveCSS(
     "background-color",
     low
   );
 
   // Depois de amanhã.
   await page.getByRole("button", { name: "Depois de amanhã" }).click();
-  await expect(row(page, "Passeio de Buggy").getByText("Esgotado")).toBeVisible();
-  await expect(row(page, "Passeio de Barco").getByText("30 vagas")).toBeVisible();
-  await expect(row(page, "Trilha das Lagoas").getByText("8 vagas")).toBeVisible();
+  await expect(card(page, "Passeio de Buggy").getByText("Esgotado")).toBeVisible();
+  await expect(card(page, "Passeio de Barco").getByText("30 vagas")).toBeVisible();
+  await expect(card(page, "Trilha das Lagoas").getByText("8 vagas")).toBeVisible();
   expect(requestedDays).toEqual(["2026-09-28", "2026-09-29", "2026-09-30"]);
 });
 
-test("each row opens the tour's detail page", async ({ page }) => {
+test("each card's Agendamentos link opens the tour's detail page", async ({ page }) => {
   await mockBackend(page);
   await page.route("**/api/tours/barco/**", (route) => route.fulfill({ json: [] }));
 
   await page.goto("/passeios");
-  await row(page, "Passeio de Barco").click();
+  await card(page, "Passeio de Barco").getByRole("link", { name: "Agendamentos" }).click();
 
   await expect(page).toHaveURL(/\/passeios\/barco$/);
   await expect(page.getByRole("heading", { name: "Agendamentos do passeio" })).toBeVisible();
