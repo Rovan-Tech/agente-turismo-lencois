@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.errors import BAD_REQUEST, FORBIDDEN
 from app.core.config import Settings, get_settings
 from app.core.security import is_valid_whatsapp_signature
 from app.db.session import get_db
@@ -13,7 +14,7 @@ from app.services.message_handler import IncomingMessage, process_incoming_messa
 router = APIRouter(prefix="/webhook/whatsapp", tags=["webhook"])
 
 
-@router.get("")
+@router.get("", responses={403: FORBIDDEN})
 async def verify_webhook(
     hub_mode: str = Query(..., alias="hub.mode"),
     hub_verify_token: str = Query(..., alias="hub.verify_token"),
@@ -60,7 +61,7 @@ def _to_incoming(msg: dict[str, Any]) -> IncomingMessage | None:
     )
 
 
-@router.post("")
+@router.post("", responses={400: BAD_REQUEST, 403: FORBIDDEN})
 async def receive_webhook(
     request: Request,
     x_hub_signature_256: str | None = Header(default=None),

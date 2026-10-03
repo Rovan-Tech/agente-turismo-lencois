@@ -39,7 +39,7 @@ def _sanitize_for_json(value: object) -> object:
     return value
 
 
-async def _handle_validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
+def _handle_validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
     """Devolve 422 mesmo quando o payload rejeitado tinha `inf`/`nan` (senão o encoder quebra).
 
     Reproduz o formato padrão do FastAPI (``jsonable_encoder`` primeiro, pra lidar com `ctx`/`input`
@@ -50,7 +50,8 @@ async def _handle_validation_error(_request: Request, exc: RequestValidationErro
     return JSONResponse(status_code=422, content={"detail": content})
 
 
-async def health() -> dict:
+def health() -> dict[str, str]:
+    """Verificação de saúde para o Cloud Run e o CI."""
     return {"status": "ok"}
 
 

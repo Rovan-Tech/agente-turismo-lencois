@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_dashboard_auth
+from app.api.errors import CONFLICT, NOT_FOUND, TOUR_NOT_FOUND, UNPROCESSABLE
 from app.core.access_jwt import AccessIdentity
 from app.db.session import get_db
 from app.models.booking import Booking, PaymentMethod
@@ -66,7 +67,7 @@ def _parse_year_month(mes: str) -> tuple[int, int]:
     return year, month
 
 
-@router.get("/{tour_id}/agenda")
+@router.get("/{tour_id}/agenda", responses={404: NOT_FOUND, 422: UNPROCESSABLE})
 async def get_tour_agenda(
     tour_id: str,
     mes: str,
@@ -105,14 +106,14 @@ async def get_tour_agenda(
     try:
         days = await booking_service.get_monthly_occupancy(db, tour_id, year, month)
     except tour_catalog.TourNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="passeio não encontrado") from exc
+        raise HTTPException(status_code=404, detail=TOUR_NOT_FOUND) from exc
     return [
         {"data": day.data.isoformat(), "capacidade": day.capacidade, "ocupadas": day.ocupadas}
         for day in days
     ]
 
 
-@router.get("/{tour_id}/agendamentos")
+@router.get("/{tour_id}/agendamentos", responses={404: NOT_FOUND})
 async def list_day_bookings(
     tour_id: str, data: date, db: AsyncSession = Depends(get_db)
 ) -> list[dict[str, object]]:
@@ -124,11 +125,11 @@ async def list_day_bookings(
     try:
         bookings = await booking_service.get_day_bookings(db, tour_id, data)
     except tour_catalog.TourNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="passeio não encontrado") from exc
+        raise HTTPException(status_code=404, detail=TOUR_NOT_FOUND) from exc
     return [_booking_dict(booking) for booking in bookings]
 
 
-@router.post("/{tour_id}/agendamentos", status_code=201)
+@router.post("/{tour_id}/agendamentos", status_code=201, responses={404: NOT_FOUND, 409: CONFLICT})
 async def create_booking(
     tour_id: str, payload: BookingCreate, http_request: Request, db: AsyncSession = Depends(get_db)
 ) -> dict[str, object]:
@@ -164,7 +165,7 @@ async def create_booking(
     try:
         result = await booking_service.create_booking(db, tour_id, request, context)
     except tour_catalog.TourNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="passeio não encontrado") from exc
+        raise HTTPException(status_code=404, detail=TOUR_NOT_FOUND) from exc
     except booking_service.InsufficientCapacityError as exc:
         raise HTTPException(status_code=409, detail="não há vagas suficientes nesse dia") from exc
     return {

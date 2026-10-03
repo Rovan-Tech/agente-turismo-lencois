@@ -20,8 +20,10 @@ async def test_create_tour_persists_and_returns_it(db_session):
 @pytest.mark.asyncio
 async def test_create_tour_duplicate_id_raises_already_exists(db_session):
     await tour_catalog.create_tour(db_session, default_tour_fields())
+    duplicate = default_tour_fields(nome="Outro nome")
+
     with pytest.raises(tour_catalog.TourAlreadyExistsError):
-        await tour_catalog.create_tour(db_session, default_tour_fields(nome="Outro nome"))
+        await tour_catalog.create_tour(db_session, duplicate)
 
 
 @pytest.mark.asyncio
@@ -41,8 +43,10 @@ async def test_update_tour_replaces_fields(db_session):
 
 @pytest.mark.asyncio
 async def test_update_tour_unknown_id_raises_not_found(db_session):
+    fields = _update_fields()
+
     with pytest.raises(tour_catalog.TourNotFoundError):
-        await tour_catalog.update_tour(db_session, "nao-existe", _update_fields())
+        await tour_catalog.update_tour(db_session, "nao-existe", fields)
 
 
 @pytest.mark.asyncio

@@ -19,16 +19,17 @@ logger = logging.getLogger(__name__)
 
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 PANEL_REQUEST_HEADER_VALUE = "1"
+UNAUTHORIZED_DETAIL = "não autorizado"
 
 
 async def _identity_from_access_jwt(token: str, settings: Settings) -> AccessIdentity:
     """Valida o JWT do Access; sem equipe e audiência configuradas, recusa tudo (falha fechada)."""
     if not settings.access_team_domain or not settings.access_aud:
-        raise HTTPException(status_code=401, detail="não autorizado")
+        raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL)
     try:
         return await verify_access_jwt(token, settings.access_team_domain, settings.access_aud)
     except AccessAuthError:
-        raise HTTPException(status_code=401, detail="não autorizado") from None
+        raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL) from None
     except AccessUnavailableError as error:
         cause = type(error.__cause__).__name__ if error.__cause__ else "em espera"
         logger.exception(
@@ -71,7 +72,7 @@ async def require_dashboard_auth(
     if mode != "access" and is_valid_dashboard_token(authorization, settings.dashboard_api_token):
         return
     if mode == "token" or not cf_access_jwt_assertion:
-        raise HTTPException(status_code=401, detail="não autorizado")
+        raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL)
     identity = await _identity_from_access_jwt(cf_access_jwt_assertion, settings)
     request.state.identity = identity
     _require_panel_header(request, x_panel_request)
@@ -88,7 +89,7 @@ async def require_dashboard_auth(
         )
 
 
-async def require_panel_identity(request: Request) -> AccessIdentity:
+def require_panel_identity(request: Request) -> AccessIdentity:
     """Exige uma pessoa logada (JWT do Access): o token fixo do painel não diz quem agiu.
 
     Roda depois de `require_dashboard_auth` (dependência do roteador), que guarda a identidade.
@@ -102,10 +103,10 @@ async def require_panel_identity(request: Request) -> AccessIdentity:
     return identity
 
 
-async def require_ingest_auth(
+def require_ingest_auth(
     authorization: str | None = Header(default=None),
     settings: Settings = Depends(get_settings),
 ) -> None:
     """Protege a rota de entrada do n8n com o token próprio (nunca o do painel); fail-closed."""
     if not is_valid_bearer_token(authorization, settings.ingest_api_token):
-        raise HTTPException(status_code=401, detail="não autorizado")
+        raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL)
