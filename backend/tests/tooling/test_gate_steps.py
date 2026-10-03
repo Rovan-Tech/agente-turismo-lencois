@@ -68,6 +68,29 @@ def test_parse_mypy_extracts_file_line_message_and_code(tmp_path):
 
 
 @pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("app/x.py:12: error: msg  [code]", ("app/x.py", 12, "msg  [code]")),
+        ("app/x.py:12: note: msg", None),
+        ("Success: no issues found", None),
+        ("", None),
+        ("a:1: error: ", ("a", 1, "")),
+        (":1: error: x", None),  # o arquivo precisa de ao menos um caractere
+        (":1: error: x:2: error: y", (":1: error: x", 2, "y")),
+        ("C:\\dir\\x.py:3: error: m", ("C:\\dir\\x.py", 3, "m")),
+        ("a:1:2: error: m", ("a:1", 2, "m")),
+        ("a.py:7: error: t :9: error: x", ("a.py", 7, "t :9: error: x")),
+    ],
+)
+def test_split_mypy_line_takes_the_first_marker_after_a_non_empty_file(raw, expected):
+    assert gs.split_mypy_line(raw) == expected
+
+
+def test_split_mypy_line_is_linear_on_adversarial_input():
+    assert gs.split_mypy_line(":1" * 50000) is None
+
+
+@pytest.mark.parametrize(
     ("text", "expected"),
     [
         ('Missing "dict"  [type-arg]', ('Missing "dict"', "type-arg")),

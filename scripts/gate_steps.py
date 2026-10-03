@@ -25,7 +25,9 @@ from gate_common import (
 
 RUFF_CONFIG = str(BACKEND / "pyproject.toml")
 LEGACY_SELECT = "E,F,I,UP,B"
-MYPY_LINE_RE = re.compile(r"^(?P<file>.+?):(?P<line>\d+): error: (?P<text>.*)$")
+# Só o marcador `:linha: error: ` é uma regex; o arquivo e o texto saem por fatiamento. Um
+# `^(.+?):(\d+): error: (.*)$` retrocede em tempo super-linear (Sonar S8786).
+MYPY_MARKER_RE = re.compile(r":(?P<line>\d+): error: ")
 MYPY_CODE_RE = re.compile(r"[\w-]+")
 MYPY_BASELINE = ROOT / ".mypy-baseline.json"
 MYPY_SUMMARY_RE = re.compile(r"^(Success:|Found \d+ errors?)", re.M)
@@ -190,15 +192,26 @@ def split_mypy_code(text: str) -> tuple[str, str | None]:
     return text, None
 
 
+def split_mypy_line(raw: str) -> tuple[str, int, str] | None:
+    """Divide `arquivo:linha: error: texto` em `(arquivo, linha, texto)`; outra linha, `None`.
+
+    O arquivo tem ao menos um caractere e termina no primeiro marcador `:linha: error: `.
+    """
+    marker = MYPY_MARKER_RE.search(raw, 1)
+    if marker is None:
+        return None
+    return raw[: marker.start()], int(marker["line"]), raw[marker.end() :]
+
+
 def parse_mypy(cwd: Path, output: str) -> MypyErrors:
     """Extrai `(arquivo, linha, mensagem, código)` de cada erro do mypy."""
     errors = []
     for raw in output.splitlines():
-        match = MYPY_LINE_RE.match(raw)
-        if match:
-            path = (cwd / match["file"]).resolve()
-            msg, code = split_mypy_code(match["text"])
-            errors.append((path, int(match["line"]), msg, code))
+        parts = split_mypy_line(raw)
+        if parts:
+            file, line, text = parts
+            msg, code = split_mypy_code(text)
+            errors.append(((cwd / file).resolve(), line, msg, code))
     return errors
 
 
