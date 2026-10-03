@@ -54,7 +54,7 @@ Também sob demanda em Actions > Nightly > Run workflow. Falha avisa o dono do r
 
 | Job | O que faz | Reprova quando |
 | --- | --- | --- |
-| `rescan` | pip-audit, npm audit e Trivy na imagem | CVE nova (sem o código mudar) |
+| `rescan` | pip-audit, npm audit (só produção, ver TD-C4) e Trivy na imagem | CVE nova (sem o código mudar) |
 | `dast` | OWASP ZAP contra a API no ar a partir do OpenAPI | alerta de nível FAIL (avisos só no relatório) |
 | `load` | k6, 30 req/s por 30 s | erro > 1% ou p95 > 500 ms |
 | `fuzz-full` | schemathesis com todos os checks | nunca (informativo; ver TD-C1) |

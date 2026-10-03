@@ -40,9 +40,11 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: frontend/.nvmrc
+      # Só dependências de produção: o `braces` (via tailwindcss 3.x, só de build) não tem versão
+      # corrigida. Ver TD-C4 em docs/tech-debt.md; voltar a auditar tudo quando houver patch.
       - name: npm audit
         working-directory: frontend
-        run: npm audit --audit-level=high
+        run: npm audit --omit=dev --audit-level=high
       - name: Trivy na imagem do backend
         run: |
           docker build --pull -t agente-backend:nightly backend
