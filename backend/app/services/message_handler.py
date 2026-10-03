@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import tempfile
 from dataclasses import dataclass
@@ -54,6 +55,27 @@ async def get_or_create_open_conversation(db: AsyncSession, phone: str) -> Conve
     return conversation
 
 
+def _transcribe_audio_bytes(settings: Settings, audio_bytes: bytes) -> str:
+    """Transcreve o áudio por um arquivo temporário que some ao final (LGPD: sem áudio em disco).
+
+    Síncrona de propósito: roda em `asyncio.to_thread`, pois escreve em disco e executa o Whisper.
+
+    Args:
+        settings: Configuração da aplicação (modelo do Whisper).
+        audio_bytes: Áudio bruto baixado do WhatsApp.
+
+    Returns:
+        O texto transcrito.
+    """
+    from app.services.transcription import transcribe_audio
+
+    with tempfile.NamedTemporaryFile(suffix=".ogg", delete=True) as tmp_file:
+        tmp_file.write(audio_bytes)
+        tmp_file.flush()
+        text, _language = transcribe_audio(settings, tmp_file.name)
+    return text
+
+
 async def resolve_incoming_text(
     settings: Settings, message_type: str, text_body: str | None, media_id: str | None
 ) -> tuple[str, MessageType]:
@@ -66,12 +88,8 @@ async def resolve_incoming_text(
             settings, media_url, settings.max_audio_bytes
         )
 
-        from app.services.transcription import transcribe_audio
-
-        with tempfile.NamedTemporaryFile(suffix=".ogg", delete=True) as tmp_file:
-            tmp_file.write(audio_bytes)
-            tmp_file.flush()
-            text, _language = transcribe_audio(settings, tmp_file.name)
+        # Disco e inferência são bloqueantes: rodam numa thread para não travar o loop de eventos.
+        text = await asyncio.to_thread(_transcribe_audio_bytes, settings, audio_bytes)
         return text, MessageType.AUDIO_TRANSCRITO
 
     return "", MessageType.TEXTO
