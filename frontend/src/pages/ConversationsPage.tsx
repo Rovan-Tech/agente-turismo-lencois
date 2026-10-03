@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
 
 import { ConversationRow } from "../components/ConversationRow";
+import { LanguageFilterTabs } from "../components/LanguageFilterTabs";
 import { SearchBox } from "../components/SearchBox";
 import { StatusFilterTabs } from "../components/StatusFilterTabs";
-import { countByFilter, filterConversations, type StatusFilter } from "../lib/conversations";
+import {
+  countByFilter,
+  filterConversations,
+  languageFilterOptions,
+  type LanguageFilter,
+  type StatusFilter,
+} from "../lib/conversations";
 import { listConversations } from "../lib/api";
 import type { ConversationSummary } from "../types";
 
 export function ConversationsPage() {
   const [conversations, setConversations] = useState<ConversationSummary[] | null>(null);
   const [filter, setFilter] = useState<StatusFilter>("todas");
+  const [language, setLanguage] = useState<LanguageFilter>("todos");
   const [query, setQuery] = useState("");
   const [now] = useState(() => new Date());
 
@@ -23,7 +31,8 @@ export function ConversationsPage() {
     };
   }, []);
 
-  const visible = conversations ? filterConversations(conversations, filter, query) : [];
+  const visible = conversations ? filterConversations(conversations, filter, query, language) : [];
+  const languageOptions = conversations ? languageFilterOptions(conversations) : [];
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
@@ -45,11 +54,16 @@ export function ConversationsPage() {
 
       {conversations !== null && conversations.length > 0 && (
         <>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-col gap-3">
             <StatusFilterTabs
               active={filter}
               counts={countByFilter(conversations)}
               onChange={setFilter}
+            />
+            <LanguageFilterTabs
+              active={language}
+              options={languageOptions}
+              onChange={setLanguage}
             />
           </div>
           {visible.length === 0 && (

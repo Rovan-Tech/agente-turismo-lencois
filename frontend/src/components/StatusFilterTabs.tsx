@@ -1,4 +1,5 @@
 import { STATUS_FILTERS, type StatusFilter } from "../lib/conversations";
+import { FilterTabs, type FilterTabItem } from "./FilterTabs";
 
 /** Abas de filtro por status; cada uma mostra quantas conversas tem. */
 export function StatusFilterTabs({
@@ -10,29 +11,11 @@ export function StatusFilterTabs({
   counts: Record<StatusFilter, number>;
   onChange: (filter: StatusFilter) => void;
 }>) {
-  return (
-    <fieldset aria-label="Filtrar por status" className="min-w-0 flex flex-wrap gap-2">
-      {STATUS_FILTERS.map(({ value, label }) => {
-        const selected = value === active;
-        return (
-          <button
-            key={value}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(value)}
-            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
-              selected
-                ? "border-transparent bg-action text-on-action"
-                : "border-subtle bg-surface text-secondary hover:bg-subtle"
-            }`}
-          >
-            {label}
-            <span className="rounded-full bg-neutral-subtle px-2 text-xs text-neutral-subtle">
-              {counts[value]}
-            </span>
-          </button>
-        );
-      })}
-    </fieldset>
-  );
+  const items: FilterTabItem<StatusFilter>[] = STATUS_FILTERS.map(({ value, label }) => ({
+    value,
+    selected: value === active,
+    count: counts[value],
+    content: label,
+  }));
+  return <FilterTabs ariaLabel="Filtrar por status" items={items} onChange={onChange} />;
 }

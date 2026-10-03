@@ -91,6 +91,31 @@ describe("ConversationsPage", () => {
     expect(screen.queryByText("+55 98 90000-0001")).toBeNull();
   });
 
+  it("offers a language tab per detected language and filters by it", async () => {
+    renderPage(MIXED);
+    await screen.findByText("+55 98 90000-0001");
+
+    const languageGroup = screen.getByRole("group", { name: "Filtrar por idioma" });
+    expect(
+      within(languageGroup).getByRole("button", { name: "Todos os idiomas 3" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(languageGroup).getByRole("button", { name: "ES espanhol 1" }));
+
+    expect(screen.getByText("+55 98 90000-0003")).toBeInTheDocument();
+    expect(screen.queryByText("+55 98 90000-0001")).toBeNull();
+  });
+
+  it("hides the language filter when every conversation shares one language", async () => {
+    renderPage([
+      summary({ id: "a", whatsapp_phone: "5598900000001", idioma_detectado: "pt" }),
+      summary({ id: "b", whatsapp_phone: "5598900000002", idioma_detectado: "pt" }),
+    ]);
+    await screen.findByText("+55 98 90000-0001");
+
+    expect(screen.queryByRole("group", { name: "Filtrar por idioma" })).toBeNull();
+  });
+
   it("searches by phone or by the last message and says when nothing matches", async () => {
     renderPage(MIXED);
     await screen.findByText("+55 98 90000-0001");
