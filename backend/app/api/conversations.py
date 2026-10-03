@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -19,7 +20,9 @@ from app.core.config import Settings, get_settings
 from app.db.session import get_db
 from app.models.conversation import Conversation, ConversationStatus, Handling
 from app.models.message import Message
-from app.services import handoff
+from app.services import groq_client, handoff
+
+logger = logging.getLogger(__name__)
 
 # A lista só mostra uma prévia da última mensagem: limitar o tamanho mantém a resposta leve.
 PREVIEW_LENGTH = 200
@@ -56,6 +59,20 @@ class ReplyBody(BaseModel):
         ),
     ]
     client_message_id: str = Field(pattern=r"^[A-Za-z0-9_-]{8,64}$")
+
+
+class TranslateBody(BaseModel):
+    """Texto a traduzir e o idioma de destino; tradução sob demanda, sem gravar nada."""
+
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    texto: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True, min_length=1, max_length=2000, pattern=r"^[^\x00]*$"
+        ),
+    ]
+    idioma_destino: Literal["pt", "en", "es"]
 
 
 @contextmanager
@@ -254,6 +271,24 @@ async def send_conversation_message(
             ctx.db, ctx.settings, conversation, ctx.identity, outgoing
         )
     return _message_dict(message)
+
+
+@router.post("/traducao", responses={503: {"description": "Tradução indisponível"}})
+async def translate_message(
+    payload: TranslateBody, settings: Settings = Depends(get_settings)
+) -> dict[str, str]:
+    """Traduz um texto sob demanda (rascunho do atendente ou mensagem recebida), via Groq."""
+    try:
+        traducao = await groq_client.translate_text(settings, payload.texto, payload.idioma_destino)
+    except groq_client.GroqUnavailableError as error:
+        logger.warning(
+            "Groq indisponível: causa=%s status_http=%s; tradução recusada",
+            error.causa,
+            error.status_http,
+            extra={"event": "translation_unavailable", "causa": error.causa},
+        )
+        raise HTTPException(status_code=503, detail="Tradução indisponível no momento.") from None
+    return {"traducao": traducao}
 
 
 @router.get("/{conversation_id}", responses={404: NOT_FOUND})
