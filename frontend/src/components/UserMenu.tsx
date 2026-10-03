@@ -12,7 +12,7 @@ const LINK = "font-semibold text-link hover:underline";
  * (desenvolvimento com o token fixo, ou a consulta falhou) fica o nome genérico e nenhum "Sair",
  * que levaria a um endereço que não existe fora do Access.
  */
-export function UserMenu({ me }: { me: Me | null }) {
+export function UserMenu({ me }: Readonly<{ me: Me | null }>) {
   return (
     <span className="flex items-center gap-3">
       <span className="flex items-center gap-2 font-medium text-primary">

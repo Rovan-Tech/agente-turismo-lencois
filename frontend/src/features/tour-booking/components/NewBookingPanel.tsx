@@ -13,7 +13,7 @@ interface NewBookingPanelProps {
 }
 
 /** Visual estático da simulação de pagamento — nunca um campo de número de cartão, real ou fake. */
-function PaymentPreview({ method }: { method: PaymentMethod }) {
+function PaymentPreview({ method }: Readonly<{ method: PaymentMethod }>) {
   if (method === "pix") {
     return (
       <p className="rounded-md border border-dashed border-subtle bg-subtle p-3 font-mono text-xs text-secondary">
@@ -36,7 +36,7 @@ function PaymentPreview({ method }: { method: PaymentMethod }) {
 }
 
 /** Painel de novo agendamento: pessoas, forma de pagamento simulada e "simular pagamento aprovado". */
-export function NewBookingPanel({ data, onSubmit }: NewBookingPanelProps) {
+export function NewBookingPanel({ data, onSubmit }: Readonly<NewBookingPanelProps>) {
   const [pessoas, setPessoas] = useState(1);
   const [formaPagamento, setFormaPagamento] = useState<PaymentMethod>("pix");
   const [telefone, setTelefone] = useState("");

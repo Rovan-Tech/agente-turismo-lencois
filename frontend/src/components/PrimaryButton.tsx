@@ -4,7 +4,7 @@ import type { ButtonHTMLAttributes } from "react";
 export function PrimaryButton({
   className = "",
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement>) {
+}: Readonly<ButtonHTMLAttributes<HTMLButtonElement>>) {
   return (
     <button
       type="button"

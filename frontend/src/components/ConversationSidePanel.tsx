@@ -12,14 +12,14 @@ export function ConversationSidePanel({
   updateFailed,
   onChange,
   children,
-}: {
+}: Readonly<{
   status: ConversationStatus;
   updating: boolean;
   updateFailed: boolean;
   onChange: (next: ConversationStatus) => void;
   /** Seções extras entre o status e as ações (ex.: passeio sugerido). */
   children?: ReactNode;
-}) {
+}>) {
   return (
     <aside
       aria-label="Detalhes da conversa"

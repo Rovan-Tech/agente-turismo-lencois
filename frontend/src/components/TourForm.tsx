@@ -55,7 +55,11 @@ const CHECKBOX_FIELDS: { key: CheckboxFieldKey; label: string }[] = [
   { key: "acessivel_criancas_pequenas", label: "Crianças pequenas" },
 ];
 
-function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+function Field({
+  id,
+  label,
+  children,
+}: Readonly<{ id: string; label: string; children: React.ReactNode }>) {
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-primary">
@@ -74,7 +78,13 @@ interface TourFormProps {
   onCancel: () => void;
 }
 
-export function TourForm({ mode, initialTour, onSubmit, onSuccess, onCancel }: TourFormProps) {
+export function TourForm({
+  mode,
+  initialTour,
+  onSubmit,
+  onSuccess,
+  onCancel,
+}: Readonly<TourFormProps>) {
   const [form, setForm] = useState<FormState>(initialTour ?? emptyForm());
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -177,7 +187,7 @@ export function TourForm({ mode, initialTour, onSubmit, onSuccess, onCancel }: T
             checked={form.ativo ?? true}
             onChange={(e) => setForm({ ...form, ativo: e.target.checked })}
           />
-          Ativo
+          <span>Ativo</span>
         </label>
       )}
 

@@ -18,7 +18,7 @@ const NAV_ITEMS = [
 ];
 
 /** Links de navegação do painel; o item da seção atual recebe `aria-current="page"`. */
-export function NavLinks({ className }: { className: string }) {
+export function NavLinks({ className }: Readonly<{ className: string }>) {
   const { pathname } = useLocation();
   return (
     <nav aria-label="Principal" className={className}>

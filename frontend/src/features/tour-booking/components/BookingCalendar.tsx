@@ -28,7 +28,7 @@ export function BookingCalendar({
   selectedDate,
   onSelectDate,
   onChangeMonth,
-}: BookingCalendarProps) {
+}: Readonly<BookingCalendarProps>) {
   return (
     <section aria-labelledby="booking-calendar-title" className="flex flex-col gap-3">
       <div className="flex items-center justify-between">

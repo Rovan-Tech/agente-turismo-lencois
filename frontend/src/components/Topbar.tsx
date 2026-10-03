@@ -10,12 +10,12 @@ export function Topbar({
   me,
   theme,
   onToggleTheme,
-}: {
+}: Readonly<{
   now: Date;
   me: Me | null;
   theme: Theme;
   onToggleTheme: () => void;
-}) {
+}>) {
   return (
     <header className="hidden items-center justify-end gap-4 border-b border-subtle bg-surface px-6 py-3 text-sm md:flex">
       <time dateTime={now.toLocaleDateString("sv-SE")} className="text-secondary">

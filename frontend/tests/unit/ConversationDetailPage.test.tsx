@@ -372,7 +372,7 @@ describe("ConversationDetailPage: taking over and answering", () => {
     const calls = send.mock.calls.length;
     fireEvent.change(screen.getByRole("textbox", REPLY_FIELD), { target: { value: text } });
     fireEvent.click(screen.getByRole("button", { name: "Enviar" }));
-    await waitFor(() => expect(send.mock.calls.length).toBe(calls + 1));
+    await waitFor(() => expect(send.mock.calls).toHaveLength(calls + 1));
   }
 
   it("uses a new send id for the next message after one was accepted, even with the same text", async () => {

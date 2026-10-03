@@ -2,7 +2,10 @@ import type { Booking } from "../../../types";
 import { formatDateLabel, paymentMethodLabel } from "../format";
 
 /** Agendamentos pagos de um dia: telefone, pessoas e forma de pagamento (atendente autenticado). */
-export function DayBookingsList({ data, bookings }: { data: string; bookings: Booking[] }) {
+export function DayBookingsList({
+  data,
+  bookings,
+}: Readonly<{ data: string; bookings: Booking[] }>) {
   return (
     <section aria-labelledby="day-bookings-title" className="flex flex-col gap-2">
       <h2 id="day-bookings-title" className="font-display font-semibold text-primary">

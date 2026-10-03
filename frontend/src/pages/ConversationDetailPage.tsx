@@ -20,10 +20,10 @@ import type { ConversationDetail } from "../types";
 function ConversationHeaderBar({
   conversation,
   titleRef,
-}: {
+}: Readonly<{
   conversation: ConversationDetail;
   titleRef: React.RefObject<HTMLHeadingElement>;
-}) {
+}>) {
   const language = languageName(conversation.idioma_detectado);
   return (
     <header className="mt-3 flex flex-wrap items-center justify-between gap-3 border-b border-subtle px-4 py-4 sm:px-6">

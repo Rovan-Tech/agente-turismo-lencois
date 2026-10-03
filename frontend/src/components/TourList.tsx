@@ -14,7 +14,7 @@ interface TourListProps {
   onToggleActive: (tour: Tour) => void;
 }
 
-export function TourList({ tours, onEdit, onToggleActive }: TourListProps) {
+export function TourList({ tours, onEdit, onToggleActive }: Readonly<TourListProps>) {
   return (
     <ul className="mt-6 divide-y divide-subtle rounded-lg border border-subtle bg-surface">
       {tours.map((tour) => (

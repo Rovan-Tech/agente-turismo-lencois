@@ -10,11 +10,11 @@ export function MobileHeader({
   me,
   theme,
   onToggleTheme,
-}: {
+}: Readonly<{
   me: Me | null;
   theme: Theme;
   onToggleTheme: () => void;
-}) {
+}>) {
   return (
     <header className="border-b border-subtle bg-surface px-4 py-3 md:hidden">
       <div className="flex items-center justify-between">
