@@ -144,7 +144,7 @@ describe("ToursPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("falha ao desativar");
   });
 
-  it("shows the seats-by-day section for the active tours only", async () => {
+  it("shows each active tour's occupancy for the selected day and a day-free summary", async () => {
     const inactive = { ...SECOND_TOUR, ativo: false };
     vi.spyOn(api, "listTours").mockResolvedValue([ACTIVE_TOUR, inactive]);
     vi.spyOn(api, "getTourAvailability").mockResolvedValue([
@@ -155,18 +155,36 @@ describe("ToursPage", () => {
     renderPage();
 
     expect(await screen.findByText("20 vagas")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Vagas por dia" })).toBeInTheDocument();
     expect(screen.getAllByText("20 vagas")).toHaveLength(1);
+    expect(
+      screen.getByText(
+        "Desativado: o assistente não oferece este passeio e ele não recebe reservas."
+      )
+    ).toBeInTheDocument();
+    // Resumo do dia: só o passeio ativo entra na conta de vagas livres.
+    expect(screen.getByText("20")).toBeInTheDocument();
   });
 
-  it("hides the seats-by-day section when no tour is active", async () => {
-    const getAvailability = vi.spyOn(api, "getTourAvailability");
+  it("still shows the day tabs and the grid when no tour is active", async () => {
     vi.spyOn(api, "listTours").mockResolvedValue([{ ...ACTIVE_TOUR, ativo: false }]);
 
     renderPage();
-    await screen.findByText("Inativo");
 
-    expect(screen.queryByRole("heading", { name: "Vagas por dia" })).not.toBeInTheDocument();
-    expect(getAvailability).not.toHaveBeenCalled();
+    expect(await screen.findByText("Inativo")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Escolher o dia" })).toBeInTheDocument();
+  });
+
+  it("switches which day's occupancy is shown", async () => {
+    const getAvailability = vi
+      .spyOn(api, "getTourAvailability")
+      .mockResolvedValue([{ tour_id: ACTIVE_TOUR.id, capacidade: 30, ocupadas: 10 }]);
+    vi.spyOn(api, "listTours").mockResolvedValue([ACTIVE_TOUR]);
+
+    renderPage();
+    await screen.findByText("20 vagas");
+
+    fireEvent.click(screen.getByRole("button", { name: "Amanhã" }));
+
+    await waitFor(() => expect(getAvailability).toHaveBeenCalledTimes(2));
   });
 });
