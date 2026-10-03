@@ -14,6 +14,7 @@ import type {
   TourUpdateInput,
 } from "../types";
 import type { ApiResult } from "../lib/api";
+import type { TourAvailability } from "../types";
 import { buildDemoConversations, DEMO_TOURS } from "./fixtures";
 import { announcementText, FOLLOW_UP, giveBackText, WINDOW_CLOSED } from "./texts";
 
@@ -30,6 +31,7 @@ const NETWORK_DELAY_MS = 250;
 // Mesma capacidade padrão do servidor (`server_default` da migração): a demo não edita capacidade.
 const DEMO_DAILY_CAPACITY = 30;
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+const DAY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
 const VISITOR: Me = { sub: "visitante", nome: "Visitante" };
 
@@ -280,6 +282,21 @@ export function getTourAgenda(tourId: string, mes: string): Promise<DayOccupancy
       const data = `${mes}-${String(index + 1).padStart(2, "0")}`;
       return { data, capacidade: DEMO_DAILY_CAPACITY, ocupadas: occupiedOn(tourId, data) };
     })
+  );
+}
+
+/** Vagas de cada passeio ativo no dia, na mesma ordem (por nome) do servidor; dia inválido é `null`. */
+export function getTourAvailability(dia: string): Promise<TourAvailability[] | null> {
+  if (!DAY_PATTERN.test(dia)) return respond(null);
+  return respond(
+    tours
+      .filter((tour) => tour.ativo)
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+      .map((tour) => ({
+        tour_id: tour.id,
+        capacidade: DEMO_DAILY_CAPACITY,
+        ocupadas: occupiedOn(tour.id, dia),
+      }))
   );
 }
 

@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   dayOfMonth,
   formatDateLabel,
   formatMonthLabel,
+  isoDateFromToday,
   occupancyLevel,
   paymentMethodLabel,
   remainingSeatsLabel,
@@ -53,5 +54,30 @@ describe("tour booking formatting", () => {
 
   it("formats a month label with a capitalized first letter", () => {
     expect(formatMonthLabel("2026-09")).toBe("Setembro de 2026");
+  });
+});
+
+describe("isoDateFromToday", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    [0, "2026-09-28"],
+    [1, "2026-09-29"],
+    [2, "2026-09-30"],
+    [3, "2026-10-01"],
+  ])("adds %i day(s) to 28/09/2026", (offset, expected) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 8, 28, 23, 30, 0));
+
+    expect(isoDateFromToday(offset)).toBe(expected);
+  });
+
+  it("rolls over the year", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 11, 31, 10, 0, 0));
+
+    expect(isoDateFromToday(2)).toBe("2027-01-02");
   });
 });

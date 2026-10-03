@@ -251,3 +251,36 @@ async def test_get_monthly_occupancy_rejects_inactive_tour(db_session):
 
     with pytest.raises(tour_catalog.TourNotFoundError):
         await booking_service.get_monthly_occupancy(db_session, "passeio-teste", 2026, 9)
+
+
+@pytest.mark.asyncio
+async def test_get_availability_sums_only_paid_people_of_the_requested_day(db_session):
+    other_day = _other_booking(date(2026, 9, 29), PaymentStatus.PAGO, pessoas=6)
+    pending = _other_booking(date(2026, 9, 28), PaymentStatus.PENDENTE, pessoas=5)
+    await persist(db_session, _tour(capacidade_diaria=10), other_day, pending)
+    await _create(db_session, pessoas=3)
+    await _create(db_session, pessoas=2)
+
+    availability = await booking_service.get_availability(db_session, date(2026, 9, 28))
+
+    assert availability == [
+        booking_service.TourAvailability(tour_id="passeio-teste", capacidade=10, ocupadas=5)
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_availability_lists_active_tours_by_name_and_skips_inactive(db_session):
+    await persist(
+        db_session,
+        Tour(**default_tour_fields(id="zeta", nome="Zeta", capacidade_diaria=8)),
+        Tour(**default_tour_fields(id="alfa", nome="Alfa", capacidade_diaria=12)),
+        Tour(**default_tour_fields(id="inativo", nome="Antigo", ativo=False)),
+    )
+    await _create(db_session, "zeta", pessoas=8)
+
+    availability = await booking_service.get_availability(db_session, date(2026, 9, 28))
+
+    assert [(a.tour_id, a.capacidade, a.ocupadas) for a in availability] == [
+        ("alfa", 12, 0),
+        ("zeta", 8, 8),
+    ]

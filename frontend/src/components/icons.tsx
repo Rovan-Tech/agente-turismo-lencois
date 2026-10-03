@@ -73,6 +73,14 @@ export function ChevronLeftIcon(props: Readonly<IconProps>) {
   );
 }
 
+export function ChevronRightIcon(props: Readonly<IconProps>) {
+  return (
+    <Icon {...props}>
+      <path d="m9 6 6 6-6 6" />
+    </Icon>
+  );
+}
+
 export function SunIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>

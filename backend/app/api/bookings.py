@@ -67,6 +67,30 @@ def _parse_year_month(mes: str) -> tuple[int, int]:
     return year, month
 
 
+@router.get("/vagas")
+async def get_availability(
+    dia: date, db: AsyncSession = Depends(get_db)
+) -> list[dict[str, object]]:
+    """Vagas de cada passeio ativo num dia, para a lista de passeios do painel.
+
+    Declarada antes das rotas ``/{tour_id}/...`` só por clareza: o caminho de um segmento só
+    (``/vagas``) não colide com elas.
+
+    Args:
+        dia: dia consultado, no formato ``YYYY-MM-DD`` (formato inválido vira 422).
+        db: sessão assíncrona injetada pelo FastAPI.
+
+    Returns:
+        Um item por passeio ativo, com ``tour_id``, ``capacidade`` e ``ocupadas`` (soma das
+        pessoas dos agendamentos pagos do dia).
+    """
+    availability = await booking_service.get_availability(db, dia)
+    return [
+        {"tour_id": item.tour_id, "capacidade": item.capacidade, "ocupadas": item.ocupadas}
+        for item in availability
+    ]
+
+
 @router.get("/{tour_id}/agenda", responses={404: NOT_FOUND, 422: UNPROCESSABLE})
 async def get_tour_agenda(
     tour_id: str,

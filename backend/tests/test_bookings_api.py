@@ -218,3 +218,57 @@ async def test_create_booking_does_not_mutate_tour_fields(client, db_session, sa
     assert tour["nome"] == sample_tours[0].nome
     assert tour["preco_reais"] == sample_tours[0].preco_reais
     assert tour["ativo"] is True
+
+
+async def _get_availability(client, dia="2026-09-28"):
+    return await client.get("/api/tours/vagas", params={"dia": dia})
+
+
+@pytest.mark.asyncio
+async def test_get_availability_returns_capacity_and_paid_people_per_active_tour(
+    client, db_session, sample_tours
+):
+    await _paid_booking_on_sample_tour(client, db_session, sample_tours)
+    await persist(db_session, sample_tours[1])
+
+    response = await _get_availability(client)
+
+    assert response.status_code == 200
+    by_tour = {item["tour_id"]: item for item in response.json()}
+    assert by_tour["passeio-bugre-orla"] == {
+        "tour_id": "passeio-bugre-orla",
+        "capacidade": 30,
+        "ocupadas": 3,
+    }
+    assert by_tour["trilha-das-emendas"]["ocupadas"] == 0
+
+
+@pytest.mark.asyncio
+async def test_get_availability_omits_inactive_tours_and_other_days(
+    client, db_session, sample_tours
+):
+    await _paid_booking_on_sample_tour(client, db_session, sample_tours)
+    sample_tours[1].ativo = False
+    await persist(db_session, sample_tours[1])
+
+    response = await _get_availability(client, "2026-09-29")
+
+    assert response.status_code == 200
+    assert [item["tour_id"] for item in response.json()] == ["passeio-bugre-orla"]
+    assert response.json()[0]["ocupadas"] == 0
+
+
+@pytest.mark.parametrize("dia", ["28/09/2026", "2026-13-01", "amanha", ""])
+@pytest.mark.asyncio
+async def test_get_availability_invalid_dia_returns_422(client, dia):
+    response = await _get_availability(client, dia)
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["query", "dia"]
+
+
+@pytest.mark.asyncio
+async def test_get_availability_without_dia_returns_422(client):
+    response = await client.get("/api/tours/vagas")
+
+    assert response.status_code == 422

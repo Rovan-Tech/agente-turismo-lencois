@@ -322,6 +322,32 @@ describe("demoApi bookings", () => {
     expect(dayBookings).toBeNull();
   });
 
+  it("lists the seats of every active tour for a day, by name, and drops deactivated ones", async () => {
+    await done(demo.createBooking(TOUR, payload));
+    await done(demo.deleteTour(DEMO_TOURS[1].id));
+
+    const availability = await done(demo.getTourAvailability("2026-10-05"));
+    const otherDay = await done(demo.getTourAvailability("2026-10-06"));
+
+    const activeNames = DEMO_TOURS.filter((tour) => tour.id !== DEMO_TOURS[1].id)
+      .map((tour) => tour.nome)
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    expect(availability?.map((item) => item.tour_id)).toEqual(
+      activeNames.map((nome) => DEMO_TOURS.find((tour) => tour.nome === nome)?.id)
+    );
+    expect(availability?.find((item) => item.tour_id === TOUR)).toEqual({
+      tour_id: TOUR,
+      capacidade: 30,
+      ocupadas: 3,
+    });
+    expect(otherDay?.every((item) => item.ocupadas === 0)).toBe(true);
+  });
+
+  it("returns null for a malformed day, like the real API", async () => {
+    expect(await done(demo.getTourAvailability("amanha"))).toBeNull();
+    expect(await done(demo.getTourAvailability("2026-13-01"))).toBeNull();
+  });
+
   it("keeps bookings and seats isolated per tour: booking one tour never touches another", async () => {
     const other = DEMO_TOURS[1].id;
 

@@ -37,6 +37,15 @@ class DayOccupancy:
 
 
 @dataclass(slots=True, frozen=True)
+class TourAvailability:
+    """Vagas de um passeio ativo num dia (usada pela lista de passeios do painel)."""
+
+    tour_id: str
+    capacidade: int
+    ocupadas: int
+
+
+@dataclass(slots=True, frozen=True)
 class NewBookingRequest:
     """Dados de um agendamento novo — sempre entra como pago (é a simulação)."""
 
@@ -118,6 +127,38 @@ async def get_monthly_occupancy(
             ocupadas=occupied_by_day.get(start.replace(day=day), 0),
         )
         for day in range(1, days_in_month + 1)
+    ]
+
+
+async def get_availability(db: AsyncSession, day: date) -> list[TourAvailability]:
+    """Vagas de todos os passeios ativos num dia, numa única consulta (sem N+1).
+
+    Passeio desativado não aparece (mesmo critério do calendário: fora do catálogo, fora da
+    agenda). ``ocupadas`` soma as ``pessoas`` só dos agendamentos pagos do dia.
+
+    Args:
+        db: sessão assíncrona.
+        day: dia consultado.
+
+    Returns:
+        Um `TourAvailability` por passeio ativo, em ordem alfabética de nome.
+    """
+    paid = (
+        select(Booking.tour_id, func.sum(Booking.pessoas).label("total"))
+        .where(Booking.data == day)
+        .where(Booking.status_pagamento == PaymentStatus.PAGO)
+        .group_by(Booking.tour_id)
+        .subquery()
+    )
+    result = await db.execute(
+        select(Tour.id, Tour.capacidade_diaria, func.coalesce(paid.c.total, 0))
+        .outerjoin(paid, paid.c.tour_id == Tour.id)
+        .where(Tour.ativo.is_(True))
+        .order_by(Tour.nome, Tour.id)
+    )
+    return [
+        TourAvailability(tour_id=tour_id, capacidade=capacidade, ocupadas=int(total))
+        for tour_id, capacidade, total in result.all()
     ]
 
 

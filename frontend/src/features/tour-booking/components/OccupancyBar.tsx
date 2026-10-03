@@ -11,11 +11,15 @@ const FILL_CLASS: Record<ReturnType<typeof occupancyLevel>, string> = {
     "[&::-webkit-progress-value]:bg-occupancy-full [&::-moz-progress-bar]:bg-occupancy-full",
 };
 
-/** Ocupação de hoje: barra de progresso mais o selo "X vagas" (nunca só cor, a leitura é textual). */
+/**
+ * Ocupação de um dia (hoje, por padrão): barra de progresso mais o selo "X vagas" (nunca só cor, a
+ * leitura é textual). `dayLabel` entra no nome acessível ("Ocupação de amanhã: 4 vagas").
+ */
 export function OccupancyBar({
   ocupadas,
   capacidade,
-}: Readonly<{ ocupadas: number; capacidade: number }>) {
+  dayLabel = "hoje",
+}: Readonly<{ ocupadas: number; capacidade: number; dayLabel?: string }>) {
   const level = occupancyLevel(ocupadas, capacidade);
   const percent = capacidade > 0 ? Math.min(100, Math.round((ocupadas / capacidade) * 100)) : 100;
   const label = remainingSeatsLabel(ocupadas, capacidade);
@@ -25,7 +29,7 @@ export function OccupancyBar({
       <progress
         value={percent}
         max={100}
-        aria-label={`Ocupação de hoje: ${label}`}
+        aria-label={`Ocupação de ${dayLabel}: ${label}`}
         className={`h-2 w-full appearance-none overflow-hidden rounded-full bg-neutral-subtle [&::-webkit-progress-bar]:bg-neutral-subtle [&::-webkit-progress-value]:rounded-full [&::-moz-progress-bar]:rounded-full ${FILL_CLASS[level]}`}
       />
       <span

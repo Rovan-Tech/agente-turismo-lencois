@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { TourForm } from "../components/TourForm";
 import { TourList } from "../components/TourList";
+import { TourAvailability } from "../features/tour-booking/components/TourAvailability";
 import { createTour, deleteTour, listTours, updateTour } from "../lib/api";
 import { useFetchState } from "../lib/useFetchState";
 import type { Tour } from "../types";
@@ -78,6 +79,10 @@ export function ToursPage() {
 
       {toursState.status === "ready" && toursState.data.length === 0 && (
         <p className="mt-8 text-muted">Nenhum passeio cadastrado.</p>
+      )}
+
+      {toursState.status === "ready" && toursState.data.some((tour) => tour.ativo) && (
+        <TourAvailability tours={toursState.data.filter((tour) => tour.ativo)} />
       )}
 
       {toursState.status === "ready" && toursState.data.length > 0 && (

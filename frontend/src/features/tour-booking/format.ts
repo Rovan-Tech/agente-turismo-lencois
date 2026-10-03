@@ -31,6 +31,15 @@ export function remainingSeatsLabel(ocupadas: number, capacidade: number): strin
   return remaining === 1 ? "1 vaga" : `${remaining} vagas`;
 }
 
+/** Data `YYYY-MM-DD` (calendário local) daqui a `offsetDays` dias; a virada de mês/ano é do `Date`. */
+export function isoDateFromToday(offsetDays: number): string {
+  const now = new Date();
+  const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offsetDays);
+  const month = String(target.getMonth() + 1).padStart(2, "0");
+  const day = String(target.getDate()).padStart(2, "0");
+  return `${target.getFullYear()}-${month}-${day}`;
+}
+
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   pix: "Pix",
   boleto: "Boleto",
