@@ -35,7 +35,7 @@ export function ConversationsPage() {
   const languageOptions = conversations ? languageFilterOptions(conversations) : [];
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="w-full flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:overflow-y-auto">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl font-bold text-primary">Conversas</h1>
@@ -76,6 +76,6 @@ export function ConversationsPage() {
           </ul>
         </>
       )}
-    </main>
+    </div>
   );
 }

@@ -27,6 +27,8 @@ const CONVERSATION = {
 /** Simula a API da conversa e conta os GET (detalhe) e PATCH (status) recebidos. */
 async function mockConversationApi(page: Page) {
   const state = { status: CONVERSATION.status, fetches: 0, patches: 0 };
+  // A partir de `lg`, a conversa aberta divide a tela com a lista: sem isso ela bateria na rede.
+  await page.route("**/api/conversations", (route) => route.fulfill({ json: [] }));
   await page.route("**/api/conversations/e2e-conversa**", async (route) => {
     const request = route.request();
     if (request.method() === "PATCH") {
@@ -177,6 +179,9 @@ test("sizes the tourist's message bubble to its text instead of stretching it", 
   page,
 }) => {
   await mockConversationApi(page);
+  // Abaixo de `lg` a conversa ocupa a tela inteira (sem a lista do lado, que só mostra a partir
+  // dali): é a largura que dá mais espaço de sobra para esta checagem de "não esticou".
+  await page.setViewportSize({ width: 700, height: 800 });
 
   await page.goto("/conversas/e2e-conversa");
 

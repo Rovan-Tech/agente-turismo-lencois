@@ -41,7 +41,7 @@ test("creates and edits a tour through the catalog page", async ({ page }) => {
 
   await page.goto("/passeios");
 
-  await expect(page.getByRole("heading", { name: "Catálogo de passeios" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Passeios", exact: true })).toBeVisible();
   await expect(page.getByText("Nenhum passeio cadastrado.")).toBeVisible();
 
   await page.getByRole("button", { name: "Novo passeio" }).click();

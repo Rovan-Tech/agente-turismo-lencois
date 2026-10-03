@@ -86,7 +86,7 @@ export function ConversationDetailPage() {
   return (
     // A tela tem a altura da janela: só a lista de mensagens rola. No celular o painel de detalhes
     // fica abaixo da conversa (rola-se o `main` até ele); no desktop é uma coluna ao lado.
-    <main className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
       <section className="flex h-full min-h-0 min-w-0 flex-none flex-col md:flex-1">
         <Link
           to="/"
@@ -143,6 +143,6 @@ export function ConversationDetailPage() {
           <SuggestedTourCard tour={conversation.passeio_sugerido} />
         </ConversationSidePanel>
       )}
-    </main>
+    </div>
   );
 }

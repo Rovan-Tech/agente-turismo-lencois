@@ -37,9 +37,14 @@ test("lets a visitor take over a conversation, answer and give it back, all on s
   await expect(page.getByText("Você está atendendo")).toBeVisible();
   const field = page.getByRole("textbox", { name: "Resposta ao turista" });
   await expect(field).toBeFocused();
-  await field.fill("Pick up is at 8am at your hotel.");
-  await page.getByRole("button", { name: "Enviar" }).click();
-  await expect(page.getByText("Pick up is at 8am at your hotel.", { exact: true })).toBeVisible();
+  // A conversa não está em português: o atendente escreve em pt e o painel traduz antes de enviar.
+  await field.fill("A busca é às 8h na pousada.");
+  await page.getByRole("button", { name: "Traduzir para inglês" }).click();
+  const translation =
+    "This is a demo translation. In the real product, the AI translates what was typed.";
+  await expect(page.getByText(translation)).toBeVisible();
+  await page.getByRole("button", { name: "Enviar em inglês" }).click();
+  await expect(page.getByText(translation, { exact: true })).toBeVisible();
 
   // O turista da demonstração responde sozinho e a tela o relê (até 15 s de atualização).
   await expect(page.getByText(/talk it over with my group/)).toBeVisible({ timeout: 30_000 });
